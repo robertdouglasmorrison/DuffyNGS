@@ -1,0 +1,4 @@
+exportPattern("^[[:alpha:]]+")
+import(Biostrings)
+import(methods)
+useDynLib( DuffyNGS)

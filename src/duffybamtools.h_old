@@ -1,0 +1,181 @@
+/*
+ *	File:		duffybamtools.c
+ *
+ * 	Created on:	17.06.2011
+ * 	Author: 	Wolfgang Kaisers
+ *	Content:	C Header File for R package rbamtools
+ *
+ */
+
+#ifndef duffybamtools_h
+#define duffybamtools_h
+
+#include <string.h>
+
+#include <R.h>
+#include <Rinternals.h>
+#include <Rdefines.h>
+#include <R_ext/PrtUtil.h>
+#include "samtools/bam.h"
+#include "samtools/sam.h"
+#include "align_list.h"
+
+
+const char * const CIGAR_TYPES="MIDNSHP=X";
+#define SAM_TYPE_READ 2
+
+bam_header_t* clone_bam_header(bam_header_t *h);
+SEXP is_nil_externalptr(SEXP ptr);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// bamHeader
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void finalize_bam_header(SEXP ptr);
+SEXP init_bam_header(SEXP pHeaderText);
+SEXP bam_header_get_header_text(SEXP pHeader);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// BamWriter
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void finalize_bam_writer(SEXP ptr);
+SEXP bam_writer_open(SEXP pHeader,SEXP pFilename);
+SEXP bam_reader_open_writer(SEXP pReader,SEXP pFilename);
+SEXP bam_writer_save_align(SEXP pWriter, SEXP pAlign);
+SEXP bam_writer_close(SEXP pWriter);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// BamReader
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void finalize_bam_reader(SEXP ptr);
+static void finalize_bam_index(SEXP ptr);
+SEXP bam_reader_open(SEXP filename);
+SEXP bam_reader_close(SEXP pReader);
+SEXP bam_reader_get_header_text(SEXP pReader);
+SEXP bam_reader_get_ref_count(SEXP pReader);
+SEXP bam_reader_get_ref_data(SEXP pReader);
+SEXP bam_reader_create_index(SEXP bam_file,SEXP idx_file);
+SEXP bam_reader_load_index(SEXP idx_file);
+SEXP bam_reader_unload_index(SEXP pIdx);
+SEXP bam_reader_get_next_align(SEXP pReader, SEXP alignedOnly, SEXP primaryOnly);
+SEXP bam_reader_get_next_chunk(SEXP pReader, SEXP n, SEXP alignedOnly, SEXP primaryOnly);
+SEXP bam_reader_save_aligns(SEXP pReader,SEXP pWriter);
+SEXP bam_reader_sort_file(SEXP pFilename,SEXP pPrefix,SEXP pMaxMem,SEXP pByName);
+SEXP bam_reader_get_header(SEXP pReader);
+SEXP bam_reader_tell(SEXP pReader);
+SEXP bam_reader_seek(SEXP pReader, SEXP pPos);
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// bam_range
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+static void finalize_bam_range(SEXP ptr);
+static int range_fetch_func(const bam1_t *b, void *data);
+static int range_fetch_complex_func(const bam1_t *b,void *data);
+SEXP bam_range_init();
+SEXP bam_range_fetch(SEXP pReader,SEXP pIndex,SEXP pCoords,SEXP pComplex);
+SEXP bam_range_get_size(SEXP pRange);
+SEXP bam_range_get_next_align(SEXP pRange, SEXP alignedOnly, SEXP primaryOnly);
+SEXP bam_range_get_prev_align(SEXP pRange);
+SEXP bam_range_step_next_align(SEXP pRange);
+SEXP bam_range_step_prev_align(SEXP pRange);
+SEXP bam_range_get_align_df(SEXP pRange);
+SEXP bam_range_write(SEXP pWriter,SEXP pRange);
+SEXP bam_range_wind_back(SEXP pRange);
+SEXP bam_range_push_back(SEXP pRange,SEXP pAlign);
+SEXP bam_range_pop_back(SEXP pRange);
+SEXP bam_range_push_front(SEXP pRange,SEXP pAlign);
+SEXP bam_range_pop_front(SEXP pRange);
+SEXP bam_range_write_current_align(SEXP pRange,SEXP pAlign);
+SEXP bam_range_insert_past_curr_align(SEXP pRange,SEXP pAlign);
+SEXP bam_range_insert_pre_curr_align(SEXP pRange,SEXP pAlign);
+SEXP bam_range_mv_curr_align(SEXP pSrc, SEXP pTarget);
+
+SEXP bam_range_modify(SEXP pRange, SEXP RefID, SEXP Pos, SEXP Qname, SEXP Qseq, SEXP Qual);
+SEXP bam_range_get_readID(SEXP pRange);
+SEXP bam_range_get_read_locus(SEXP pRange);
+SEXP bam_range_get_refid(SEXP pRange);
+SEXP bam_range_get_position(SEXP pRange);
+SEXP bam_range_get_align_length(SEXP pRange);
+SEXP bam_range_get_align_sequence(SEXP pRange);
+SEXP bam_range_get_align_qualities(SEXP pRange);
+SEXP bam_range_get_read_sequence(SEXP pRange);
+SEXP bam_range_get_read_qualities(SEXP pRange);
+SEXP bam_range_get_read_phredScores(SEXP pRange);
+SEXP bam_range_get_tag(SEXP pRange, SEXP tag);
+SEXP bam_range_get_all_tags(SEXP pRange, SEXP sep);
+SEXP bam_range_set_tag(SEXP pRange, SEXP tag, SEXP value);
+SEXP bam_range_get_map_quality(SEXP pRange);
+SEXP bam_range_get_strand_reverse(SEXP pRange);
+SEXP bam_range_is_first_in_pair(SEXP pRange);
+SEXP bam_range_is_second_in_pair(SEXP pRange);
+SEXP bam_range_is_unmapped(SEXP pRange);
+SEXP bam_range_is_secondary_align(SEXP pRange);
+SEXP bam_range_get_cigar_df(SEXP pRange, SEXP readUnits);
+SEXP bam_range_get_mismatch_df(SEXP pRange, SEXP readUnits);
+SEXP bam_range_get_insert_size(SEXP pRange);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// BamAlignment
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static void finalize_bam_align(SEXP pAlign);
+SEXP bam_align_modify(SEXP pAlign, SEXP RefID, SEXP Pos, SEXP Qname, SEXP Qseq, SEXP Qual);
+SEXP bam_align_get_readID(SEXP pAlign);
+SEXP bam_align_get_read_locus(SEXP pAlign);
+SEXP bam_align_get_refid(SEXP pAlign);
+SEXP bam_align_get_position(SEXP pAlign);
+SEXP bam_align_get_nCigar(SEXP pAlign);
+SEXP bam_align_get_cigar_df(SEXP pAlign, SEXP readUnits);
+SEXP bam_align_get_mismatch_df(SEXP pAlign, SEXP readUnits);
+SEXP bam_align_get_mate_refid(SEXP pAlign);
+SEXP bam_align_get_mate_position(SEXP pAlign);
+SEXP bam_align_get_insert_size(SEXP pAlign);
+SEXP bam_align_get_map_quality(SEXP pAlign);
+SEXP bam_align_get_align_length(SEXP pAlign);
+SEXP bam_align_get_align_sequence(SEXP pAlign);
+SEXP bam_align_get_align_qualities(SEXP pAlign);
+SEXP bam_align_get_read_sequence(SEXP pAlign);
+SEXP bam_align_get_read_qualities(SEXP pAlign);
+SEXP bam_align_get_read_phredScores(SEXP pAlign);
+SEXP bam_align_get_tag(SEXP pAlign, SEXP tag);
+SEXP bam_align_get_all_tags(SEXP pAlign, SEXP sep);
+SEXP bam_align_set_tag(SEXP pAlign, SEXP tag, SEXP value);
+
+///////////////////////////////////////////////////////////
+// alignment flags
+
+// Reading accessors
+SEXP bam_align_is_paired(SEXP pAlign);
+SEXP bam_align_mapped_in_proper_pair(SEXP pAlign);
+SEXP bam_align_is_unmapped(SEXP pAlign);
+SEXP bam_align_mate_is_unmapped(SEXP pAlign);
+SEXP bam_align_get_strand_reverse(SEXP pAlign);
+SEXP bam_align_mate_strand_reverse(SEXP pAlign);
+SEXP bam_align_is_first_in_pair(SEXP pAlign);
+SEXP bam_align_is_second_in_pair(SEXP pAlign);
+SEXP bam_align_is_secondary_align(SEXP pAlign);
+SEXP bam_align_fail_qc(SEXP pAlign);
+SEXP bam_align_is_pcr_or_optical_dup(SEXP pAlign);
+SEXP bam_align_get_flag(SEXP pAlign);
+
+// Writing accessors
+SEXP bam_align_set_is_paired(SEXP pAlign, SEXP val);
+SEXP bam_align_set_mapped_in_proper_pair(SEXP pAlign, SEXP val);
+SEXP bam_align_set_is_unmapped(SEXP pAlign, SEXP val);
+SEXP bam_align_set_mate_is_unmapped(SEXP pAlign, SEXP val);
+SEXP bam_align_set_strand_reverse(SEXP pAlign, SEXP val);
+SEXP bam_align_set_mate_strand_reverse(SEXP pAlign, SEXP val);
+SEXP bam_align_set_is_first_in_pair(SEXP pAlign, SEXP val);
+SEXP bam_align_set_is_second_in_pair(SEXP pAlign, SEXP val);
+SEXP bam_align_set_is_secondary_align(SEXP pAlign, SEXP val);
+SEXP bam_align_set_fail_qc(SEXP pAlign, SEXP val);
+SEXP bam_align_set_is_pcr_or_optical_dup(SEXP pAlign, SEXP val);
+SEXP bam_align_set_flag(SEXP pAlign, SEXP val);
+
+void reversequality( char *dest, const char *src);
+void reversecomplement( char *dest, const char *src);
+void read_locus( const char *readID, int *values);
+
+#endif
