@@ -97,15 +97,23 @@
 
 	if ( forceSetup || ! file.exists( geneReadsFile)) {
 		cat( "\nExtracting Gene alignments..")
-		pipe.GatherGeneAlignments( sampleID, geneID, tail=500, asFASTQ=T, fastq.keyword=geneName)
+		nAligns <- pipe.GatherGeneAlignments( sampleID, geneID, tail=500, asFASTQ=T, fastq.keyword=geneName)
+		if (nAligns < 1) {
+			cat( "\nZero reads aligned to gene..")
+			return( 0)
+		}
 		# new file, so make sure we remake its decendants
 		file.delete( genePeptidesFile)
 		madeAnyFiles <- TRUE
 	}
 	if ( forceSetup || ! file.exists( genePeptidesFile)) {
 		cat( "\nConverting Gene alignments to peptides..")
-		fastqToPeptides( geneReadsFile, genePeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
+		nPeptides <- fastqToPeptides( geneReadsFile, genePeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
 				trim5=trim5.aligns, trim3=trim3.aligns)
+		if (nPeptides < 1) {
+			cat( "\nGene alignments gave zero peptides..")
+			return( 0)
+		}
 		madeAnyFiles <- TRUE
 	}
 	if ( forceSetup || ! file.exists( nohitPeptidesFile)) {

@@ -394,7 +394,7 @@ multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffile
 		# when few enough plots, the label will be made from sample/gene/etc.
 		# when too many, the label may get over simplified...
 		label <- groupSet[k]
-		if (nSamples > 6) {
+		if (nSamples > 2) {
 			# combine the sampleID and the group into the label if its not already there
 			if ( regexpr( groupSet[k], sample) < 1) {
 				label <- paste( sample, groupSet[k], sep=":  ")

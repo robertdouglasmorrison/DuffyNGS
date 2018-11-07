@@ -160,7 +160,7 @@
 			fqDF <- fqDF[ -dups, ]
 		}
 		writeFastqFile( fqDF, outfile, compress=T)
-		return(NULL)
+		return( nrow(fqDF))
 	} else {
 		return( out)
 	}
@@ -284,7 +284,7 @@
 			fqDF <- fqDF[ -dups, ]
 		}
 		writeFastqFile( fqDF, outfile, compress=T)
-		return(NULL)
+		return( nrow(fqDF))
 	} else {
 		return( out)
 	}
