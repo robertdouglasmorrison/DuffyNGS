@@ -2,7 +2,8 @@
 
 `calcAlignStats` <- function( filein, sampleID, alignPhase=c("Genomic","RiboClear","Splice"), 
 			what="SGBIDMAN", statsPath="AlignStats", reload=TRUE, totalReads=NULL, 
-			chunkSize=200000, maxReads=NULL, plot=TRUE, pause=0, banner="") {
+			chunkSize=200000, maxReads=NULL, plot=TRUE, pause=0, banner="",
+			verbose=TRUE) {
 
 	alignPhase <- match.arg( alignPhase)
 	if ( is.null( what)) what <- "SGBIDMAN"
@@ -109,14 +110,14 @@
 		# gene-level stats...
 		if ( regexpr( "G", what) > 0) {
 			cat( " genes..")
-			thisG <- evaluateGeneStats( seqIDs[isPrimary], geneIDs[isPrimary])
+			thisG <- evaluateGeneStats( seqIDs[isPrimary], geneIDs[isPrimary], verbose=verbose)
 			ansG <- mergeGeneStats( rbind( ansG, thisG))
 		}
 	
 		# MAR stats...
 		if ( regexpr( "M", what) > 0) {
 			cat( " MARs..")
-			thisM <- evaluateMARstats( seqIDs, geneIDs, readFac)
+			thisM <- evaluateMARstats( seqIDs, geneIDs, readFac, verbose=verbose)
 			ansM <- mergeMARstats( ansM, thisM)
 		}
 	
@@ -152,7 +153,7 @@
 
 		if (plot) {
 			cat( " plot.")
-			plotAlignStats( alignStatsData, asPNG=TRUE, plotPath=statsPath, pause=pause)
+			plotAlignStats( alignStatsData, asPNG=TRUE, plotPath=statsPath, pause=pause, verbose=verbose)
 		}
 
 		rm( alignStatsData, mismatchs, seqIDs, refIDs, geneIDs)
@@ -161,7 +162,7 @@
 
 	cat( "\nDone.   Final Plots..\n")
 	load( statsFile)
-	plotAlignStats( alignStatsData, asPNG=TRUE, plotPath=statsPath, pause=pause)
+	plotAlignStats( alignStatsData, asPNG=TRUE, plotPath=statsPath, pause=pause, verbose=verbose)
 
 	# close that graphics window
 	dev.off()
@@ -385,7 +386,7 @@ mergeSeqStats <- function( mydf) {
 }
 
 
-evaluateGeneStats <- function( seqids, geneids) {
+evaluateGeneStats <- function( seqids, geneids, verbose=TRUE) {
 
 	tb <- base::sort( base::table( geneids), decreasing=TRUE)
 	genenames <- names(tb)
@@ -395,7 +396,7 @@ evaluateGeneStats <- function( seqids, geneids) {
 	seqptr <- base::match( genenames, geneids)
 	seqnames <- seqids[seqptr]
 	gProd <- gene2ProductAllSpecies( genenames)
-	species <- getSpeciesFromSeqID( seqnames)
+	species <- getSpeciesFromSeqID( seqnames, verbose=verbose)
 	species[ is.na(species)] <- "unknownSpecies"
 
 	outdf <- data.frame( genenames, seqnames, species, gProd, tbv, pct, cpct, 
@@ -432,11 +433,11 @@ mergeGeneStats <- function( mydf) {
 }
 
 
-evaluateMARstats <- function( seqids, geneids, alignFac) {
+evaluateMARstats <- function( seqids, geneids, alignFac, verbose=TRUE) {
 
 	# using the read factoring, let's know something about species/non-gene/gene breakdown
 	# of the Multi Hit Reads
-	species <- getSpeciesFromSeqID( seqids)
+	species <- getSpeciesFromSeqID( seqids, verbose=verbose)
 	species[ is.na(species)] <- "unknownSpecies"
 	N <- nlevels(alignFac)
 	spec <- gtype <- cnt <- vector( length=N)
@@ -498,7 +499,8 @@ mergeALIGNstats <- function( stats1, stats2) {
 }
 
 
-plotAlignStats <- function( alignStatsData=NULL, statsFile=NULL, asPNG=FALSE, plotPath=".", pause=0) {
+plotAlignStats <- function( alignStatsData=NULL, statsFile=NULL, asPNG=FALSE, plotPath=".", pause=0,
+				verbose=TRUE) {
 
 	# wrapper to plot the various stats from an .bam file
 	if ( !(capabilities()[ "png" ])) asPNG <- FALSE
@@ -508,7 +510,7 @@ plotAlignStats <- function( alignStatsData=NULL, statsFile=NULL, asPNG=FALSE, pl
 		alignStatsData <- get( who[1])
 	}
 	if ( !is.null( alignStatsData$seqStatistics) && nrow(alignStatsData$seqStatistics) > 0) {
-	   plotSeqStatData( alignStatsData, asPNG=asPNG, plotPath=plotPath, pause=pause)
+	   plotSeqStatData( alignStatsData, asPNG=asPNG, plotPath=plotPath, pause=pause, verbose=verbose)
 	}
 	if ( !is.null( alignStatsData$geneStatistics) && nrow(alignStatsData$geneStatistics) > 0) {
 	   plotGeneStatData( alignStatsData, asPNG=asPNG, plotPath=plotPath, pause=pause)
@@ -528,7 +530,7 @@ plotAlignStats <- function( alignStatsData=NULL, statsFile=NULL, asPNG=FALSE, pl
 }
 
 
-plotSeqStatData <- function( alignStatsData, asPNG=FALSE, plotPath=".", pause=0) {
+plotSeqStatData <- function( alignStatsData, asPNG=FALSE, plotPath=".", pause=0, verbose=TRUE) {
 
 	# plot a few types...
 	saveMAI <- par("mai")
@@ -540,7 +542,7 @@ plotSeqStatData <- function( alignStatsData, asPNG=FALSE, plotPath=".", pause=0)
 
 	seqStats <- alignStatsData$seqStatistics
 	freqtbl <- seqStats
-	species <- getSpeciesFromSeqID( freqtbl$SEQ_ID)
+	species <- getSpeciesFromSeqID( freqtbl$SEQ_ID, verbose=verbose)
 	species[ is.na(species)] <- "unknownSpecies"
 	colorAns <- colorBySpecies( species)
 	colset <- colorAns$colors

@@ -28,6 +28,8 @@
 		cat( "\n\nError: Sample grouping column: '", groupColumn, "' not found in annotation file.", sep="")
 		stop()
 	}
+	groupIDs <- checkGroupNames( annT[[ groupColumn]])
+
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( targetID)) targetID <- getOptionValue( optT, "targetID", notfound="HsPf", verbose=F)
 	setCurrentTarget( targetID)

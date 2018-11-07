@@ -27,7 +27,7 @@
 		myGroups <- "Self"
 		nGroups <- 1
 	} else {
-		groupSet <- annT[[ groupColumn]]
+		groupSet <- checkGroupNames( annT[[ groupColumn]])
 		myGroups <- sort( unique( groupSet))
 		nGroups <- length(myGroups)
 	}

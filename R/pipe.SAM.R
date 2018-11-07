@@ -39,7 +39,7 @@
 	if ( any( where == 0)) stop( "Some named SampleIDs not in Annotation File")
 	SAM_samples <- unique( flatSamples)
 	where <- match( SAM_samples, annT$SampleID)
-	SAM_groups <- annT[[ groupColumn]][where]
+	SAM_groups <- checkGroupNames( annT[[ groupColumn]][where])
 	SAM_colors <- annT[[ colorColumn]][where]
 	SAM_species <- speciesID
 	SAM_prefix <- getCurrentSpeciesFilePrefix()

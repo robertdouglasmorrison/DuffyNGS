@@ -225,7 +225,7 @@
 	# the annotation holds the group calls
 	annT <- readAnnotationTable( annotationFile)
 	allGroups <- annT[[ groupColumn]]
-	myGroup <- allGroups[ match( sampleIDs, annT$SampleID)]
+	myGroup <- checkGroupNames( allGroups[ match( sampleIDs, annT$SampleID)])
 	groupNames <- sort( unique( myGroup))
 	nGroups <- length( groupNames)
 	groupColors <- annT[[ colorColumn]][ match( groupNames, allGroups)]

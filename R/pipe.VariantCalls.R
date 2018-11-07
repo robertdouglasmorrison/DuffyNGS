@@ -404,6 +404,8 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	setCurrentSpecies( speciesID)
 	prefix <- getCurrentSpeciesFilePrefix()
 
+	groupSet <- checkGroupNames( groupSet)
+
 	# gather all the VCF calls from all these samples
 	seqV <- posV <- geneV <- refV <- altV <- altAA <- scoreV <- qualV <- sidV <- gidV <- depthV <- vector()
 	nall <- 0

@@ -27,7 +27,7 @@
 	flatColors <- annT[[ colorColumn]][ where]
 	RR_samples <- unique( flatSamples)
 	where <- match( RR_samples, annT$SampleID)
-	RR_groups <- annT[[ groupColumn]][where]
+	RR_groups <- checkGroupNames( annT[[ groupColumn]][where])
 	RR_colors <- annT[[ colorColumn]][where]
 	RR_species <- speciesID
 	RR_prefix <- getCurrentSpeciesFilePrefix()
