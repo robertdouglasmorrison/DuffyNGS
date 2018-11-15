@@ -1,6 +1,72 @@
 # pipe.SNPmatrix.R
 
 
+
+# wrapper function to do all the steps we need
+pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqMatrix.txt",
+					optionsFile="Options.txt", results.path=NULL,
+					speciesID=getCurrentSpecies(), missingOnly=TRUE,
+					na.rm="half", min.freq=1.0, min.diff=5, min.reads=1) {
+
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+	prefix <- getCurrentSpeciesFilePrefix()
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	variants.path <- file.path( results.path, "VariantCalls")
+
+	# part 1:  each sample should have its SNPs called.
+	snpFiles <- paste( sampleIDset, prefix, "Summary.VCF.txt", sep=".")
+	snpFiles <- file.path( variants.path, sampleIDset, snpFiles)
+	need <- which( ! file.exists( snpFiles))
+	if ( ! missingOnly) need <- 1:length(snpFiles)
+	if ( length(need)) {
+		cat( "\nStep 1:  Finding Variant SNP sites for", length(need), "samples..")
+		for (s in sampleIDset[need]) pipe.VariantCalls(s, optionsFile=optionsFile, 
+							results.path=results.path, speciesID=speciesID)
+	} else {
+		cat( "\nStep 1:  Using existing 'VariantCall' summary files..")
+	}
+
+	# part 2:  combine them to find the set of SNPs seen in any sample
+	vcfFile <- file.path( variants.path, "AllSamples.AllVCFs.txt")
+	if ( ! file.exists( vcfFile)) {
+		cat( "\n\nStep 2:  Merging all SNPs sites..")
+		vcfSet <- pipe.VariantMerge( sampleIDset, outfile=vcfFile, optionsFile=optionsFile,
+						results.path=results.path)
+	} else {
+		cat( "\nStep 2:  Using existing 'AllSamples.AllVCFs.txt' SNP file..")
+		vcfSet <- read.delim( vcfFile, as.is=T)
+	}
+
+	# part 3:  measure actual pileup depths and base calls at all those sites
+	baseDepthFiles <- paste( sampleIDset, "SNP.BaseDepth.txt", sep=".")
+	baseDepthFiles <- file.path( variants.path, sampleIDset, baseDepthFiles)
+	need <- which( ! file.exists( snpFiles))
+	if ( ! missingOnly) need <- 1:length(snpFiles)
+	if ( length(need)) {
+		cat( "\n\nStep 3:  Measure Base Depth at all SNP sites..   Slow...")
+		multicore.lapply( sampleIDset[need], pipe.SNP.BaseDepth, otherSNPs=vcfSet, 
+				optionsFile=optionsFile, results.path=results.path)
+	} else {
+		cat( "\nStep 3:  Using existing 'BaseDepth' files..")
+	}
+
+	# part 4:  combine into the giant table
+	cat( "\n\nStep 4:  Turn Base Depths into Frequency Matrix of all samples..")
+	freqM <- pipe.SNP.FreqMatrix( sampleIDset, optionsFile=optionsFile, results.path=results.path, 
+					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads)
+
+	# write out the results
+	outfile <- file.path( variants.path, outfile)
+	cat( "\nWriting final results: ", outfile)
+	write.table( freqM, outfile, sep="\t", quote=F, row.names=T)
+
+	#done
+	return( nrow( freqM))
+}
+
+
 `pipe.SNP.BaseDepth` <- function( sampleID, optionsFile="Options.txt", 
 				results.path=NULL, seqIDset=NULL, SNPtablePath="~/SNPs/",
 				otherSNPs=NULL, indelsToo=TRUE, keepIntergenics=TRUE) {
@@ -333,6 +399,7 @@
 	# we have it all
 
 	# test for reasons to drop data, but base the tests on just the frequency data
+	cat( "\nInitial Table of SNP site frequencies:   N_Samples: ", nFiles, "  N_Rows: ", nrow(out))
 	# drop any empty columns
 	drops <- vector()
 	for ( i in 1:nFiles) if ( all( is.na( out[ ,i]))) drops <- c( drops, i)
@@ -344,6 +411,7 @@
 		}
 		out <- out[ , -drops, drop=FALSE]
 		nFiles <- nFiles - length(dropFreqs)
+		cat( "\nDropped entire samples for missing/invalid data: ", length(dropFreqs))
 	}
 
 	# drop any empty rows
@@ -354,7 +422,7 @@
 		if ( na.rm == "half") drops <- which( nNA >= nFiles/2)
 		if ( length(drops)) {
 			out <- out[ -drops, , drop=FALSE]
-			cat( "\nDropped rows with '",na.rm, "' NA:  ", length(drops), sep="")
+			cat( "\nDropped rows with at least '",na.rm, "' NA:  ", length(drops), sep="")
 		}
 	}
 
@@ -364,7 +432,7 @@
 		drops <- which( rmaxs < min.freq)
 		if ( length(drops)) {
 			out <- out[ -drops, , drop=FALSE]
-			cat( "\nDropped rows below 'min.freq'=", min.freq,"  N_rows:  ", length(drops))
+			cat( "\nDropped rows with no value above 'min.freq' =", min.freq,"   N:  ", length(drops))
 		}
 	}
 
@@ -374,9 +442,11 @@
 		drops <- which( rdiffs < min.diff)
 		if ( length(drops)) {
 			out <- out[ -drops, , drop=FALSE]
-			cat( "\nDropped rows < min.diff:   ", length(drops))
+			cat( "\nDropped rows with no values differing by at least 'min.diff' =", 
+					min.diff, "   N: ", length(drops))
 		}
 	}
+	cat( "\nFinal Table of SNP site frequencies:   N_Samples: ", nFiles, "  N_Rows: ", nrow(out), "\n")
 
 	# we are really done
 	return( out)
@@ -763,3 +833,4 @@
 	out <- data.frame( "SNP_ID"=mySNPs, "N_Samples"= myNseen, round( avgPcts, 2), stringsAsFactors=F)
 	return( out)
 }
+

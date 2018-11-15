@@ -276,7 +276,7 @@
 }
 
 
-`calcGenericDE` <- function( v1, v2, minRPKM=1, clipFold=10) {
+`calcGenericDE` <- function( v1, v2, minRPKM=1, clipFold=10.0) {
 
 	# evaluate the differential expression between two samples for one gene...
 	# extract the values from the 2 transcript subsets...

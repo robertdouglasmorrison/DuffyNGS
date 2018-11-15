@@ -193,6 +193,10 @@
 	calls$AA <- aaAns[[readingFrame]]
 	rownames(calls) <- 1:nrow(calls)
 
+	# there is a tiny chance of no indels at all, which makes that column of "" look like NA
+	# when we read in the call table
+	if ( all( is.na( calls$IndelDetails))) calls$IndelDetails <- ""
+
 	# find that AA context
 	context <- toupper( context)
 	contextStart <- gregexpr( context, aaSeq, fixed=T)[[1]]
@@ -232,6 +236,10 @@
 	dnaSeq <- paste( calls$DNA, collapse="")
 	calls$AA <- aaAns[[readingFrame]]
 	rownames(calls) <- 1:nrow(calls)	
+
+	# there is a tiny chance of no indels at all, which makes that column of "" look like NA
+	# when we read in the call table
+	if ( all( is.na( calls$IndelDetails))) calls$IndelDetails <- ""
 
 	# what command do we want
 	command <- match.arg( command)

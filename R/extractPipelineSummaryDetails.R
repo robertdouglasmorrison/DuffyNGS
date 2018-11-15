@@ -1,5 +1,16 @@
 # extractPipelineSummaryDetails.R -- pull the key values out of the summary text file
 
+`pipe.ExtractPipelineSummaryDetails` <- function( sampleIDset, optionsFile="Options.txt", 
+			results.path=NULL, verbose=FALSE) {
+
+	ans <- extractPipelineSummaryDetails( sampleID=sampleIDset, optionsFile=optionsFile,
+			results.path=results.path, verbose=verbose)
+	write.table( ans, "Pipeline.SummaryDetails.csv", sep=",", quote=T, row.names=F)
+
+	return( invisible( ans))
+}
+
+
 `extractPipelineSummaryDetails` <- function( sampleID, optionsFile="Options.txt", 
 			results.path=NULL, verbose=FALSE) {
 

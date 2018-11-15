@@ -707,7 +707,7 @@
 		hC <- allPeaks$Cheight[i]
 		if ( any( is.na( c(hF,hR,hC)))) next
 		if ( any( c(hF,hR,hC) < 1)) next
-		hMean <- mean( hF, hR)
+		hMean <- mean( c( hF, hR))
 		relTerm <- sqrt( min( c( hF, hR) / hMean))
 		if ( hC < hMean) relTerm <- relTerm * sqrt(hC/hMean)
 		rel[i] <- relTerm
