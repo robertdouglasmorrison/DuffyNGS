@@ -71,7 +71,8 @@ nucleotides of the raw reads in the FASTQ data.
 }
   \item{use.multicore}{
 Logical, should the three strands of raw read pileup data (forward, reverse, and combined) be 
-run in parallel as three separate child peakpick processes.
+run in parallel as three separate child peakpick processes. As of R version 3, plotting during multicore
+is no longer supported, so care should be taken with this argument.
 }
   \item{p.value}{
 The limiting P-value for determining how many peaks to include in the final tables of ChIP 

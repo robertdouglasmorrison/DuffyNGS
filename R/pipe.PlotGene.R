@@ -105,7 +105,6 @@
 				dev.print( png, plotfile, width=pdf.width, height=pdf.height, "bg"="white")
 			}
 			if (length(mygenes) > 1) cat( "  ",gname)
-			if (length(mygenes) > 1) cat( "  ",gname)
 		}
 	}
 	if ( NG > 1) cat( "\n")
