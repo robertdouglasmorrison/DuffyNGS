@@ -53,6 +53,6 @@ Bob Morrison
 }
 
 \seealso{
-\code{\link{pipe.RiboClear}} Ribo clearing alignment against an index of unwanted genomic featurs.
-\code{\link{pipe.SpliceAlign}} Splice junction alignment against an index of standard and alternative splice junctions.
+\code{\link{pipe.RiboClear}} {Ribo clearing alignment against an index of unwanted genomic featurs.}
+\code{\link{pipe.SpliceAlign}} {Splice junction alignment against an index of standard and alternative splice junctions.}
 }

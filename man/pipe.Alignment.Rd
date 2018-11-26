@@ -1,4 +1,5 @@
 \name{pipe.Alignment}
+\alias{pipe.Alignment}
 \alias{pipe.RNAalignment}
 \alias{pipe.DNAalignment}
 \alias{pipe.ChIPalignment}

@@ -60,7 +60,8 @@ with \code{loadWIG=TRUE}.
 Logical, send progress information to standard out.
 }
   \item{mode}{
-Controls the behavior of how alignments are loaded into the the wiggle track data objects.
+Controls the behavior of how alignments are loaded into the the wiggle track data objects.  Optional 
+mode \code{"QuickQC"} invokes the behavior for preliminary QC analysis.  See \code{\link{pipe.QuickQC}}.
 }
   \item{exonsOnly}{
 Logical, controls which regions of the gene footprint get integrated into the gene's expression
@@ -86,8 +87,8 @@ A family of files is created:
 Bob Morrison
 }
 \seealso{
-  \code{\link{pipe.Alignment}} for the previous pipeline step that turns raw FASTQ data to BAM alignments.
-  \code{\link{pipe.TranscriptToHTML}} for turning the transcriptome into a web page with gene pileup images.
-  \code{\link{pipe.DiffExpression}} for turning a set of transcriptomes into files of differential gene 
-  expression.
+  \code{\link{pipe.Alignment}} {for the previous pipeline step that turns raw FASTQ data to BAM alignments.}
+  \code{\link{pipe.TranscriptToHTML}} {for turning the transcriptome into a web page with gene pileup images.}
+  \code{\link{pipe.DiffExpression}} {for turning a set of transcriptomes into files of differential gene 
+  expression.}
 }

@@ -58,6 +58,6 @@ Bob Morrison
 }
 
 \seealso{
-\code{\link{pipe.RiboClear}} Ribo clearing alignment against an index of unwanted genomic featurs.
-\code{\link{pipe.GenomicAlign}} Genomic alignment against an index of target genome(s).
+\code{\link{pipe.RiboClear}} {Ribo clearing alignment against an index of unwanted genomic featurs.}
+\code{\link{pipe.GenomicAlign}} {Genomic alignment against an index of target genome(s).}
 }

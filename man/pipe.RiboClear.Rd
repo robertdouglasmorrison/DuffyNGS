@@ -72,6 +72,6 @@ using option \code{forcePairedEnd}.
 }
 
 \seealso{
-\code{\link{pipe.GenomicAlign}} Genomic alignment against an index of target genome(s).
-\code{\link{pipe.SpliceAlign}} Splice junction alignment against an index of standard and alternative splice junctions.
+\code{\link{pipe.GenomicAlign}} {Genomic alignment against an index of target genome(s).}
+\code{\link{pipe.SpliceAlign}} {Splice junction alignment against an index of standard and alternative splice junctions.}
 }

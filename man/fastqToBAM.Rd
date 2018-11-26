@@ -1,10 +1,10 @@
 \name{fastqToBAM}
 \alias{fastqToBAM}
 \title{ 
-Convert FASTQ file(s) into a BAM file, by calling Bowtie.
+Convert FASTQ file(s) into a BAM file, by calling Bowtie2.
 }
 \description{
-  Call Bowtie2 (or older Bowtie) to do an alignment of a file of FASTQ read data.  Builds the 
+  Call Bowtie2 to do an alignment of a file of FASTQ read data.  Builds the 
   full Unix command line needed to spawn a call to Bowtie, using all pertinent options file settings.
 }
 \usage{
@@ -84,10 +84,11 @@ Bob Morrison
 }
 
 \seealso{ 
-  \code{\link{pipe.RiboClear}} Ribo clearing against an index of unwanted transcripts.
-  \code{\link{pipe.GenomicAlign}} Genomic alignment against an index of target genome(s).
-  \code{\link{pipe.SpliceAlign}} Splice junction alignment against an index of standard and alternative splice junctions.
-  \code{\link{buildBowtie2CommandLine}} for constructing the command.
-  \code{\link{bowtie2Par}} about default Bowtie settings.
-  \code{\link{callBowtie2}} for the low-level call to Bowtie to do the alignments.
+  \code{\link{pipe.RiboClear}} {Ribo clearing against an index of unwanted transcripts.}
+  \code{\link{pipe.GenomicAlign}} {Genomic alignment against an index of target genome(s).}
+  \code{\link{pipe.SpliceAlign}} {Splice junction alignment against an index of standard and alternative 
+  splice junctions.}
+  \code{\link{buildBowtie2CommandLine}} {for constructing the command.}
+  \code{\link{bowtie2Par}} {about default Bowtie settings.}
+  \code{\link{callBowtie2}} {for the low-level call to Bowtie to do the alignments.}
 }
