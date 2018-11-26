@@ -1508,7 +1508,7 @@ setMethod("show","bamAlign",function(object){
   } else {
   	cat( "alignSeq: ", alignSeq(object),"\nalignQual:", alignQual(object), "\n")
   	cat( "mateRefID:    ",mateRefID(object),"\nmatePosition: ",matePosition(object),"\n")
-  	cat( "insertSize:", insertSize(obj),"\n")
+  	cat( "insertSize:", insertSize(object),"\n")
   	cat("cigarData:\n")
   	print(cigarData(object))
   }
@@ -1523,6 +1523,8 @@ setMethod("show","bamAlign",function(object){
 setGeneric("pcrORopt_duplicate", function(object) standardGeneric("pcrORopt_duplicate"))
 setMethod("pcrORopt_duplicate", "bamAlign", function(object)
   return(.Call("bam_align_is_pcr_or_optical_dup",object@align,PACKAGE="DuffyNGS")))
+setMethod("pcrORopt_duplicate", "bamRange", function(object)
+  return(.Call("bam_range_is_pcr_or_optical_dup",object@range,PACKAGE="DuffyNGS")))
 setGeneric("pcrORopt_duplicate<-", function(object,value) standardGeneric("pcrORopt_duplicate<-"))
 setReplaceMethod(f="pcrORopt_duplicate", signature="bamAlign",
                  definition=function(object,value){

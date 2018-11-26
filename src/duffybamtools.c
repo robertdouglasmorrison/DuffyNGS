@@ -2138,6 +2138,41 @@ SEXP bam_range_is_secondary_align(SEXP pRange)
 	return boolans;
 }
 
+
+SEXP bam_range_is_pcr_or_optical_dup(SEXP pRange)
+{
+	if(TYPEOF(pRange)!=EXTPTRSXP)
+	{
+		error("[bam_range_is_pcr_or_optical_dup] No external pointer!");
+		return R_NilValue;
+	}
+	align_list *l=(align_list*)(R_ExternalPtrAddr(pRange));
+
+	// Read Address of current align->for reconstitution at the end
+	align_element *e=l->curr_el;
+	wind_back(l);
+
+	// create one vector
+	const bam1_t *align;
+	int nRows=(l->size);
+	int32_t i;
+
+	SEXP boolans;
+	PROTECT(boolans=allocVector(LGLSXP,nRows));
+
+	for(i=0;i<nRows;++i)
+	{
+		align=get_const_next_align(l);
+		LOGICAL(boolans)[i] = ((align->core.flag & BAM_FDUP) != 0);
+	}
+	// Reset curr_el pointer
+	l->curr_el=e;
+
+	UNPROTECT(1);
+	return boolans;
+}
+
+
 SEXP bam_range_get_cigar_df(SEXP pRange, SEXP readUnits)
 {
 	if(TYPEOF(pRange)!=EXTPTRSXP)
@@ -3159,7 +3194,7 @@ SEXP bam_align_get_mismatch_df(SEXP pAlign, SEXP readUnits)
 	int loopcnt = 0;
 	int DEBUG = 0;
 	while ( icig < nCigar || curMM <= (mmbuf+mmlength)) {
-		if (DEBUG) printf( "\nDebug WHILE:  %d %d %d %d %d %c %c %d %d ", nout, needCIG, needMM, icig, 
+		if (DEBUG) printf( "\nDebug WHILE:  %d %d %d %d %ld %c %c %d %d ", nout, needCIG, needMM, icig, 
 				(curMM-mmbuf), thisCIGchar, thisMMchar, curCIGpos, curMMpos);
 		if ( loopcnt++ > 100) break;
 		if (needCIG) {

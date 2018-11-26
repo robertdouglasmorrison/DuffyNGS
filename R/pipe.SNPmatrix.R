@@ -42,8 +42,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	# part 3:  measure actual pileup depths and base calls at all those sites
 	baseDepthFiles <- paste( sampleIDset, "SNP.BaseDepth.txt", sep=".")
 	baseDepthFiles <- file.path( variants.path, sampleIDset, baseDepthFiles)
-	need <- which( ! file.exists( snpFiles))
-	if ( ! missingOnly) need <- 1:length(snpFiles)
+	need <- which( ! file.exists( baseDepthFiles))
+	if ( ! missingOnly) need <- 1:length(baseDepthFiles)
 	if ( length(need)) {
 		cat( "\n\nStep 3:  Measure Base Depth at all SNP sites..   Slow...")
 		multicore.lapply( sampleIDset[need], pipe.SNP.BaseDepth, otherSNPs=vcfSet, 

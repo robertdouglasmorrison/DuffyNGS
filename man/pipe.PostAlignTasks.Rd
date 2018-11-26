@@ -8,7 +8,7 @@ Do secondary processing steps after running the alignment pipeline for a sample.
 }
 \usage{
 pipe.PostAlignTasks(sampleID, annotationFile = "Annotation.txt", optionsFile = "Options.txt", 
-	dataType = c( "RNA-seq", "ChIP-seq", "DNA-seq"), verbose = TRUE)
+	dataType = c( "RNA-seq", "DNA-seq", "ChIP-seq", "RIP-seq"), verbose = TRUE)
 }
 \arguments{
   \item{sampleID}{
@@ -33,5 +33,7 @@ be generated.
 }
 \details{
 Runs any optional secondary processing steps after the main alignment pipeline is
-finished.   Currently, the only optional step is 'NoHits-Analysis'.
+finished.   Currently, the only optional step is the investigation of the the 'NoHit' reads 
+to see what unexpected organisms, etc., remain in the raw FASTQ files after alignment.
+See option \code{investigate.NoHits} and function \code{\link{pipe.CR_Investigate}}.
 }

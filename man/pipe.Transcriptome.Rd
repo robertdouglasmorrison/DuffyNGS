@@ -1,16 +1,16 @@
 \name{pipe.Transcriptome}
 \alias{pipe.Transcriptome}
 \title{
-Turn Alignments into Wiggle Tracks and Transcriptome.
+Turn Alignments into Wiggle Tracks and Transcriptomes.
 }
 \description{
 Pipeline step that generates transcriptomes of gene expression levels for one sample.
-The alignment BAM files are converted to strand specific and unique/multi-hit wiggle 
+The alignment BAM files are converted to (optionally) strand specific and unique/multi-hit wiggle 
 tracks, and then read pileup depth is measured for all genes in all target species.
 }
 \usage{
 pipe.Transcriptome( sampleID, annotationFile = "Annotation.txt", optionsFile = "Options.txt", 
-	speciesID = NULL, results.path = NULL, dataType = NULL, altGeneMap = NULL, i
+	speciesID = NULL, results.path = NULL, dataType = NULL, altGeneMap = NULL, 
 	altGeneMapLabel = NULL, loadWIG = FALSE, verbose = TRUE, mode = "normal", exonsOnly = NULL)
 }
 \arguments{
@@ -47,12 +47,14 @@ that has the gene names and locations to be measured for read pileup depth.  By 
 standard built-in gene map for each species.
 }
   \item{altGeneMapLabel}{
-A character string identifier for the alternate gene map, that becomes part of all created file names
+A character string identifier for the alternate gene map, that becomes part of all created path and file names
 to indicate the gene map that produced those transcriptomes.
 }
   \item{loadWIG}{
 Logical, should all wiggle track data structures be rebuilt from the alignment BAM files.  By default,
-the wiggle files are only created if they do not yet exist for this sample.
+the wiggle files are only created if they do not yet exist for this sample.  Incorrect read sense of strand 
+specific reads can be fixed by updating the annotation field and then rerunning just this pipeline step 
+with \code{loadWIG=TRUE}.
 }
   \item{verbose}{
 Logical, send progress information to standard out.

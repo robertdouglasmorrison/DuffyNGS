@@ -679,7 +679,7 @@ int bgzf_check_EOF(BGZF *fp)
 #else
 	offset = ftello(fp->file);
 	if (fseeko(fp->file, -28, SEEK_END) != 0) return -1;
-	fread(buf, 1, 28, fp->file);
+	int n = fread(buf, 1, 28, fp->file);
 	fseeko(fp->file, offset, SEEK_SET);
 #endif
 	return (memcmp(magic, buf, 28) == 0)? 1 : 0;

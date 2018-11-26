@@ -118,6 +118,7 @@ SEXP bam_range_get_cigar_string(SEXP pRange);
 SEXP bam_range_is_unmapped(SEXP pRange);
 SEXP bam_range_mate_is_unmapped(SEXP pRange);
 SEXP bam_range_is_secondary_align(SEXP pRange);
+SEXP bam_range_is_pcr_or_optical_dup(SEXP pRange);
 SEXP bam_range_get_cigar_df(SEXP pRange, SEXP readUnits);
 SEXP bam_range_get_mismatch_df(SEXP pRange, SEXP readUnits);
 SEXP bam_range_get_mate_refid(SEXP pRange);

@@ -41,8 +41,16 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 		gmap <- gmap2
 	}
 	if ( nrow( gmap) < 1) {
-		cat( "\nNo gene found at:  ", seqID, position, geneID, "  Skipping plot...")
-		return()
+		#cat( "\nNo gene found at:  ", seqID, position, geneID, "  Skipping plot...")
+		#return()
+		# find whatever row is closest
+		fullGeneMap <- getCurrentGeneMap()
+		dStarts <- abs( position - fullGeneMap$POSITION)
+		dStops <- abs( position - fullGeneMap$END)
+		bestStart <- which.min( dStarts)
+		bestStop <- which.min( dStops)
+		gmap <- fullGeneMap[ bestStart, ]
+		if ( dStops[bestStop] < dStarts[bestStart]) gmap <- fullGeneMap[ bestStop, ]
 	}
 	if ( nrow( gmap) > 1) {
 		bestOne <- which.min( gmap$N_EXON_BASES)

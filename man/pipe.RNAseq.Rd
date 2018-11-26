@@ -1,19 +1,21 @@
 \name{pipe.RNAseq}
 \alias{pipe.RNAseq}
-\alias{pipe.ChIPseq}
 \alias{pipe.DNAseq}
+\alias{pipe.ChIPseq}
+\alias{pipe.RIPseq}
 \alias{pipeline}
 \title{
 DuffyNGS Pipelines
 }
 \description{
-The top level all-in-one function for turning raw RNA-seq FASTQ files into
+The top level all-in-one function for turning raw FASTQ files into
 wiggle tracks, transcriptomes, etc.
 }
 \usage{
 pipe.RNAseq(  sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
-pipe.ChIPseq( sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
 pipe.DNAseq(  sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
+pipe.ChIPseq( sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
+pipe.RIPseq( sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
 
 pipeline( sampleID = NULL, annotationFile = "Annotation.txt", optionsFile = "Options.txt")
 }
@@ -45,7 +47,7 @@ cleanup of any previous files) prior to running the pipeline on this sample.
 \code{\link{pipe.Alignment}} Alignment.  Turn FASTQ data into the various types of
 alignments via the Bowtie2 alignment program.
 
-\code{\link{pipe.Transcript}} Transcription (if RNA-seq data) or ChIP Peaks (if ChIP-seq data).  
+\code{\link{pipe.Transcriptome}} Transcription (if RNA-seq data) or ChIP Peaks (if ChIP-seq data).  
 Turn alignments into wiggle tracks, and then generate transcriptome(s) or ChIP peak calls for all target species.
 
 \code{\link{pipe.PostAlignTasks}} Optional post-alignment tasks, such as de novo assembly of 

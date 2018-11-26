@@ -1,17 +1,25 @@
-\name{pipe.RNAalignment}
+\name{pipe.Alignment}
 \alias{pipe.RNAalignment}
-\title{ Alignment Stage of DuffyNGS Pipeline for RNA-seq Data }
+\alias{pipe.DNAalignment}
+\alias{pipe.ChIPalignment}
+\alias{pipe.RIPalignment}
+\title{ Alignment Stage of DuffyNGS Pipeline workflow.}
 \description{
-Turn a FASTQ file(s) of raw reads into RiboCleared, Genomic, and SpliceJunction alignments.
-Encapsulates a 3 stage Bowtie alignment protocol for RNA-seq data, to turn raw reads
-into alignments.  First, a RiboClearing stage to remove ribosomal RNA and other
-high expression unwanted transcripts. Next a genomic alignment stage to
-capture the reads of interest matching the target genome(s). Lastly, a splice alignment
-stage to capture reads spanning known splice junctions.  RiboClearing and splice
-junction stages are optional steps.
+Turn FASTQ file(s) of raw reads into RiboCleared, Genomic, and SpliceJunction alignments.
+Encapsulates a 3 stage Bowtie alignment protocol for NGS data, to turn raw reads
+into alignments.  First, an optional RiboClearing stage to remove ribosomal RNA and other
+high expression unwanted transcripts. Next the main genomic alignment stage to
+capture the reads of interest matching the target genome(s). Lastly, an optional splice alignment
+stage to capture reads spanning known splice junctions.  
 }
 \usage{
 pipe.RNAalignment(sampleID = NULL, annotationFile = "Annotation.txt", 
+	optionsFile = "Options.txt", verbose = TRUE)
+pipe.DNAalignment(sampleID = NULL, annotationFile = "Annotation.txt", 
+	optionsFile = "Options.txt", verbose = TRUE)
+pipe.ChIPalignment(sampleID = NULL, annotationFile = "Annotation.txt", 
+	optionsFile = "Options.txt", verbose = TRUE)
+pipe.RIPalignment(sampleID = NULL, annotationFile = "Annotation.txt", 
 	optionsFile = "Options.txt", verbose = TRUE)
 }
 \arguments{
@@ -32,10 +40,10 @@ parameters that are not sample specific.  See \code{\link{DuffyNGS_Options}}.
 }
 }
 \details{
-Turn FASTQ file(s) of raw reads into 3 groups of alignments and 2 groups of
-unaligned reads.  Details affecting alignment indexes and Bowtie2 parameters
+Turn FASTQ file(s) of raw reads into 3 groups of alignments and a final group of 'NoHits'
+unaligned reads.  Details affecting choice of alignment indexes and Bowtie2 runtime parameters
 are set in the \code{\link{DuffyNGS_Options}} file.
-Main components:
+Main pipeline components:
 
 \code{\link{pipe.RiboClear}} Ribo clearing against an index of unwanted
 transcripts.
@@ -58,8 +66,6 @@ Also, a list of alignment counts:
   \item{nRibo}{ the number of reads that aligned to the RiboClearing stage}
   \item{nGenomic}{ the number of reads that aligned to the Genomic stage of the alignment pipeline}
   \item{nSplice}{ the number of reads that aligned to the SpliceJunction stage of the alignment pipeline}
-
-Note that in the case of paired end reads, the alignment counts returned are just for the second pairs.
 }
 \author{
 Bob Morrison
