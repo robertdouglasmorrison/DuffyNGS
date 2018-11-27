@@ -55,8 +55,8 @@ For \code{getBowtie2Version()}, the current version of Bowtie2 as a character st
 \seealso{
   \code{\link{fastqToBAM}} for a higher level wrapper to calling Bowtie
   \code{\link{buildBowtie2CommandLine}} for the utility that constructs valid Bowtie2 command lines.
-  \code{\link{callBowtie2}} for envoking the Bowtie2 alignment program.
+  \code{\link{callBowtie2}} for invoking the Bowtie2 alignment program.
   \code{\link{buildBowtie2BuildCommandLine}} for the utility that constructs valid Bowtie2-build command lines.
-  \code{\link{callBowtie2Build}} for envoking the Bowtie2-build index creation program.
+  \code{\link{callBowtie2Build}} for invoking the Bowtie2-build index creation program.
 }
 
