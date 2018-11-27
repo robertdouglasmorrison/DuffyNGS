@@ -30,12 +30,11 @@ Optional character string of one GeneID.
   \item{seqID}{
 Optional character string of one SeqID.  Required explicitily for the low level function.
 }
-  \item{start}{
-Optional integer of a starting nucleotide.
-}
+  \item{start}{}
   \item{stop}{
-Optional integer of a stopping nucleotide.
-Note that any valid combination of the above that is sufficient to define a region of a chromosome is allowed.
+Optional integer for the starting and stopping nucleotide location.  Note that any valid 
+combination of the above that is sufficient to define a region of a chromosome is allowed.
+For example, a GeneID alone also implies its SeqID, start, and stop.
 }
   \item{annotationFile}{
 the file of sample annotation details, which specifies all needed 
@@ -50,9 +49,10 @@ parameters that are not sample specific.  See \code{\link{DuffyNGS_Options}}.
 The top level folder where all results have been written to. Default is taken from the options file.
 }
   \item{summarize.calls}{
-Logical.  Controls whether the very low level details of the base calls at each nucleotide are summarized
-into tabular form.  FALSE leaves the raw large cryptic strings as made by SAMTOOLS.  When TRUE, they are 
-converted into a short text string count summary of A/C/G/T/Indels.
+Logical.  Controls whether the very low level details of the base calls at each nucleotide 
+location are summarized into tabular form.  FALSE leaves the raw large cryptic strings as 
+made by SAMTOOLS MPILEUP.  When TRUE, they are summarized into a consensus base call and a 
+short text string count summary of A/C/G/T/Indel calls.
 }
   \item{fastaFile}{
 Full pathname to the genomic DNA FASTA file that made the Bowtie index that the BAM file was aligned against.
@@ -63,7 +63,7 @@ Full pathname to the genomic DNA FASTA file that made the Bowtie index that the 
 Bounds passed to SAMTOOLS MPILEUP, to control how it performs and reports its assessment of the BAM file.
 }
   \item{mpileupArgs}{
-Other optional arguments to pass to SAMTOOLS MPILEUP.
+Other optional arguments passed to SAMTOOLS MPILEUP.
 }
 }
 \details{
@@ -77,9 +77,9 @@ Only base locations with 1+ read of coverage are returned, so there can be gaps 
 Columns include:
   \item{SEQ_ID}{ chromosome name as a character string}
   \item{POSITION}{ chromosome location as an integer}
-  \item{REF_BASE}{ the expected base call of the reference genome}
+  \item{REF_BASE}{ the expected base call from the reference genome}
   \item{DEPTH}{ the depth of coverage at this position, as an integer}
-  \item{CALL_BASE}{ when summarize is TRUE, the one base that was most frequently observed.
+  \item{CALL_BASE}{ when summarize is TRUE, the one consensus base that was most frequently observed.
   If FALSE, the the full cryptic string of base calls as made by MPILEUP}
   \item{CALL_SCORE}{ only when summarize is FALSE, the full cryptic string of Phred quality scores}
   \item{BASE_TABLE}{ only when summarize is TRUE, the short sorted table of observed base counts}
@@ -93,4 +93,7 @@ Bob Morrison
 \note{
 Note that the high level function only operates on a single sample.  While the low level function can
 be given a vector of BAM files, and then returns depth and call details for multiple files at one time.
+}
+\seealso{
+For various low level functions that manipulate the MPILEUP calls, see \code{\link{MPU.callBases}}.
 }

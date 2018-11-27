@@ -343,14 +343,14 @@ MPU.callStringsToMatrix <- function( callStrings) {
 }	
 	
 
-`MPU.callMatrixToBaseCounts` <- function( m, ref, indelsToo=FALSE, normalize=FALSE) {
+`MPU.callMatrixToBaseCounts` <- function( m, referenceBase, indelsToo=FALSE, normalize=FALSE) {
 
 	# given a matrix of base counts with column names ", A C G T N Indel", turn it to just A,C,G,T
 
 	# step 1: extract the main part for the answer
 	if (indelsToo) {
 		out <- m[ , c(2:5,7), drop=FALSE]
-		ignore <- m[ ,7, drop=FALSE]
+		ignore <- m[ ,6, drop=FALSE]
 		Nout <- 5
 	} else {
 		out <- m[ , 2:5, drop=FALSE]
@@ -359,13 +359,13 @@ MPU.callStringsToMatrix <- function( callStrings) {
 	}
 
 	# step 2: assign the 'genomic' to the right column
-	isA <- which( ref == "A")
+	isA <- which( referenceBase == "A")
 	if ( length(isA)) out[ isA, 1] <- m[ isA, 1]
-	isC <- which( ref == "C")
+	isC <- which( referenceBase == "C")
 	if ( length(isC)) out[ isC, 2] <- m[ isC, 1]
-	isG <- which( ref == "G")
+	isG <- which( referenceBase == "G")
 	if ( length(isG)) out[ isG, 3] <- m[ isG, 1]
-	isT <- which( ref == "T")
+	isT <- which( referenceBase == "T")
 	if ( length(isT)) out[ isT, 4] <- m[ isT, 1]
 
 	# step 3:  normalize?
