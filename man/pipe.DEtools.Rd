@@ -167,9 +167,9 @@ Bob Morrison
   \code{\link{pipe.MetaResults}} {for dispatching all DE tools and merging their results.}
 }
 \references{
-  \item{DESeq}{Anders,  Genome Biology (2010)}
-  \item{EdgeR}{Robinson,  Biostatistics (2008)}
-  \item{RankProduct}{Breitling,  FEBS Letters (2004)}
-  \item{RoundRobin}{Morrison (unpublished)}
-  \item{SAM}{Tusher,  PNAS (2001)}
+  DESeq:   Anders,  Genome Biology (2010)
+  EdgeR:   Robinson,  Biostatistics (2008)
+  RankProduct:   Breitling,  FEBS Letters (2004)
+  RoundRobin:   Morrison (unpublished)
+  SAM:   Tusher,  PNAS (2001)
 }

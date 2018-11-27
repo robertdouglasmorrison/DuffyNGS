@@ -144,7 +144,7 @@ For each group name, a set of DE result files in various formats:
   \item{UP.txt}{}
   \item{DOWN.txt}{Tab delimited files of all genes in the species, sorted by average fold-change,
   average P-value, and average rank, across all the DE tooks, and includes extra columns showing the actual
-  gene rank position in each DE tool.
+  gene rank position in each DE tool.}
   \item{UP.html }{}
   \item{DOWN.html }{A pair of HTML files of gene expression showing just the top \code{Ngenes} genes
   that are most differentially expressed for that comparison group.}

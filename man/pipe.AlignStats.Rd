@@ -50,13 +50,19 @@ behavior for preliminary QC analysis.  See \code{\link{pipe.QuickQC}}.
 }
   \item{what}{
 An optional character string that specifies which types of statistics to monitor.  Default is to
-monitor every type of feature, or "SGBIDMA" where
-    \item{S}{ Sequences: features about chromosome, like read counts and percentages.}
-    \item{G}{ Genes: features about genes, like read counts and percentages for highly detected genes.}
-    \item{B}{ Bases: features about base calls, locations of mismatches, and nucleotide usage.}
-    \item{I,D}{ Insertions & Deletions:  features about indel locations in the aligned reads.}
-    \item{M}{ MARs (Multiply Aligned Reads): features about reads hitting 2+ locations.}
-    \item{A}{ Align scores: features about the distribution of Bowtie alignment scores.}
+monitor every type of feature, or "SGBIDMA" where:
+
+    S:  Sequences: features about chromosome, like read counts and percentages.
+
+    G:  Genes: features about genes, like read counts and percentages for highly detected genes.
+
+    B:  Bases: features about base calls, locations of mismatches, and nucleotide usage.
+
+    I,D:  Insertions & Deletions:  features about indel locations in the aligned reads.
+
+    M:  MARs (Multiply Aligned Reads): features about reads hitting 2+ locations.
+
+    A:  Align scores: features about the distribution of Bowtie alignment scores.
 }
   \item{fastqFile}{
 Optional character string for the original FASTQ file that was input to the alignment pipeline.
