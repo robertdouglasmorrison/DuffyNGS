@@ -39,7 +39,7 @@ parameters that are not sample specific.  See \code{\link{DuffyNGS_Options}}.
 \details{
 Turn raw sequencing reads into final results for that type of data, building various files of results along
 the way.  \code{pipeline} is a wrapper function that looks at the annotation field \code{DataType} to dispatch
-the correct pipeline tool.  Main components:
+the correct pipeline tool.  Main components common to all data types include:
 
 \code{\link{pipe.PreAlignTasks}} Setup.  Create the results directories (and 
 cleanup of any previous files) prior to running the pipeline on this sample.
@@ -53,8 +53,8 @@ Turn alignments into wiggle tracks, and then generate transcriptome(s) or ChIP p
 \code{\link{pipe.PostAlignTasks}} Optional post-alignment tasks, such as de novo assembly of 
 No-Hit reads.
 
-For a typical dataset, this pipeline can take many hours and is usually configured as a batch job
-submitted to a compute cluster.
+For a typical dataset, this top levelpipeline can take many hours to complete, and is 
+usually configured to be run as a batch job submitted to a compute cluster.
 }
 \value{
 a family of data files written to disk, and a text log of all details sent to standard out.  

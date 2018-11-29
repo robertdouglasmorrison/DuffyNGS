@@ -1,12 +1,12 @@
 \name{pipe.MetaResults}
 \alias{pipe.MetaResults}
 \title{
-Dispatch and Merge Multiple Differential Expression Tool Results.
+Dispatch Multiple Differential Expression Tools and then Merge Results.
 }
 \description{
 Top level wrapper function to call a family of published DE tools, that each find significant
-differentially expressed genes between groups of samples, and the combine and merge all
-separate DE results into one Meta Result.
+differentially expressed genes between groups of samples, and then after all DE tools complete,
+combine and merge all separate DE results into one folder of Meta Results.
 }
 \usage{
 pipe.MetaResults(sampleIDset, speciesID = getCurrentSpecies(), annotationFile = "Annotation.txt", 

@@ -121,7 +121,7 @@
 }
 
 
-`BAM.mpileup` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, min.depth=3, max.depth=10000,
+`BAM.mpileup` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, min.depth=1, max.depth=10000,
 			min.gap.fraction=0.25, mpileupArgs="", summarize.calls=FALSE, verbose=TRUE) {
 
 	if ( ! file.exists( fastaFile)) {
@@ -204,7 +204,7 @@
 
 
 `BAM.variantCalls` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, 
-				prob.variant=0.5, min.depth=3, max.depth=10000, min.gap.fraction=0.25,
+				prob.variant=0.5, min.depth=1, max.depth=10000, min.gap.fraction=0.25,
 				mpileupArgs="", vcfArgs="", ploidy=1, geneMap=getCurrentGeneMap(), 
 				snpCallMode=c("all","multiallelic","consensus"), verbose=TRUE) {
 

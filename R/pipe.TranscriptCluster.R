@@ -4,7 +4,7 @@
 
 `pipe.TranscriptCluster` <- function( sampleIDset=NULL, annotationFile="Annotation.txt", 
 		optionsFile="Options.txt", results.path=NULL, speciesID=getCurrentSpecies(),
-		intensityColumn="RPKM_M", useLog=TRUE, label="") {
+		intensityColumn="RPKM_M", useLog=FALSE, label="") {
 
 
 	require( cluster)

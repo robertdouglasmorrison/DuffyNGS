@@ -108,6 +108,11 @@ generates several files of RIP peak results.
 The algorithm was written and tuned for the transcription factor induction data from 
 the ISB's Baliga lab for M.tuberculosis.  It may need some retuning for
 other genomes and/or sequencing data variabilities.
+
+This function operates on a single sample.  In a typical experiment, there will be multiple 
+samples that need to be evaluated as a set.  See \code{\link{pipe.RIPpeaksToAltGeneMap}} for
+combining RIP peaks from multiple samples into one set of features to be interogated for differential
+expression abundance.
 }
 \value{
 A family of files are written to this sample's subfolder in the 'RIPpeaks' folder of results.
@@ -140,4 +145,6 @@ Bob Morrison
 \seealso{
   \code{\link{calcWigRIPpeaks}} for the intermediate level implementation, and
   \code{\link{findRIPpeaks}} for the low level single strand read pileup depth peak pick tool.
+  \code{\link{pipe.RIPpeaksToAltGeneMap}} for the next step of joining peak sites into gene features for
+  differential detection.
 }

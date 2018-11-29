@@ -3,7 +3,7 @@
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.5,
-				snpCallMode=c("consensus","all","multiallelic"), min.depth=5,
+				snpCallMode=c("consensus","all","multiallelic"), min.depth=1,
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
 
 	# get needed paths, etc. from the options file

@@ -22,6 +22,8 @@ pipe.ChIPalignment(sampleID = NULL, annotationFile = "Annotation.txt",
 	optionsFile = "Options.txt", verbose = TRUE)
 pipe.RIPalignment(sampleID = NULL, annotationFile = "Annotation.txt", 
 	optionsFile = "Options.txt", verbose = TRUE)
+pipe.Alignment(sampleID = NULL, annotationFile = "Annotation.txt", 
+	optionsFile = "Options.txt", verbose = TRUE)
 }
 \arguments{
   \item{sampleID}{

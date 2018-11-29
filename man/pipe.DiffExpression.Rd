@@ -62,7 +62,7 @@ the ratios folder get created.
 }
 }
 \details{
-This pipe is perhaps slightly misnamed, in that it only does mnay simple 2-sample comparisons, to create 
+This pipe is perhaps slightly misnamed, in that it only does many simple 2-sample comparisons, to create 
 the ratio files needed by the Round Robin pipe, the oldest and originally only DE tool in the DuffyNGS suite.
 True group-wise differential expression pipes are mentioned below.
 }
@@ -74,12 +74,12 @@ expression comparison between transcriptomes from 2 different group categories.
 Bob Morrison
 }
 \seealso{
-  \code{\link{pipe.DESeq}} {}
-  \code{\link{pipe.EdgeR}} {}
-  \code{\link{pipe.RankProduct}} {}
-  \code{\link{pipe.RoundRobin}} {}
+  \code{\link{pipe.DESeq}} { }
+  \code{\link{pipe.EdgeR}} { }
+  \code{\link{pipe.RankProduct}} { }
+  \code{\link{pipe.RoundRobin}} { }
   \code{\link{pipe.SAM}} { for the 5 separate Differential Expression tools that do group versus group
   comparisons.}
 
-  \code{\link{pipe.MetaResuts}} { for the dispatching and final merging & averaging of all 5 DE tools.}
+  \code{\link{pipe.MetaResults}} { for the dispatching and final merging & averaging of all 5 DE tools.}
 }

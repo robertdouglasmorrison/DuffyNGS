@@ -153,7 +153,7 @@ For each group name, a set of DE result files in various formats:
   includes all DE metrics returned by that DE tool.}
   \item{UP.html }{}
   \item{DOWN.html }{A pair of HTML files of gene expression showing just the top \code{Ngenes} genes
-  that are most differentially expressed for that comparison group.}
+  that are most differentially expressed for that comparison group and direction.}
   \item{All.GeneData.txt}{A tab delimited matrix file of all genes in the species, giving the expression
   values used by that DE tool (RPKM for some, READ counts for DESeq & EdgeR).}
   \item{Cluster & PCA}{A set of .PNG plots that visually summarize the similarity of the transcriptsomes.
@@ -167,9 +167,11 @@ Bob Morrison
   \code{\link{pipe.MetaResults}} {for dispatching all DE tools and merging their results.}
 }
 \references{
-  DESeq:   Anders,  Genome Biology (2010)
-  EdgeR:   Robinson,  Biostatistics (2008)
-  RankProduct:   Breitling,  FEBS Letters (2004)
-  RoundRobin:   Morrison (unpublished)
-  SAM:   Tusher,  PNAS (2001)
+  \preformatted{
+  DESeq:       Anders,  Genome Biology (2010)
+  EdgeR:       Robinson,  Biostatistics (2008)
+  RankProduct: Breitling,  FEBS Letters (2004)
+  RoundRobin:  Morrison (unpublished)
+  SAM:         Tusher,  PNAS (2001)
+  }
 }
