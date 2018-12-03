@@ -12,7 +12,8 @@
 Utilities for Manipulating BAM Files.
 }
 \description{
-A variety of functions for operating on BAM files, as may be needed by various SAMTOOLS utilities.
+A variety of functions for operating on BAM and SAM files, as may be needed by various 
+DuffyNGS pipeline tools or SAMTOOLS utilities.
 }
 \usage{
 BAM.sort(file, what = c("position", "readID"), index = TRUE, memory = 2.147e+09, threads = 2, verbose = TRUE)
@@ -26,7 +27,7 @@ SAM2BAM(file, verbose = TRUE, delete.SAM = TRUE)
 }
 \arguments{
   \item{file, files}{
-Character string full pathname of one existing SAM file.  Or a character vector of 2+ SAM files.
+Character string full pathname of one existing BAM file.  Or a character vector of 2+ BAM files.
 }
   \item{what}{
 Character vector of named fields in the BAM file to do the sorting on.
@@ -47,18 +48,18 @@ Filename for the newly created BAM file.
 Character string of a single field in the BAM file, to be the value that gets inspected.
 }
   \item{chunkSize}{
-Numeric buffer size, number of alignments to read into memory at a time.
+Numeric buffer size, number of BAM file alignments to read into memory at a time.
 }
   \item{maxReads}{
-Numeric, maximum number of alignments to inspect.
+Numeric, maximum number of BAM file alignments to inspect.
 }
   \item{path}{
 Character string of a top level results folder, that contains various alignment pipeline result subfolders.
 }
 }
 \details{
-These utility functions are designed to do typical error checking about file existance, etc., so higher
-level pipeline tools don't have to.  Most are just simple wrappers around SAMTOOLS functions.
+These utility functions are designed to do typical error checking about file existence, etc., so higher
+level pipeline tools don't have to.  Most are just simple wrappers around system calls to SAMTOOLS functions.
 }
 \value{
 For \code{BAM.sort}, when successful, the filename of the created sorted BAM file.
