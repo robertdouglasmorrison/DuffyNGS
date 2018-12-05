@@ -10,8 +10,9 @@ and optionally save them as PNG images.
 \usage{
 pipe.PlotGene(sampleIDs, genes, annotationFile = "Annotation.txt", 
 	optionsFile = "Options.txt", results.path = NULL, targetID = NULL, colorColumn = "Color",
-	plotFormat = c( "", "png", "pdf"), plot.path = "Gene_Plots", keepShortGeneName = NULL, 
-	pileup.col=c(4,2,1), png.width=1000, png.height=700, pdf.width=10, pdf.height=7, ...)
+	PLOT.FUN = NULL, plotFormat = c( "", "png", "pdf"), plot.path = "Gene_Plots", 
+	keepShortGeneName = NULL, pileup.col=c(4,2,1), png.width=1000, png.height=700, 
+	pdf.width=10, pdf.height=7, ...)
 }
 \arguments{
   \item{sampleIDs}{
@@ -34,8 +35,9 @@ optionally specify the current target organism(s).  Affects the display of genom
 detectability on default read pileup plots.
 }
   \item{PLOT.FUN}{
-Optional function to call for generating the gene expression plot.  By default, call either
-\code{\link{plotWIGgene}} or \code{\link{plotMultiWIGgene}} depending on the number of SampleIDs.
+Optional function to call for generating the gene expression plot.  By default, calls the standard 
+read pileups functions, either \code{\link{plotWIGgene}} or \code{\link{plotMultiWIGgene}} depending 
+on the number of SampleIDs.
 }
   \item{plotFormat}{
 Controls the plotting behaviour.  Default is to write to the current graphics device. Optionally 
@@ -46,7 +48,7 @@ Folder to write PNG or PDF image files to.
 }
   \item{keepShortGeneName}{
 When not NULL, an integer value passed to \code{\link{shortGeneName}} to trim the image 
-filename down to a shortened version of the gene name.
+filename down to a shortened version of the full GeneID name.
 }
   \item{pileup.col}{
 a vector of 3 colors, for drawing of forward strand, reverse strand, and "combo strand" colors, respectively. 
@@ -69,4 +71,8 @@ The default behavoir of showing full read pileup images for many samples at one 
 memory and time.  When the number of samples gets large, consider providing a simpler plot function 
 based on some other display metric such as RPKM expression values.  Secondly, the pileup images are 
 not ideal for quantitative comparisons. 
+}
+\seealso{
+  \code{\link{pipe.PlotSNP}} for aligned read plot images that examine the base call distributions around possible
+  SNP locations at single nucleotide resolution.
 }

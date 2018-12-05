@@ -1,7 +1,8 @@
 # pipe.PlotSNP.R
 
-`pipe.PlotSNP` <- function( sampleIDs, seqID, position, geneID=NULL, tailWidth=50, groups=sampleIDs,
-				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL, 
+`pipe.PlotSNP` <- function( sampleIDs, seqID, position, geneID=NULL, groups=sampleIDs,
+				annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				results.path=NULL, tailWidth=NULL, 
 				plotFormat=c("","png","pdf"), plotFileName=NULL, plot.path="SNP_Plots", 
 				label="", SNPtablePath="~/SNPs/", mf=NULL, start=NULL, stop=NULL, 
 				verbose=TRUE, ...) {
@@ -49,6 +50,13 @@
 	doMultiSample <- ( length( doSamples) > 1)
 	doMultiPosition <- ( length( position) > 1)
 
+	# allow auto guess of how wide a tail to use
+	if ( is.null( tailWidth)) {
+		nplots <- max( length(doSamples), length(positions))
+		tailWidth <- max( 3, round( 100 / nPlots))
+	}
+
+	# pre-get the gene map and geneID if we can
 	if ( ! doMultiPosition) {
 		if ( is.null( geneID)) {
 			gmap <- subset.data.frame( geneMap, SEQ_ID == seqID & position >= POSITION & position <= END)

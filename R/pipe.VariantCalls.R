@@ -686,7 +686,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 }
 
 
-`snpVariantsOnly` <- function( tbl, mode=c("compare", "single"), min.depth=5) {
+`snpVariantsOnly` <- function( tbl, mode=c("compare", "single"), min.depth=1) {
 
 	mode <- match.arg( mode)
 	if ( nrow(tbl) < 1) return( tbl)
@@ -865,7 +865,7 @@ VCF.TotalDepth <- function( info) {
 
 `pipe.VariantTable` <- function( sampleIDset, seqID, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				min.depth=3, mpileupArgs="", 
+				min.depth=1, mpileupArgs="", 
 				explicit.reference=TRUE, call.mode=c("percents","counts"), findVariants=TRUE) {
 
 	# get needed paths, etc. from the options file
@@ -1035,7 +1035,7 @@ VCF.TotalDepth <- function( info) {
 
 `pipe.VariantMerge` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				min.qual=5,  min.depth=5, min.score=40, dropDuplicates=FALSE, 
+				min.qual=5,  min.depth=1, min.score=40, dropDuplicates=FALSE, 
 				dropIndels=FALSE, verbose=TRUE, outfile=NULL) {
 
 	# get needed paths, etc. from the options file

@@ -4,6 +4,7 @@
 
 `pipe.DNAseq` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt") {
 
+	checkSampleName( sampleID)
 	target <- getAndSetTarget( optionsFile, sampleID=sampleID, annotationFile=annotationFile)
 
 	# note the time we start
