@@ -587,7 +587,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		# penalize when some groups are too low depth
 		pctTooLow <- (min.depth - gDepth) / min.depth
 		pctTooLow[ pctTooLow <= 0] <- 0
-		if ( any( pctTooLow)) {
+		if ( any( pctTooLow > 0)) {
 			penalty <- mean( pctTooLow, na.rm=T)
 			delta <- delta * ( 1 - penalty)
 		}

@@ -22,9 +22,11 @@ BAM.variantCalls(files, seqID, fastaFile, start = NULL, stop = NULL, prob.varian
 }
 \arguments{
   \item{sampleIDset}{
-Vector of SampleIDs to call SNPs for.  Note that the SAMTOOLS methods are quite different for
-a single sample versus multiple BAM files at one time.  Most always called on a single sample
-at a time.
+Vector of SampleIDs to call SNPs for.  Note that the underlying BCFTOOLS variant calling 
+methods are quite different when given
+a single sample versus multiple BAM files at one time.  Most consistent and reliable results
+are had when the function is called on a single sample at a time, and then merging all SNP calls
+after the fact.
 }
   \item{files}{
 Character vector of full pathname BAM files.
@@ -39,15 +41,14 @@ File of processing options, which specifies all processing
 parameters that are not sample specific.  See \code{\link{DuffyNGS_Options}}.
 }
   \item{speciesID}{
-The SpeciesID of the target species to calculate a transcriptome for.  By default, transcriptome 
-for all species in the current target are generated.
+The SpeciesID of the target species to call SNPs for.  By default, use the current species.
 }
   \item{results.path}{
 The top level folder path for writing result files to.  By default, read from the Options 
 file entry 'results.path'.
 }
   \item{seqIDset}{
-Optional character vector of SeqIDs. Default is to call all chromosome, in parallel if possible.
+Optional character vector of SeqIDs. Default is to call SNPs for all chromosome, in parallel if possible.
 }
   \item{seqID}{
 Character string of a single SeqID, that must exist as a named contig in the FASTA file.
@@ -112,6 +113,9 @@ For \code{BAM.variantCalls}, a data frame, as in the chromosomal \code{.VCF.txt}
 Bob Morrison
 }
 \seealso{
+  \code{\link{pipe.VariantSummary}} {for joining all chromosome SNP results into a single file for
+  one sample, with optional cleaning/filtering.}
+  
   \code{\link{pipe.VariantComparison}} {for finding SNPs that are diffentially detected between groups.}
 }
 \note{
