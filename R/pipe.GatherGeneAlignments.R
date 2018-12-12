@@ -159,7 +159,7 @@
 			if (verbose) cat( "\nDropping redundant MAR alignments from FASTQ: ", length(dups))
 			fqDF <- fqDF[ -dups, ]
 		}
-		writeFastqFile( fqDF, outfile, compress=T)
+		writeFastq( fqDF, outfile, compress=T)
 		return( nrow(fqDF))
 	} else {
 		return( out)
@@ -283,7 +283,7 @@
 			if (verbose) cat( "\nDropping redundant MAR alignments from FASTQ: ", length(dups))
 			fqDF <- fqDF[ -dups, ]
 		}
-		writeFastqFile( fqDF, outfile, compress=T)
+		writeFastq( fqDF, outfile, compress=T)
 		return( nrow(fqDF))
 	} else {
 		return( out)

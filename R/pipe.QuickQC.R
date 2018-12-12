@@ -123,17 +123,22 @@
 	riboIndex <- getOptionValue( optTbl, "RiboIndex", notfound="Pf.RiboClear_idx")
 	riboPolicy <- getOptionValue( optTbl, "RiboAlignmentPolicy", notfound=" ")
 	riboMap <- getOptionValue( optTbl, "RiboMap", notfound="Pf.RiboMap.txt")
-	if ( nchar(riboMap) < 4) {
-		cat( "\nError:  option 'RiboMap' is not a valid filename")
-		stop( "Failed to convert ribo cleared alignments..")
-	}
-	riboMap <- file.path( indexPath, riboMap)
 	spliceIndex <- getOptionValue( optTbl, "SpliceIndex", notfound="Pf.SpliceClear_idx")
 	splicePolicy <- getOptionValue( optTbl, "SpliceAlignmentPolicy", notfound=" ")
 	spliceMapPrefix <- getOptionValue( optTbl, "SpliceMapPrefix", notfound="spliceMap")
 
 	# do a ribo clear step
 	if ( dataType %in% c("RNA-seq","RIP-seq") && riboIndex != "") {
+
+		if ( nchar(riboMap) < 4) {
+			cat( "\nError:  option 'RiboMap' is not a valid filename")
+			stop( "pipe.QuickQC is aborting..")
+		}
+		riboMap <- file.path( indexPath, riboMap)
+		if ( ! file.exists(riboMap)) {
+			cat( "\nError:  option 'RiboMap' file not found.  Tried: ", riboMap)
+			stop( "pipe.QuickQC is aborting..")
+		}
 
 		cat( verboseOutputDivider, "\nPre-Alignment against Ribo Clearing Index...\n")
 		ans <- fastqToBAM( filein, riboFile, sampleID=sample, k=5,

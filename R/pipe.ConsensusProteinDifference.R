@@ -73,7 +73,7 @@
 		mafftAns <- mafft( fastaInFile, alnOutFile, mode="global", outfmt="clustal", verbose=FALSE)
 	} else {
 		cat( "\nReading Previous MAFFT result..")
-		mafftAns <- readALNfile( alnOutFile, verbose=F)
+		mafftAns <- readALN( alnOutFile, verbose=F)
 	}
 	bigAAmatrix <- mafftAns$alignment
 	rownames(bigAAmatrix) <- sampleSet

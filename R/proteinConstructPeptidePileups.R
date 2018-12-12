@@ -301,7 +301,9 @@
 			# OK, try the other 2 reading frames too
 			# with new first pass of 'matchPDict()', the peptides in 'chunk' got reduced...
 			# just the 'hit2' hits should be removed here...
+			if ( ! length(chunk)) next
 			notHit <- setdiff( 1:length(chunk), hit2)
+			if ( ! length(notHit)) next
 			scoresRF2 <- pairwiseAlignment( chunk[notHit], constructRF2, type='local', scoreOnly=T,
 						gapOpen=-6, gapExt=-3)
 			scoresRF3 <- pairwiseAlignment( chunk[notHit], constructRF3, type='local', scoreOnly=T,
