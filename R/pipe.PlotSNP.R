@@ -52,7 +52,7 @@
 
 	# allow auto guess of how wide a tail to use
 	if ( is.null( tailWidth)) {
-		nplots <- max( length(doSamples), length(positions))
+		nPlots <- max( length(doSamples), length(position))
 		tailWidth <- max( 3, round( 100 / nPlots))
 	}
 

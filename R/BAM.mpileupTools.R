@@ -4,6 +4,19 @@
 GEN_CALL <- ","     # the SAMtools character for 'matches the genome'
 INDEL_CHARS <- c( "+", "-")
 DIGITS <- as.character( 0:9)
+GSUB <- base::gsub
+LAPPLY <- base::lapply
+MATCH <- base::match
+NCHAR <- base::nchar
+ORDER <- base::order
+PASTE <- base::paste
+SAPPLY <- base::sapply
+SORT <- base::sort
+SUBSTR <- base::substr
+TOUPPER <- base::toupper
+UNION <- base::union
+WHICH <- base::which
+WHICH.MAX <- base::which.max
 
 
 # translate the pileup string of base calls into one called base at each genomic location
@@ -24,41 +37,39 @@ MPU.callBases <- function( baseCalls, referenceBase,  minDepth=3, debug=F,
 	# the quality call of the "begin read" flag might be a "$", so find the starts first!
 	# drop the 'begin of read segment' flags
 	if (debug) cat( "  ^beg..")
-	strs <- gsub( "\\^.", "", strs)
+	strs <- GSUB( "\\^.", "", strs)
 
 	# drop the 'end of read segment' flags
 	if (debug) cat( "  $end..")
-	strs <- gsub( "$", "", strs, fixed=T)
+	strs <- GSUB( "$", "", strs, fixed=T)
 
 	# turn all genome hits to forward strand
 	if (debug) cat( "  strand..")
-	strs <- gsub( ".", GEN_CALL, strs, fixed=T)
+	strs <- GSUB( ".", GEN_CALL, strs, fixed=T)
 
 	# turn all mismatches to forward strand
-	strs <- toupper( strs)
+	strs <- TOUPPER( strs)
 
 	# check for indels, that will be much slower/harder
 	if (debug) cat( "  indels..")
-	hasDelete <- which(regexpr( "-", strs, fixed=T) > 0)
-	hasInsert <- which(regexpr( "+", strs, fixed=T) > 0)
-	hasIndel <- sort( union( hasDelete, hasInsert))
+	hasDelete <- WHICH(regexpr( "-", strs, fixed=T) > 0)
+	hasInsert <- WHICH(regexpr( "+", strs, fixed=T) > 0)
+	hasIndel <- SORT( UNION( hasDelete, hasInsert))
 
 	# make the simple call based on what's most common
 	if (debug) cat( "  split..")
 	allbases <- strsplit( strs, split="")
 
 	if (debug) cat( "  count..")
-	mySORT <- base::sort
 	myTABLE <- oneDtable
-	myPASTE <- base::paste
 
-	baseCntsTable <- lapply( allbases, FUN=myTABLE)
+	baseCntsTable <- LAPPLY( allbases, FUN=myTABLE)
 	if ( mode == "percents") {
-		baseCntsTable <- lapply( baseCntsTable, FUN=function(x) round( x * 100 / sum(x)))
+		baseCntsTable <- LAPPLY( baseCntsTable, FUN=function(x) round( x * 100 / sum(x)))
 	}
-	bestbase <- sapply( baseCntsTable, function(tbl) {
+	bestbase <- SAPPLY( baseCntsTable, function(tbl) {
 					if ( sum(tbl) < 1) return(GEN_CALL)
-					names(tbl)[ which.max(tbl)]
+					names(tbl)[ WHICH.MAX(tbl)]
 				})
 	TotalBases <- length( bestbase)
 
@@ -67,14 +78,14 @@ MPU.callBases <- function( baseCalls, referenceBase,  minDepth=3, debug=F,
 
 		# first they get tabled differently
 		if (debug) cat( "\nIndel Evaluations:", length( hasIndel), "\n")
-		indelCntsTable <- lapply( allbases[hasIndel], FUN=MPU.tablifyIndelCalls)
-		bestIndelBase <- sapply( indelCntsTable, function(tbl) {
+		indelCntsTable <- LAPPLY( allbases[hasIndel], FUN=MPU.tablifyIndelCalls)
+		bestIndelBase <- SAPPLY( indelCntsTable, function(tbl) {
 						if ( sum(tbl) < minDepth) return(GEN_CALL)
-						names(tbl)[ which.max(tbl)]
+						names(tbl)[ WHICH.MAX(tbl)]
 					})
 		baseCntsTable[ hasIndel] <- indelCntsTable
 		if ( mode == "percents") {
-			baseCntsTable[ hasIndel] <- lapply( baseCntsTable[ hasIndel], FUN=function(x) round( x * 100 / sum(x)))
+			baseCntsTable[ hasIndel] <- LAPPLY( baseCntsTable[ hasIndel], FUN=function(x) round( x * 100 / sum(x)))
 		}
 		bestbase[hasIndel] <- bestIndelBase
 
@@ -89,17 +100,17 @@ MPU.callBases <- function( baseCalls, referenceBase,  minDepth=3, debug=F,
 			if ( regexpr( "-|\\+", mybest) < 1) next
 			
 			# which sign won?
-			myFirstBase <- substr(mybest,1,1)
-			mysign <- substr( mybest, 2,2)
-			myNbase <- nchar(mybest) - 2
-			indelLetters <- substr( mybest, 3, nchar(mybest))
+			myFirstBase <- SUBSTR(mybest,1,1)
+			mysign <- SUBSTR( mybest, 2,2)
+			myNbase <- NCHAR(mybest) - 2
+			indelLetters <- SUBSTR( mybest, 3, NCHAR(mybest))
 			if ( myNbase < 1) next
 
 			# an 'insert' means extra letters after me...
 			if ( mysign == "+") {
 				# since we're building the string, put in the'real base' now
 				if ( myFirstBase == GEN_CALL) myFirstBase <- refs[k]
-				myAns <- paste( myFirstBase, indelLetters, sep="")
+				myAns <- PASTE( myFirstBase, indelLetters, sep="")
 				bestbase[k] <- myAns
 				foundInserts <- c( foundInserts, mybest)
 			} else {
@@ -140,15 +151,15 @@ MPU.callBases <- function( baseCalls, referenceBase,  minDepth=3, debug=F,
 	out <- refs
 
 	# SNPs are just a substitution
-	isSNP <- which( bestbase %in% c( "A","C","G","T"))
+	isSNP <- WHICH( bestbase %in% c( "A","C","G","T"))
 	if ( length( isSNP) > 0) out[ isSNP] <- bestbase[ isSNP]
 
 	# deletions
-	isDEL <- which( bestbase == "*")
+	isDEL <- WHICH( bestbase == "*")
 	if ( length( isDEL) > 0) out[ isDEL] <- ""
 
 	# insertions
-	isIN <- which( nchar( bestbase) > 1)
+	isIN <- WHICH( NCHAR( bestbase) > 1)
 	if ( length( isIN) > 0) out[ isIN] <- bestbase[ isIN]
 
 	return( list( "call"=out, "depth.table"=baseCntsTable))
@@ -164,45 +175,43 @@ MPU.strandDepth <- function( baseCalls, pos=NULL, debug=F) {
 
 	# drop the 'end of read segment' flags
 	if (debug) cat( "  $end..")
-	strs <- gsub( "$", "", strs, fixed=T)
+	strs <- GSUB( "$", "", strs, fixed=T)
 
 	# drop the 'begin of read segment' flags
 	if (debug) cat( "  ^beg..")
-	strs <- gsub( "\\^.", "", strs)
+	strs <- GSUB( "\\^.", "", strs)
 
 	# check for indels, that will be much slower/harder
 	if (debug) cat( "  indels..")
-	hasDelete <- which(regexpr( "-", strs, fixed=T) > 0)
-	hasInsert <- which(regexpr( "+", strs, fixed=T) > 0)
-	hasIndel <- sort( union( hasDelete, hasInsert))
+	hasDelete <- WHICH(regexpr( "-", strs, fixed=T) > 0)
+	hasInsert <- WHICH(regexpr( "+", strs, fixed=T) > 0)
+	hasIndel <- SORT( UNION( hasDelete, hasInsert))
 
 	# make the simple call based on what's most common
 	if (debug) cat( "  split..")
 	allbases <- strsplit( strs, split="")
 
 	if (debug) cat( "  count..")
-	mySORT <- base::sort
 	myTABLE <- oneDtable
-	myPASTE <- base::paste
 
 	# comma and dot are not valid names, so alter
 	FWD_MARKS <- c( ".", "A","C","G", "T", "N")
 	REV_MARKS <- c( ",", "a","c","g", "t", "n")
 
-	baseCntsTable <- lapply( allbases, FUN=myTABLE)
+	baseCntsTable <- LAPPLY( allbases, FUN=myTABLE)
 
 	# the ones with indels need a more precise tool
 	if ( length( hasIndel) > 0) {
 		if (debug) cat( "  indel counting..")
-		indelCntsTable <- lapply( allbases[hasIndel], FUN=MPU.tablifyIndelCalls)
+		indelCntsTable <- LAPPLY( allbases[hasIndel], FUN=MPU.tablifyIndelCalls)
 		baseCntsTable[ hasIndel] <- indelCntsTable
 	}
 
 	if (debug) cat( "  strand depths..")
-	strandCounts <- sapply( baseCntsTable, function(tbl) {
-					fwdBins <- match( FWD_MARKS, names(tbl), nomatch=0)
+	strandCounts <- SAPPLY( baseCntsTable, function(tbl) {
+					fwdBins <- MATCH( FWD_MARKS, names(tbl), nomatch=0)
 					fwdCnt <- sum( tbl[ fwdBins], na.rm=T)
-					revBins <- match( REV_MARKS, names(tbl), nomatch=0)
+					revBins <- MATCH( REV_MARKS, names(tbl), nomatch=0)
 					revCnt <- sum( tbl[ revBins], na.rm=T)
 					return( c( fwdCnt, revCnt))
 				})
@@ -241,7 +250,7 @@ MPU.tablifyIndelCalls <- function( callChars) {
 				# we know know how many characters the indel text is
 				indelText <- callChars[ (i) : (i+size-1)]
 				# overwrite the original call with this composite
-				calls[ nout] <- paste( c( calls[nout], indelSign, indelText), collapse="")
+				calls[ nout] <- PASTE( c( calls[nout], indelSign, indelText), collapse="")
 				i <- i + size
 				atChar <- TRUE
 				next
@@ -279,18 +288,18 @@ MPU.callTableToString <- function( callTables) {
 
 	if ( is.list( callTables)) {
 		#cat( "  toStrings..")
-		ans <- sapply( callTables, function(x) {
+		ans <- SAPPLY( callTables, function(x) {
 				vals <- as.character(x)
 				nams <- as.character( names(x))
-				ord <- order( x, decreasing=T)
-				paste( nams[ord], vals[ord], sep="=", collapse=";")
+				ord <- ORDER( x, decreasing=T)
+				PASTE( nams[ord], vals[ord], sep="=", collapse=";")
 			})
 	} else {
 		x <- callTables
 		vals <- as.character(x)
 		nams <- as.character( names(x))
-		ord <- order( x, decreasing=T)
-		ans <- paste( nams[ord], vals[ord], sep="=", collapse=";")
+		ord <- ORDER( x, decreasing=T)
+		ans <- PASTE( nams[ord], vals[ord], sep="=", collapse=";")
 	}
 	ans
 }
@@ -330,7 +339,7 @@ MPU.callStringsToMatrix <- function( callStrings) {
 	lapply( 1:N, function(x) {
 			thisTable <- listOfTables[[x]]
 			if ( is.null( thisTable)) return()
-			where <- match( names( thisTable), CALLS, nomatch=0)
+			where <- MATCH( names( thisTable), CALLS, nomatch=0)
 			out[ x, where] <<- thisTable[ where > 0]
 			# any that don't match CALLS are indels
 			if ( any( where == 0)) {
@@ -359,13 +368,13 @@ MPU.callStringsToMatrix <- function( callStrings) {
 	}
 
 	# step 2: assign the 'genomic' to the right column
-	isA <- which( referenceBase == "A")
+	isA <- WHICH( referenceBase == "A")
 	if ( length(isA)) out[ isA, 1] <- m[ isA, 1]
-	isC <- which( referenceBase == "C")
+	isC <- WHICH( referenceBase == "C")
 	if ( length(isC)) out[ isC, 2] <- m[ isC, 1]
-	isG <- which( referenceBase == "G")
+	isG <- WHICH( referenceBase == "G")
 	if ( length(isG)) out[ isG, 3] <- m[ isG, 1]
-	isT <- which( referenceBase == "T")
+	isT <- WHICH( referenceBase == "T")
 	if ( length(isT)) out[ isT, 4] <- m[ isT, 1]
 
 	# step 3:  normalize?
@@ -401,7 +410,7 @@ callTable.Pvalue <- function( callTable, callSumsTable) {
 	if ( length( callTable) < 2) return(1)
 
 	# first make sure all of my terms are in the big table
-	where <- match( names( callTable), names( callSumsTable), nomatch=0)
+	where <- MATCH( names( callTable), names( callSumsTable), nomatch=0)
 	if ( any( where == 0)) {
 		extras <- names(callTable)[where == 0]
 		smlPop <- rep( 0, times=length(extras))
@@ -416,7 +425,7 @@ callTable.Pvalue <- function( callTable, callSumsTable) {
 	}
 
 	# now trim the big table to the intersection of me and the big table
-	where <- match( names( callSumsTable), names( callTable), nomatch=0)
+	where <- MATCH( names( callSumsTable), names( callTable), nomatch=0)
 	callSumsTable <- callSumsTable[ where]
 
 	popProbs <- callSumsTable / sum( callSumsTable, na.rm=T)
@@ -466,39 +475,39 @@ callTable.totalSum <- function( callTables, verbose=FALSE) {
 	ans <- list( "nIndels"=0, "who"=whoIndel, "bases"=vector(), "type"=vector(), "indelText"=indelText)
 
 	# the 'flips' matrix has colnames of {',',A,C,G,T,N,Indel}
-	whoMax <- apply( flips, MARGIN=1, which.max)
-	INDEL_COLUMN <- which( colnames(flips) == "Indel")
+	whoMax <- apply( flips, MARGIN=1, WHICH.MAX)
+	INDEL_COLUMN <- WHICH( colnames(flips) == "Indel")
 	nIndels <- sum( whoMax == INDEL_COLUMN)
 	if ( nIndels > 0) {
 
 		# extract the details for these
-		whoIndel <- which( whoMax == INDEL_COLUMN)
+		whoIndel <- WHICH( whoMax == INDEL_COLUMN)
 		locs <- as.integer( rownames( flips)[whoIndel])
-		where <- match( locs, curMPU$POSITION)
+		where <- MATCH( locs, curMPU$POSITION)
 		ref <- curMPU$REF_BASE[where]
 		call <- curMPU$CALL_BASE[where]
 	
 		# the context determines insertion from deletion
 		bases <- rep.int( "", length(whoIndel))
-		type <- ifelse( nchar(ref) > nchar(call), "delete", "insert")
-		isIns <- which( type == "insert")
-		isDel <- which( type == "delete")
+		type <- ifelse( NCHAR(ref) > NCHAR(call), "delete", "insert")
+		isIns <- WHICH( type == "insert")
+		isDel <- WHICH( type == "delete")
 		# for insertions, the 'call' has both what was there and the extra bases
 		bases[isIns] <- call[isIns]
 		bases[isDel] <- call[isDel]
 	}
 
 	# also get the top 3 indel calls from any base that had any indels at all
-	who2 <- which( flips[ ,INDEL_COLUMN] > 0)
+	who2 <- WHICH( flips[ ,INDEL_COLUMN] > 0)
 	if ( length( who2)) {
-		top3indels <- sapply( curMPU$BASE_TABLE[who2], function( txt) {
+		top3indels <- SAPPLY( curMPU$BASE_TABLE[who2], function( txt) {
 					terms <- strsplit( txt, split=";", fixed=T)[[1]]
 					# reference and SNPs have a easy format
 					notIndel <- grep( "^[,ACGT]=", terms)
 					isIndel <- setdiff( 1:length(terms), notIndel)
 					if ( length(isIndel)) {
 						nshow <- min( length(isIndel), 3)
-						return( paste( terms[isIndel[1:nshow]], collapse=";"))
+						return( PASTE( terms[isIndel[1:nshow]], collapse=";"))
 					}
 					return( "")
 				})

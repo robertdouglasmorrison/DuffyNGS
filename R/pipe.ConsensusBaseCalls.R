@@ -2,7 +2,8 @@
 
 `pipe.ConsensusBaseCalls` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
-				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, utr.tail.length=0) {
+				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, utr.tail.length=0,
+				verbose=TRUE) {
 				
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -17,14 +18,15 @@
 	noReadCalls <- match.arg( noReadCalls)
 
 	if ( utr.tail.length != 0) {
-		cat( "\nAdding UTR bases..  Turning off AA and cDNA step..")
+		if (verbose) cat( "\nAdding UTR bases..  Turning off AA and cDNA step..")
 		aaToo <- FALSE
 		as.cDNA <- FALSE
 	}
 
 	# we have what we need, call the lower level tool
 	ans <- consensusBaseCalls( bamfile, genomicFastaFile, geneID=geneID, seqID=seqID, 
-			start=start, stop=stop, aaToo=aaToo, noReadCalls=noReadCalls, utr.tail.length=utr.tail.length)
+			start=start, stop=stop, aaToo=aaToo, noReadCalls=noReadCalls, utr.tail.length=utr.tail.length, 
+			verbose=verbose)
 	if ( is.null(ans)) return(NULL)
 
 	# translate genomic info back to cDNA units if we want
@@ -39,7 +41,7 @@
 
 `consensusBaseCalls` <- function( bamfile, genomicFastaFile, geneID=NULL, seqID=NULL, 
 				start=NULL, stop=NULL, aaToo=TRUE, noReadCalls=c("blank","genomic"),
-				utr.tail.length=0) {
+				utr.tail.length=0, verbose=TRUE) {
 				
 	# let's be a bit more flexible with what we pass in
 	# Could be a genomic range {seqID, start, stop}, a gene {geneID}, or any generic sequence...
@@ -53,6 +55,8 @@
 		if ( is.null(seqID)) stop( "One of 'seqID','geneID' must be not NULL")
 		if ( seqID %in% seqMap$SEQ_ID) {
 			isRange <- TRUE
+			if ( is.null(start)) start <- 1
+			if ( is.null(stop)) stop <- subset( seqMap, SEQ_ID == seqID)$LENGTH[1]
 			gmap <- subset.data.frame( geneMap, SEQ_ID == seqID & stop >= POSITION & start <= END)
 			cmap <- subset.data.frame( cdsMap, GENE_ID %in% gmap$GENE_ID)
 			geneID <- gmap$GENE_ID[1]
@@ -70,7 +74,7 @@
 		}
 		cmap <- subset.data.frame( cdsMap, GENE_ID == geneID)
 		if ( ! nrow(cmap)) {
-			cat( "\nGeneID not found in CDS map.. Using Exon map instead.")
+			if (verbose) cat( "\nGeneID not found in CDS map.. Using Exon map instead.")
 			cmap <- subset.data.frame( getCurrentExonMap(), GENE_ID %in% gmap$GENE_ID)
 		}
 		if (is.null(start)) start <- gmap$POSITION[1]
@@ -81,7 +85,7 @@
 			start <- start - utr.tail.length
 			if ( start < 1) start <- 1
 			stop <- stop + utr.tail.length
-			chromoLen <- subset( seqMap, SEQ_ID == seqID)$LENGTH
+			chromoLen <- subset( seqMap, SEQ_ID == seqID)$LENGTH[1]
 			if( stop > chromoLen) stop <- chromoLen
 		}
 	}
@@ -95,10 +99,18 @@
 	genomicStr <- getFastaSeqFromFilePath( genomicFastaFile, seqID)
 	curGenomeDNA <- strsplit( as.character(genomicStr), split="")[[1]]
 
+	# decide how we will treat missing data
+	noReadCalls <- match.arg( noReadCalls)
 	# gather the reference genome bases in this range
 	allBases <- start : stop
-	genomeSNPtext <- genomeBaseText <- curGenomeDNA[ allBases]
-	names(genomeSNPtext) <- names(genomeBaseText) <- allBases
+	genomeBaseText <- curGenomeDNA[ allBases]
+	names(genomeBaseText) <- allBases
+	if (noReadCalls == "blank") {
+		genomeSNPtext <- base::rep.int( "", length(genomeBaseText))
+		names(genomeSNPtext) <- allBases
+	} else {
+		genomeSNPtext <- genomeBaseText
+	}
 
 	hasBaseCalls <- ( nrow( curMPU) > 0)
 	if ( ! hasBaseCalls) {
@@ -114,7 +126,11 @@
 	rownames(flips) <- xLocs
 
 	# get the majority base at each SNP spot, if not a SNP it will be ',' (matches the reference
-	snpTopBase <- apply( flips, MARGIN=1, function(x) colnames(flips)[ which.max(x)])
+	WHICH <- base::which
+	WHICH.MAX <- base::which.max
+	MATCH <- base::match
+
+	snpTopBase <- apply( flips, MARGIN=1, function(x) colnames(flips)[ WHICH.MAX(x)])
 	names( snpTopBase) <- xLocs
 
 	# the Indels are tougher, we need to get the actual bases for both the reference and the indels and figure if
@@ -129,20 +145,21 @@
 
 	# there may be places with no read depth at all
 	# default is to use genomic... or delete those bases
-	noReadCalls <- match.arg( noReadCalls)
+	# our methods below start from the genome calls, and then undo or change them
 	if ( noReadCalls == "blank") {
-		notSeen <- setdiff( allBases, xLocs)
+		genomeSNPtext <- genomeBaseText
+		notSeen <- base::setdiff( allBases, xLocs)
 		if ( length( notSeen)) {
-			where <- match( notSeen, allBases)
+			where <- MATCH( notSeen, allBases)
 			genomeSNPtext[where] <= ""
 		}
 	}
 
 	# see what bases are different from genomic
-	whoSNP <- base::which( snpTopBase != ",")
+	whoSNP <- WHICH( snpTopBase != ",")
 	if ( length( whoSNP) > 0) {
 		myLocs <- as.integer( names(snpTopBase)[whoSNP])
-		where <- base::match( myLocs, allBases)
+		where <- MATCH( myLocs, allBases)
 		genomeSNPtext[ where] <- snpTopBase[ whoSNP]
 	}
 
@@ -264,6 +281,42 @@
 	baseCallAns$callsTable <- callsTable
 	cat( "  Done.\n")
 	return( baseCallAns)
+}
+
+
+`consensusBaseNoiseMasker` <- function( baseCallAns, min.depth=20, min.noise=0.15, dna.mask="N",
+					aa.mask="X") {
+
+	# given the base call consensus, allow masking of of high noise calls that may be unreliable,
+	# due to either polyclonal material, poor genomic uniqueness, etc.
+	if ( is.null(baseCallAns)) return( baseCallAns)
+	cm <- baseCallAns$callsMatrix
+	if ( is.null(cm)) return( baseCallAns)
+	if ( ! nrow(cm)) return( baseCallAns)
+
+	dna <- baseCallAns$dna.consensus
+	aa <- baseCallAns$aa.consensus
+	hasAA <- (length(dna) == length(aa))
+
+	# see how deep and how noisy
+	totalReads <- apply( cm, 1, sum, na.rm=T)
+	callReads <- apply( cm, 1, max, na.rm=T)
+	noiseReads <- totalReads - callReads
+
+	# test for are we noisy enough
+	pctNoise <- noiseReads / totalReads
+	isNoise <- which( totalReads >= min.depth & pctNoise >= min.noise)
+
+	out <- baseCallAns
+	if ( length(isNoise)) {
+		dna[ isNoise] <- dna.mask
+		out$dna.consensus <- dna
+		if ( hasAA) {
+			aa[ isNoise] <- aa.mask
+			out$aa.consensus <- aa
+		}
+	}
+	return(out)
 }
 
 
