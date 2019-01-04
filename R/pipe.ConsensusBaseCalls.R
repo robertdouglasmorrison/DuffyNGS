@@ -344,7 +344,7 @@
 	bestAns <- aa.consensus[ , bestFrame]
 	names( bestAns) <- dnaNames
 
-	return( data.frame( "BestFrame"=bestAns, aa.consensus))
+	return( data.frame( "BestFrame"=bestAns, aa.consensus, stringsAsFactors=FALSE))
 }
 
 

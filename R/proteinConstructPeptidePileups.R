@@ -3,7 +3,7 @@
 `proteinConstructPeptidePileups` <- function( sampleID, geneName, constructFile, peptide.path=".",
 					constructName=paste(sampleID,geneName,sep="."), 
 					txt.cex=0.25, maxNoHits=1000000, max.depth=60, max.drawnPerSite=3,
-					mode=c("normal", "realigned"), draw.box=FALSE, ...) {
+					mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, ...) {
 
 	SAPPLY <- base::sapply
 	WHICH <- base::which
@@ -394,7 +394,7 @@
 		cat( "\nReading Gene peptides file: ", alignedReadsFile)
 		vgTbl <- read.delim( alignedReadsFile, as.is=T)
 		cat( "\nDone.  \tN_Peptides:  ", nrow(vgTbl), "\n")
-		addPeptidePileups( vgTbl$Peptide, wt=vgTbl$Count, chunk.size=20000, 
+		addPeptidePileups( vgTbl$Peptide, wt=vgTbl$Count, chunk.size=chunkSize, 
 				txt.col=1, maxUseDepth=alignedReadsDepth, 
 				max.drawnPerSite=max.drawnPerSite, source="aligned.read")
 	}

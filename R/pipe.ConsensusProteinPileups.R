@@ -5,7 +5,7 @@
 						max.depth=60, txt.cex=0.25, forceSetup=FALSE, maxNoHits.setup=1000000,
 						mode=c("normal","realigned"), plotOnly=FALSE, max.drawnPerSite=3,
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
-						draw.box=FALSE) {
+						draw.box=FALSE, chunkSize.pileup=20000) {
 
 	require(Biostrings)
 
@@ -49,7 +49,8 @@
 
 	consensusAns <<- proteinConstructPeptidePileups( sampleID, geneName=geneName, constructFile=consensusAAfile, 
 				peptide.path=peptide.path, txt.cex=txt.cex, maxNoHits=maxNoHits.pileup, 
-				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box)
+				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box,
+				chunkSize=chunkSize.pileup)
 
 	pdfFile1 <- file.path( peptide.path, paste( sampleID, geneName, "PeptidePileups.pdf", sep="."))
 	pdfFile2 <- file.path( peptide.path, paste( sampleID, geneName, "FinalConsensus.pdf", sep="."))
