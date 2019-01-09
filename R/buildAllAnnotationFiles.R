@@ -195,7 +195,7 @@
 		idxFiles <- dir( bowtie1IndexPath, pattern=paste( "^",genomicIndexFile,sep=""))
 		if ( ! length( idxFiles)) {
 			cat( "\n\nNo Bowtie1 index found for:  ", genomicIndexFile)
-			cat( "\nBuidling now..")
+			cat( "\nBuilding now..")
 			# the 'fasta' file can be a directory...
 			myFastaFile <- genomicFastaFile
 			cat( "\nUsing Fasta file name/directory: ", myFastaFile)
@@ -206,6 +206,31 @@
 			callBowtieBuild( cmdline, wait=TRUE, verbose=verbose)
 		} else {
 			cat( "\nBowtie1 index found and ready..")
+		}
+		# also verify the index we need for all the 'other' genomes are there
+		nOtherIndex <- length( otherSpeciesIDSet)
+		if (nOtherIndex) for ( k in 1:nOtherIndex) {
+			otherIndex <- otherGenomicIndexSet[k]
+			otherSpecies <- otherSpeciesIDSet[k]
+			if ( is.list( otherSpeciesIDSet)) otherSpecies <- otherSpeciesIDSet[[k]]
+			if ( is.list(otherGenomicIndexSet)) otherIndex <- otherGenomicIndexSet[[k]]
+			idxFiles <- dir( bowtie1IndexPath, pattern=paste( "^",otherIndex,sep=""))
+			if ( ! length( idxFiles)) {
+				cat( "\n\nNo Bowtie1 index found for:  ", otherIndex)
+				cat( "\nTrying to Build now..")
+				# the 'fasta' file can be a directory...
+				myOtherFastaPath <- dirname(genomicFastaFile)
+				myOtherFastaFile <- paste( otherSpecies, "genomicDNA.fasta", sep="_")
+				myOtherFastaFile <- file.path( myOtherFastaPath, myOtherFastaFile)
+				cat( "\nUsing Fasta file name/directory: ", myOtherFastaFile)
+				outfile <- file.path( bowtie1IndexPath, otherIndex)
+				cmdline <- buildBowtieBuildCommandLine( inputFastaFile=myOtherFastaFile, 
+						outputIndexFile=outfile, optionsFile=optionsFile, 
+						verbose=FALSE, debug=debug)
+				callBowtieBuild( cmdline, wait=TRUE, verbose=verbose)
+			} else {
+				cat( "\nOther Bowtie1 index found and ready..", otherSpecies)
+			}
 		}
 
 		cat( "\n\nPart 4a:  Detectability files...")

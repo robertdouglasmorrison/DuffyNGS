@@ -1337,8 +1337,11 @@ dashedLine <- function( xb, xe, y, ...) {
 	    # setup for one 'other species too'
 	    hasOther <- FALSE
 	    if ( !is.null( curDetectOther) && !is.na( curDetectOther$Detectable)) {
+	    	otherbinsetptr <- WB_getBinSetPtrFromSeqID( curDetectOther$Unique, seqid)
 	    	otherBinset <- curDetectOther$Detectable$BinData[[ binsetptr]]
-		hasOther <- TRUE
+	    	if ( otherbinsetptr >= 1) {
+		    hasOther <- TRUE
+	        }
 	    }
 
 	    firstBin <- WB_base2bin( leftBase)
