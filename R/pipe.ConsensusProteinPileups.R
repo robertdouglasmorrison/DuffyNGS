@@ -5,7 +5,7 @@
 						max.depth=60, txt.cex=0.25, forceSetup=FALSE, maxNoHits.setup=1000000,
 						mode=c("normal","realigned"), plotOnly=FALSE, max.drawnPerSite=3,
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
-						draw.box=FALSE, chunkSize.pileup=20000) {
+						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE) {
 
 	require(Biostrings)
 
@@ -28,7 +28,8 @@
 	nAA <- pipe.ConsensusProteinSetup( sampleID, geneID=geneID, geneName=geneName, results.path=results.path, 
 				exon=exon, maxNoHits=maxNoHits.setup, forceSetup=forceSetup,
 				trim5.aligns=trim5.aligns, trim3.aligns=trim3.aligns, 
-				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits)
+				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits,
+				useCutadapt=useCutadapt)
 	if ( nAA < 1) return(NULL)
 	consensusAAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusAA.fasta", sep="."))
 	
@@ -75,7 +76,7 @@
 `pipe.ConsensusProteinSetup` <- function( sampleID, geneID, geneName=geneID, maxNoHits=1000000, 
 					optionsFile="Options.txt", results.path=NULL, exon=NULL, 
 					trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
-					forceSetup=FALSE, ...) {
+					forceSetup=FALSE, useCutadapt=FALSE, ...) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
@@ -89,8 +90,15 @@
 	nohitReadsFile2 <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 	nohitPeptidesFile <- file.path( peptide.path, paste( sampleID, "NoHits", "RawReadPeptides.txt", sep="."))
 	geneReadsFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "fastq.gz", sep="."))
+	geneReadsTrimmedFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "trimmed.fastq.gz", sep="."))
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
 
+	if ( useCutadapt) {
+		if ( ! file.exists( nohitReadsFile)) {
+			cat( "\nCutting Adapters off 'NoHit' reads..")
+			cutadapt( file1=basename(nohitReadsFile2), path=dirname(nohitReadsFile))
+		}
+	}
 	if ( ! file.exists( nohitReadsFile)) nohitReadsFile <- nohitReadsFile2
 	if ( ! file.exists( nohitReadsFile)) {
 		stop( "Alignment pipeline 'NoHits' fastq file not found.  Run main pipeline first.")
@@ -109,6 +117,11 @@
 	}
 	if ( forceSetup || ! file.exists( genePeptidesFile)) {
 		cat( "\nConverting Gene alignments to peptides..")
+		if (useCutadapt) {
+			cat( "\nCutting Adapters off 'Gene' reads..")
+			cutadapt( file1=basename(geneReadsFile), path=dirname(geneReadsFile))
+			geneReadsFile <- geneReadsTrimmedFile
+		}
 		nPeptides <- fastqToPeptides( geneReadsFile, genePeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
 				trim5=trim5.aligns, trim3=trim3.aligns)
 		if (nPeptides < 1) {
@@ -365,7 +378,7 @@
 `realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", results.path=NULL,
-				extra.fastq.keyword=NULL) {
+				extra.fastq.keyword=NULL, useCutadapt=FALSE) {
 
 	require(Biostrings)
 
@@ -436,6 +449,10 @@
 	cat( "\nCalling Bowtie against consensus sequence..")
 	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 	geneReadsFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "fastq.gz", sep="."))
+	if (useCutadapt) {
+		nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.trimmed.fastq.gz", sep="."))
+		geneReadsTrimFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "trimmed.fastq.gz", sep="."))
+	}
 	allReadsFiles <- c(geneReadsFile, nohitReadsFile)
 	if ( ! is.null( extra.fastq.keyword)) {
 		cat( "  extra FASTQ:  ")
@@ -451,7 +468,7 @@
 			optionsFile=optionsFile, alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
 	
 	# step 4:  get the new consensus from this BAM file
-	cat( "\nExtract new consensus from re-aligned reads to current consensus..")
+	cat( "\nExtract new consensus from re-aligning reads to previous consensus..")
 	ans <- consensusBaseCalls( bamfile=bamFile, genomicFastaFile=consensusDNAfile, seqID=myDesc, 
 				geneID=NULL, start=leftFlankLen+1, stop=leftFlankLen+nchar(dnaFA$seq), aaToo=TRUE, 
 				noReadCalls="genomic")
@@ -476,6 +493,7 @@
 	tempPeptidesFile <- file.path( peptide.path, "ConsensusProtein.Peptides.txt")
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
 	bam2fastq( bamfile=bamFile, outfile=fastqFilePrefix, paired.end=FALSE)
+	# since the raw DNA reads wt got aligned ere already cutAdapt'ed, no need to do it again...
 	fastqToPeptides( filein=fastqFile, fileout=tempPeptidesFile)
 	# merge these new peptides into the existing set, instead of overwriting...
 	mergePeptideFiles( tempPeptidesFile, genePeptidesFile, outfile=genePeptidesFile, 
