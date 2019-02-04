@@ -121,7 +121,7 @@ buildUSRfromFile <- function( file, trim5=0, trim3=0, Nkeep=NULL, dropPolyN=TRUE
 		isFasta <- ( base::substr( raw[1], 1,1) == ">")
 		if ( isFastq) lines <- seq( 2, NR, by=4)
 		if ( isFasta) lines <- seq( 2, NR, by=2)
-		if ( length( lines) < 1) stop( "extractUSRfromFile: unknown file type.")
+		if ( length( lines) < 1) stop( "extractUSRfromFile: corrupt file or not FASTA/FASTQ.")
 	
 		thisSet <- raw[ lines]
 	
