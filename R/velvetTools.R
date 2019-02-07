@@ -2,7 +2,7 @@
 
 
 `makeVelvetContigs` <- function( fastaFile, outpath=sub( ".fa.*","", fastaFile),
-		velvet.path="~/Velvet/velvet_1.2.10", buildHash=TRUE, buildContigs=TRUE,
+		velvet.path="~/bin", buildHash=TRUE, buildContigs=TRUE,
 		kmerSize=25, minLength=200, doPairedEnd=FALSE, minCoverage=NULL, 
 		velveth.args="", velvetg.args="", verbose=FALSE) {
 

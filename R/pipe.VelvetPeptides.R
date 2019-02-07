@@ -2,7 +2,7 @@
 
 
 `pipe.VelvetPeptides` <- function( sampleID, annotationFile="Annotation.txt",
-		optionsFile="Options.txt", velvetPath="~/Velvet/velvet_1.2.10",
+		optionsFile="Options.txt", velvetPath="~/bin",
 		kmerSize=25, minLength=200, minCoverage=3, maxCoverage=3000,
 		useNoHits=TRUE, fastq.keywords=NULL, buildHash=TRUE, buildContigs=TRUE,
 		verbose=TRUE) {
