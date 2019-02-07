@@ -84,14 +84,14 @@
 		}
 	}
 
-
-	#ans <- checkBowtieVersion()
-	#if ( is.null( ans)) {
-	#	Nfail <- Nfail + 1
-	#	cat( "\n\nNote:  Bowtie1 only used for building genome detectability files when adding new genomes...\n")
-	#} else {
-	#	cat( "\nBowtie1:   version =", ans)
-	#}
+	# bowtie 1
+	ans <- checkBowtieVersion()
+	if ( is.null( ans)) {
+		Nfail <- Nfail + 1
+		cat( "\n\nNote:  Bowtie1 only used for building genome detectability files when adding new genomes...\n")
+	} else {
+		cat( "\nBowtie1:   version =", ans, "     path =", as.character(Sys.which("bowtie")))
+	}
 
 	if ( Nfail == 0) {
 		cat( "\n\nAll programs used by DuffyNGS are found and ready.\n")

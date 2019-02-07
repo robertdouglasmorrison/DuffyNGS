@@ -1,7 +1,7 @@
 # pipe.HLA.ConsensusProteins.R -- wrapper to the Consensus Proteins tool for HLA loci
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, IMGTreferenceAA.path="~/seq2HLA/references_Dec2017", 
+				results.path=NULL, IMGTreferenceAA.path="/active/morrison_r/seq2HLA/references_Dec2017", 
 				min.heterozygousPct=5, doPileups=FALSE, verbose=TRUE) {
 
 	# path for all results
@@ -16,13 +16,14 @@
 	setCurrentSpecies( "Hs_grc")
 
 	# list of Hs_grc HLA genes to harvest
-	HLAgeneIDs <- c( "HLA-A:GI3105:06:29942470", "HLA-B:GI3106:06:31353868", "HLA-C:GI3107:06:31268749",
+	HLAgeneIDs <- c( "HLA-A:GI3105:06:29942470", "HLA-B:GI3106:06:31353868", 
+			"HLA-C:GI3107:06:31268749", "HLA-E:GI3133:06:30489406",
 			"HLA-DRA:GI3122:06:32439842", "HLA-DRB1:GI3123:06:32578769", 
 			"HLA-DQA1:GI3117:06:32637396", "HLA-DQB1:GI3119:06:32659464", 
 			"HLA-DPA1:GI3113:06:33064569", "HLA-DPB1:GI3115:06:33075926")
-			#"HLA-DPA2:GI646702:06:33091482", "HLA-DPB2:GI3116:06:33112516")
-	HLAgeneNames <- c( "HLA_A", "HLA_B", "HLA_C", "HLA_DRA", "HLA_DRB1", "HLA_DQA1", "HLA_DQB1", 
-			"HLA_DPA1", "HLA_DPB1")   # "HLA_DPA2", "HLA_DPB2")
+	HLAgeneNames <- c( "HLA_A", "HLA_B", "HLA_C", "HLA_E",
+			"HLA_DRA", "HLA_DRB1", "HLA_DQA1", "HLA_DQB1", 
+			"HLA_DPA1", "HLA_DPB1")
 
 	# we will do each HLA locus all the way through
 	outLocus <- outName <- outDist <- vector()

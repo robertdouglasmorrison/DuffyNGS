@@ -37,12 +37,12 @@ bowtie2Par <- function( ... ) {
 bowtie2Par.defaults <- function( optionsFile="", verbose=TRUE) {
 
 	if ( optionsFile == "") {
-		cat( "\nSetting Bowtie2 Parameters to default values...")
-		myProgram <- "/labs/duffy/DuffyRNAseq/bin/bowtie2"
+		if (verbose) cat( "\nSetting Bowtie2 Parameters to default values...")
+		myProgram <- Sys.which( "bowtie2")
 		programEnvVar <- Sys.getenv( "BOWTIE2_PROGRAM", unset=NA)
 		if ( !is.na( programEnvVar)) myProgram <- programEnvVar
 
-		myPath <- "/labs/duffy/DuffyRNAseq/Bowtie2Indexes/"
+		myPath <- "~/NGS/Bowtie2Indexes/"
 		pathEnvVar <- Sys.getenv( "BOWTIE2_INDEX_PATH", unset=NA)
 		if ( !is.na( pathEnvVar)) myPath <- pathEnvVar
 		
@@ -58,9 +58,14 @@ bowtie2Par.defaults <- function( optionsFile="", verbose=TRUE) {
 		myIndex <- getOptionValue( optT, "GenomicIndex", verbose=verbose)
 	}
 
-	assign( "Program",            myProgram,  envir=Bowtie2Env)
-	assign( "IndexPath",          myPath,  envir=Bowtie2Env)
-	assign( "GenomicIndex",       myIndex,  envir=Bowtie2Env)
+	if ( myProgram == "") {
+		cat( "\nWarning:  failed to find/set Bowtie2 program.")
+		cat( "\nTried:    Sys.which('bowtie2')  and .Sys.getenv('BOWTIE2_PROGRAM')")
+	}
+
+	assign( "Program", myProgram, envir=Bowtie2Env)
+	assign( "IndexPath", myPath, envir=Bowtie2Env)
+	assign( "GenomicIndex", myIndex, envir=Bowtie2Env)
 
 	# based on the version, we may tweak some settings...
 	if ( ! exists( "CurrentVersion", envir=Bowtie2Env)) {
