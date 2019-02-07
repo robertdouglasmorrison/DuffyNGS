@@ -37,12 +37,12 @@ bowtiePar <- function( ... ) {
 bowtiePar.defaults <- function( optionsFile="", verbose=TRUE) {
 
 	if ( optionsFile == "") {
-		cat( "\nSetting Bowtie Parameters to default values...")
-		myProgram <- "/cidr/primary/morrison/NGS/bin/bowtie"
+		if (verbose) cat( "\nSetting Bowtie Parameters to default values...")
+		myProgram <- Sys.which( "bowtie")
 		programEnvVar <- Sys.getenv( "BOWTIE_PROGRAM", unset=NA)
 		if ( !is.na( programEnvVar)) myProgram <- programEnvVar
 
-		myPath <- "/cidr/primary/morrison/NGS/BowtieIndexes/"
+		myPath <- "~/NGS/BowtieIndexes/"
 		pathEnvVar <- Sys.getenv( "BOWTIE_INDEX_PATH", unset=NA)
 		if ( !is.na( pathEnvVar)) myPath <- pathEnvVar
 		
@@ -58,9 +58,13 @@ bowtiePar.defaults <- function( optionsFile="", verbose=TRUE) {
 		myIndex <- getOptionValue( optT, "GenomicIndex", verbose=verbose)
 	}
 
-	assign( "Program",            myProgram,  envir=BowtieEnv)
-	assign( "IndexPath",          myPath,  envir=BowtieEnv)
-	assign( "GenomicIndex",       myIndex,  envir=BowtieEnv)
+	if ( myProgram == "") {
+		cat( "\nWarning:  failed to find/set Bowtie program.")
+		cat( "\nTried:    Sys.which('bowtie')  and .Sys.getenv('BOWTIE_PROGRAM')")
+	}
+	assign( "Program", myProgram, envir=BowtieEnv)
+	assign( "IndexPath", myPath, envir=BowtieEnv)
+	assign( "GenomicIndex", myIndex, envir=BowtieEnv)
 
 	# based on the version, we may tweak some settings...
 	if ( ! exists( "CurrentVersion", envir=BowtieEnv)) {

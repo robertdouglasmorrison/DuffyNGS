@@ -3,7 +3,7 @@
 `cutadapt` <- function( file1, file2=NULL, 
 			adapt1=myReverseComplement("CAAGCAGAAGACGGCATACGAGCTCTTCCGATCT"), 
 			adapt2=myReverseComplement("AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT"), 
-			path=".", min.length=NULL, cutadaptArgs="", cutadapt.program="~/.local/bin/cutadapt") {
+			path=".", min.length=NULL, cutadaptArgs="", cutadaptProgram="~/bin/cutadapt") {
 
 	# at least one file is required, use it to deduce suffix/compression,
 	# and generate out output filename(s)
@@ -46,10 +46,10 @@
 
 	# make that command line
 	if ( isPaired) {
-		cmdLine <- paste( cutadapt.program, "-a", adapt1, "-A", adapt2, 
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, 
 				"-o", outfile1, "-p", outfile2, minLenTrimText, file1, file2, sep=" ")
 	} else {
-		cmdLine <- paste( cutadapt.program, "-a", adapt1, "-o", outfile1, minLenTrimText, file1, sep=" ")
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-o", outfile1, minLenTrimText, file1, sep=" ")
 	}
 	system( cmdLine)
 

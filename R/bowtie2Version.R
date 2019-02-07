@@ -3,14 +3,25 @@
 
 `checkBowtie2Version` <- function() {
 
+	# if no one has initialized any Bowtie actions, do that first
+	bp <- bowtie2Par()
+	if ( ! length(bp)) {
+		if ( file.exists( "./Options.txt")) {
+			bowtie2Par.defaults( optionsFile="./Options.txt")
+		} else {
+			bowtie2Par.defaults()
+		}
+	}
+
 	# see if this program is readable and executable
-	if ( ! (( file.access( bowtie2Par( "Program"), mode=0) == 0) &&  
-		( file.access( bowtie2Par( "Program"), mode=1) == 0))) {
+	myProgram <- bowtie2Par( "Program")
+	if ( ! (( file.access( myProgram, mode=0) == 0) &&  
+		( file.access( myProgram, mode=1) == 0))) {
 			cat( "\nCan not execute Bowtie2 version test.  Executable may be missing or not permissioned \n")
 			return()
 	}
 
-	versionCallCommand <- paste( bowtie2Par("Program"), "  --version")
+	versionCallCommand <- paste( myProgram, "  --version")
 	versionCall <- system( command=versionCallCommand, intern=TRUE)
 	terms <- strsplit( versionCall[1], split=" ", fixed=TRUE)[[1]]
 
@@ -31,3 +42,4 @@
 
 
 `getBowtie2Version` <- function() return( get( "CurrentVersion", envir=Bowtie2Env))
+

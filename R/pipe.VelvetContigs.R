@@ -3,7 +3,7 @@
 
 `pipe.VelvetContigs` <- function( sampleID, kmerSize, fastqSource=NULL,
 		annotationFile="Annotation.txt", optionsFile="Options.txt", 
-		results.path=NULL, velvet.path="~/Velvet/velvet_1.2.10",
+		results.path=NULL, velvet.path="~/bin",
 		minLength=200, minCoverage=3, buildHash=TRUE, buildContigs=TRUE, 
 		velveth.args="", velvetg.args="", folderName=NULL, pairedEnd=NULL,
 		kmer.subfolder=FALSE, makePeptides=TRUE, verbose=TRUE) {
@@ -65,7 +65,7 @@
 
 `pipe.VelvetContigSurvey` <- function( sampleID, kmerSizes, fastqSource=NULL,
 		annotationFile="Annotation.txt", optionsFile="Options.txt", 
-		results.path=NULL, velvet.path="~/Velvet/velvet_1.2.10",
+		results.path=NULL, velvet.path="~/bin",
 		buildHash=TRUE, buildContigs=TRUE, makePeptides=FALSE) {
 
 	NK <- length( kmerSizes)
