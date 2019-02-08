@@ -29,7 +29,20 @@
 		}
 	}
 
-	# velveth
+	# bcftools
+	exe <- Sys.which( "bcftools")
+	if ( exe == "") {
+		cat( "\n'bcftools' is not in the current search path..")
+		Nfail <- Nfail + 1
+	} else {
+		ans <- system( "bcftools --version", intern=T)
+		if ( length(ans) == 6) {
+			cat( "\nbcftools:  version =", sub("bcftools ","",ans[1]), "       path =", exe)
+		} else {
+			cat( "\nbcftools:  unexpected reply;\n", ans)
+		}
+	}
+
 	# mafft
 	exe <- Sys.which( "mafft")
 	if ( exe == "") {

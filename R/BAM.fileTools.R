@@ -223,6 +223,7 @@
 	bcftools <- Sys.which( "bcftools")
 	if ( samtools == "") stop( "Executable not found on search path:  'bcftools'")
 
+	# as of SAMTOOLS ~1.6, the ploidy is not numeric again...
 	ploidyArg <- if ( ploidy == 1) " --ploidy 1 " else ""
 
 	snpCallMode <- match.arg( snpCallMode)
@@ -233,7 +234,11 @@
 	out <- data.frame()
 	for (thisCallMode in callModes) {
 
-		cmdline <- paste( samtools, " mpileup -A -B -v -u -t DP -r ", region, " -f ", fastaFile, 
+		# as of SAMTOOLS ~1.6 and up, the MPILEUP call for doing variant calling has changed!
+		#cmdline <- paste( samtools, " mpileup -A -B -v -u -t DP -r ", region, " -f ", fastaFile, 
+		#		" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
+		#		" -L", max.depth, mpileupArgs, "  ", fileArg, 
+		cmdline <- paste( bcftools, " mpileup -A -B -r ", region, " -f ", fastaFile, 
 				" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
 				" -L", max.depth, mpileupArgs, "  ", fileArg, 
 				" | ", bcftools, " call -v ", thisCallMode, " -p ", prob.variant, ploidyArg,
@@ -252,6 +257,15 @@
 	
 			colnames( ans)[1:9] <- c( "SEQ_ID", "POSITION", "GENE_ID", "REF_BASE", "ALT_BASE", "QUAL", "FILTER", "INFO", "FORMAT")
 	
+			# tiny but non-zero chance that either of the 2 base call columns have nothing but 'T'
+			# and R table reader may treat them as locical 'TRUE'
+			if ( ncol(ans) < 1000) {
+				ans$REF_BASE <- as.character( ans$REF_BASE)
+				ans$REF_BASE[ ans$REF_BASE == "TRUE"] <- "T"
+				ans$ALT_BASE <- as.character( ans$ALT_BASE)
+				ans$ALT_BASE[ ans$ALT_BASE == "TRUE"] <- "T"
+			}
+
 			# there could be 'N's in the reference, that are of no use to us...
 			isN <- which( ans$REF_BASE == "N")
 			if ( length(isN) > 0) ans <- ans[ -isN, ]
