@@ -4,7 +4,7 @@
 plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, geneID=NULL, gmap=NULL,
 			tailWidth=50, cex.text=1.0, cex.legend=1.0, mode=c("single","multi"), 
 			label=sampleID, forceYmax=NULL, linewidth.factor=1, SNPwidth.factor=1.0,
-			show.legends=c( "all", "gene", "none"), verbose=TRUE, ...) {
+			max.depth=10000, show.legends=c( "all", "gene", "none"), verbose=TRUE, ...) {
 
 	mode <- match.arg( mode)
 	show.legends <- match.arg( show.legends)
@@ -65,7 +65,7 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	# get the bases to plot, and load that portion of the PILEUPS
 	loadKnownSNPtable(seqID, verbose=verbose)
 	SNP_curMPU <<- BAM.mpileup( bamfile, seqID, fastaFile, start=xLo, stop=xHi, summarize.calls=TRUE,
-					max.depth=500, verbose=FALSE)
+					max.depth=max.depth, verbose=FALSE)
 	if ( is.null( SNP_curMPU)) return(NULL)
 	SNP_curVCF <<- if ( file.exists(vcffile)) read.delim( vcffile, as.is=T) else data.frame()
 	genomicStr <- getFastaSeqFromFilePath( fastaFile, seqID)

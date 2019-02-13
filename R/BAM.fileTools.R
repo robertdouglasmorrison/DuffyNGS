@@ -204,9 +204,12 @@
 
 
 `BAM.variantCalls` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, 
-				prob.variant=0.5, min.depth=1, max.depth=10000, min.gap.fraction=0.25,
+				prob.variant=0.95, min.depth=1, max.depth=10000, min.gap.fraction=0.25,
 				mpileupArgs="", vcfArgs="", ploidy=1, geneMap=getCurrentGeneMap(), 
 				snpCallMode=c("all","multiallelic","consensus"), verbose=TRUE) {
+
+	# the probability threshold is tuned for genomic DNA of uniform read depth, and diploid organism
+	# for highly variant read depth data, like RNA-seq, use a much higher cutoff to capture more SNPs
 
 	N <- length( files)
 	fileArg <- files

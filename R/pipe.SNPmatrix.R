@@ -5,7 +5,8 @@
 # wrapper function to do all the steps we need
 pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqMatrix.txt",
 					optionsFile="Options.txt", results.path=NULL,
-					speciesID=getCurrentSpecies(), missingOnly=TRUE,
+					speciesID=getCurrentSpecies(), missingOnly=TRUE, 
+					prob.variant=0.95, min.depth=10000,
 					na.rm="half", min.freq=1.0, min.diff=5, min.reads=1) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
@@ -23,6 +24,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	if ( length(need)) {
 		cat( "\nStep 1:  Finding Variant SNP sites for", length(need), "samples..")
 		for (s in sampleIDset[need]) pipe.VariantCalls(s, optionsFile=optionsFile, 
+							prob.variant=prob.variant, min.depth=min.depth, 
 							results.path=results.path, speciesID=speciesID)
 	} else {
 		cat( "\nStep 1:  Using existing 'VariantCall' summary files..")
