@@ -5,7 +5,7 @@
 `pipe.ChIPseq` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				...) {
 
-	checkSampleName( sampleID)
+	checkSampleNames( sampleID)
 	target <- getAndSetTarget( optionsFile, verbose=T)
 
 	# note the time we start
