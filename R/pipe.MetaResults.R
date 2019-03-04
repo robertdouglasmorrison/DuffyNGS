@@ -44,7 +44,7 @@
 	# plotting no longer works in multicore mode...
 	specialPlotMode <- FALSE
 	save.PLOT.FUN <- PLOT.FUN
-	if ( multicore.currentCoreCount() > 1 && (is.null(PLOT.FUN) || is.function(PLOT.FUN))) {
+	if ( doDE && multicore.currentCoreCount() > 1 && (is.null(PLOT.FUN) || is.function(PLOT.FUN))) {
 		cat( "\nWarning:  no gene plotting in multicore mode..")
 		PLOT.FUN <- NA
 		specialPlotMode <- TRUE

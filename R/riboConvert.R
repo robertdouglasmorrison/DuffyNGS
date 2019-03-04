@@ -39,6 +39,9 @@
 	riboMap <- read.delim( riboMapFile, as.is=TRUE);
 	if ( ! ("SEQ_POSITION" %in% colnames( riboMap))) riboMap$SEQ_POSITION <- riboMap$START
 
+	# the Ribo Clear map can now have "Contigs" as well as stand-alone genes
+	hasContigs <- ("CONTIG_ID" %in% colnames(riboMap))
+
 	ans <- calcAlignSummary( mode="setup", filename=filein, rawReadCount=rawReadCount, alignPhase="RiboClear")
 
 	# read in the alignment file one buffer at a time
@@ -79,6 +82,29 @@
 
 		# map from riboIndex units back to genomic position
 		riboPosition <- position( chunk)
+
+		# since the ribo map can now have contigs as well as genes, some of what we call "geneIDs" 
+		# may not be real genes.   Catch those now, and resolve them to true genes
+		if (hasContigs) {
+			isContig <- which( ridGID %in% riboMap$CONTIG_ID)
+			if ( length( isContig)) {
+				# for each contig ID, make a set of positions that we can call fastFindInterval on
+				for ( j in isContig) {
+					smlMap <- subset( riboMap, CONTIG_ID == ridGID[j])
+					ord <- order( smlMap$SEQ_POSITION)
+					# bacause 'findInterval' will map to 1...N-1, put an extra copy of the last row
+					smlMap <- smlMap[ c( ord, ord[length(ord)]), ]
+					smlMap$FASTA_POSITION[nrow(smlMap)] <- smlMap$FASTA_END[nrow(smlMap)] 
+					# use just the reads that map to this contig
+					myReads <- which( ridPtrs == j)
+					myPosIn <- riboPosition[ myReads]
+					whereInSmlMap <- findInterval( myPosIn, smlMap$FASTA_POSITION, all.inside=T)
+					geneIDs[ myReads] <- smlMap$GENE_ID[ whereInSmlMap]
+				}
+			}
+		}
+
+		# now we can really map from riboIndex units back to genomic position
 		whereInMap <- base::match( geneIDs, riboMap$GENE_ID, nomatch=0)
 		seqOffset <- rep( NA, times=length(riboPosition))
 		seqOffset[ whereInMap > 0] <- riboMap$SEQ_POSITION[ whereInMap]

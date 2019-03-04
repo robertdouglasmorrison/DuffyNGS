@@ -55,24 +55,29 @@
 	readCnt <- as.numeric( tbl[[ readColumn]])
 	strandValue <- as.numeric( tbl[[ strandColumn]])
 	N <- nrow(tbl)
+	if ( ! N) return(NULL)
 
 	isNG <- grep( "(ng)", gid, fixed=T)
 	isG <- setdiff( 1:N, isNG)
 	hasNG <- ( length(isNG) >= N * 0.01)
 
 	# test #1:  are the NonGenes near the bottom?
-	pval1 <- NA
-	if (hasNG) {
+	pval1 <- pval2 <- NA
+	if (hasNG && length(isG) > 3 && length(isNG) > 3) {
 		pval1 <- wilcox.test( isG, isNG, alternate="greater")$p.value
 	}
 	
 	# test #2, are the strand call values mostly positive and near one
 	hasCount <- which( readCnt >= min.reads)
 	use <- intersect( isG, hasCount)
-	sVals <- strandValue[ use]
-	sMean <- mean( sVals)
-	sSD <- sd( sVals)
-	pval2 <- t.test( sVals, mu=min.strandCC, altern="greater")$p.value
+	if ( length(use) >= 10) {
+		sVals <- strandValue[ use]
+		sMean <- mean( sVals)
+		sSD <- sd( sVals)
+		pval2 <- t.test( sVals, mu=min.strandCC, altern="greater")$p.value
+	}
+
+	if ( all( is.na( c( pval1, pval2)))) return( NULL)
 
 	return( list( "strandMean"=sMean, "NonGene_Pvalue"=pval1, "StrandValue_Pvalue"=pval2))
 }
