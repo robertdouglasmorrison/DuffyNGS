@@ -390,6 +390,12 @@ multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffile
 		if ( nSamples > 30) mf <- c(6,6)
 		if ( nSamples > 36) mf <- c(6,7)
 		if ( nSamples > 42) mf <- c(6,8)
+		if ( nSamples > 48) mf <- c(6,9)
+		if ( nSamples > 54) mf <- c(7,9)
+		if ( nSamples > 63) mf <- c(7,10)
+		if ( nSamples > 70) mf <- c(7,11)
+		if ( nSamples > 77) mf <- c(8,11)
+		if ( nSamples > 88) mf <- c(8,12)
 	}
 	par( mfrow=mf)
 
@@ -443,6 +449,12 @@ multiPosition.plotSNP <- function( positionSet, seqIDset, sample, bamfile, vcffi
 		if ( nPlots > 30) mf <- c(6,6)
 		if ( nPlots > 36) mf <- c(6,7)
 		if ( nPlots > 42) mf <- c(6,8)
+		if ( nPlots > 48) mf <- c(6,9)
+		if ( nPlots > 54) mf <- c(7,9)
+		if ( nPlots > 63) mf <- c(7,10)
+		if ( nPlots > 70) mf <- c(7,11)
+		if ( nPlots > 77) mf <- c(8,11)
+		if ( nPlots > 88) mf <- c(8,12)
 	}
 	par( mfrow=mf)
 
