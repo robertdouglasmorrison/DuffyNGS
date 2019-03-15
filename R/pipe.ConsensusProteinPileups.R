@@ -53,6 +53,9 @@
 				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box,
 				chunkSize=chunkSize.pileup)
 
+	# record metrics to the audit file
+	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
+
 	pdfFile1 <- file.path( peptide.path, paste( sampleID, geneName, "PeptidePileups.pdf", sep="."))
 	pdfFile2 <- file.path( peptide.path, paste( sampleID, geneName, "FinalConsensus.pdf", sep="."))
 	if ( mode == "realigned") {
@@ -92,6 +95,7 @@
 	geneReadsFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "fastq.gz", sep="."))
 	geneReadsTrimmedFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "trimmed.fastq.gz", sep="."))
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
+	auditFile <- file.path( peptide.path, paste( sampleID, geneName, "AuditTrail.txt", sep="."))
 
 	if ( useCutadapt) {
 		if ( ! file.exists( nohitReadsFile)) {
@@ -137,6 +141,9 @@
 		fastqToPeptides( nohitReadsFile, nohitPeptidesFile, chunk=100000, maxPeptides=maxNoHits,
 				lowComplexityFilter=TRUE, trim5=trim5.nohits, trim3=trim3.nohits, ...)
 		madeAnyFiles <- TRUE
+	}
+	if ( forceSetup || ! file.exists( auditFile)) {
+		createAuditFile( peptide.path, sampleID, geneName)
 	}
 
 	# Step 2:  extract the consensus sequence from the Bowtie alignment results
@@ -284,9 +291,14 @@
 	cat( "\nCommand: ", command, "\tRows: ", range(rowNumbers))
 
 	newCalls <- NULL
+	oldSeq <- ""
+	newSeq <- toupper(seq)
+	protLen <- sum( calls$AA != "", na.rm=T)
+
 	if ( command %in% c( "delete", "frameshift")) {
 		newCalls <- calls[ -rowNumbers, ]
 		cat( "\nDeleted ", length(rowNumbers), " rows.")
+		oldSeq <- calls$AA[ rowNumbers]
 	} else {
 		# we need the sequence
 		newAAseq <- toupper( seq)
@@ -309,6 +321,7 @@
 			newCalls$AA[ rowNumbers] <- newAAvector
 			newCalls$IndelDetails[ rowNumbers] <- ""
 			cat( "\nReplaced ", nNewBases, " rows with new sequence: ", newAAseq)
+			oldSeq <- calls$AA[ rowNumbers]
 		}
 		if ( command == "insert") {	# insert 'before' X
 			part1 <- part2 <- data.frame()
@@ -369,9 +382,16 @@
 		writeFasta( as.Fasta( myDesc, dnaSeq), consensusDNAfile, line.width=100)
 		write.table( newCalls, consensusBASEfile, sep="\t", quote=F, row.names=TRUE)
 		cat( "\nWrote new edited .FASTA and BaseCalls for sampleID: ", sampleID, "\n")
+		protLen <- sum( newCalls$AA != "", na.rm=T)
 	} else {
 		cat( "\nNo modifications made...\n")
 	}
+
+	# record what we did
+	writeAuditRecord( peptide.path, sampleID, geneName, mode="Modify", 
+			info=list( "Command"=command, "Location"=rowNumbers, "OldSequence"=oldSeq,
+			"NewSequence"=newSeq, "ReadingFrame"=readingFrame, 
+			"Length_AA"=protLen))
 }
 
 
@@ -464,8 +484,9 @@
 	}
 	bamFile <- file.path( peptide.path, "ConsensusProtein.bam")
 	nhFile <- file.path( peptide.path, "ConsensusProtein.noHits.fastq.gz")
-	fastqToBAM( inputFastqFile=allReadsFiles, outputFile=bamFile, sampleID=sampleID, 
+	bowtieAns <- fastqToBAM( inputFastqFile=allReadsFiles, outputFile=bamFile, sampleID=sampleID, 
 			optionsFile=optionsFile, alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
+	nReadsAligned <- bowtieAns$UniqueReads + bowtieAns$MultiReads
 	
 	# step 4:  get the new consensus from this BAM file
 	cat( "\nExtract new consensus from re-aligning reads to previous consensus..")
@@ -488,22 +509,25 @@
 
 	# step 6:  turn the alignments back to fastq and then to peptides
 	bamFile <- file.path( peptide.path, "ConsensusProtein.sorted.bam")
-	fastqFilePrefix <- file.path( peptide.path, "ConsensusProtein.AlignedReads")
-	fastqFile <- file.path( peptide.path, "ConsensusProtein.AlignedReads.0.fq.gz")
+	fastqFile <- file.path( peptide.path, "ConsensusProtein.AlignedReads.fq.gz")
 	tempPeptidesFile <- file.path( peptide.path, "ConsensusProtein.Peptides.txt")
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
-	bam2fastq( bamfile=bamFile, outfile=fastqFilePrefix, paired.end=FALSE)
-	# since the raw DNA reads wt got aligned ere already cutAdapt'ed, no need to do it again...
+	bam2fastq( bamfile=bamFile, outfile=fastqFile, verbose=F)
+	# since the raw DNA reads wt got aligned are already cutAdapt'ed, no need to do it again...
 	fastqToPeptides( filein=fastqFile, fileout=tempPeptidesFile)
 	# merge these new peptides into the existing set, instead of overwriting...
 	mergePeptideFiles( tempPeptidesFile, genePeptidesFile, outfile=genePeptidesFile, 
 			mergeCountsMode="File2")
 
+	# record this step to audit trail
+	writeAuditRecord( peptide.path, sampleID, geneName, mode="Realign", 
+			info=list( "Length_AA"=nchar(aaSeq), "N_Peptides"=nReadsAligned))
+
 	# lastly, clean up
 	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein*bam*")))
 	system( paste( "rm ", file.path( peptide.path, "ConsensusProteinIndex*")))
 	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein.noHits.fastq.gz")))
-	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein.AlignedReads.0.fq.gz")))
+	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein.AlignedReads.fq.gz")))
 	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusDNA.fasta.fai", sep="."))))
 	system( paste( "rm ", tmpfile))
 	system( paste( "rm ", tempPeptidesFile))
@@ -652,5 +676,60 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 	out <- data.frame( "GENE_ID"=names(ans), "SCORE"= as.numeric(ans), "PRODUCT"=gene2Product( names(ans)), 
 				stringsAsFactors=F)
 	return(out)
+}
+
+
+`createAuditFile` <- function( peptide.path, sampleID, geneName) {
+
+	auditFile <- auditFileName( peptide.path, sampleID, geneName)
+	con <- file( auditFile, open="wt")
+	headerTerms <- c( "Command", "DateTime", "Length_AA", "N_Peptides", "SubCommand", "Location_DNA", 
+			"OldSeqFrag", "NewSeqFrag")
+	headerText <- paste( headerTerms, collapse="\t")
+	writeLines( headerText, con=con)
+	close( con)
+}
+
+
+`auditFileName` <- function( peptide.path, sampleID, geneName) {
+
+	f <- paste( sampleID, geneName, "AuditTrail.txt", sep=".")
+	return( file.path( peptide.path, f))
+}
+
+
+`writeAuditRecord` <- function( peptide.path, sampleID, geneName, mode, info) {
+
+	auditFile <- auditFileName( peptide.path, sampleID, geneName)
+	con <- file( auditFile, open="at")
+
+	dat <- date()
+	cmnd <- mode
+	cmd2 <- protLen <- nPep <- locStr <- oldSeqFrag <- newSeqFrag <- ""
+	if ( mode == "Pileup") {
+		# info is a list of details from the protein pileup step
+		nPep <- info$N_Peptides
+		# the protein is a vector of single characters
+		protLen <- length( info$Construct)
+	}
+	if ( mode == "Modify") {
+		# info is a list of details from the protein modification step
+		cmd2 <- info$Command
+		loc <- as.numeric( info$Location)
+		locStr <- paste( min(loc,na.rm=T), max(loc,na.rm=T), sep=":")
+		oldSeqFrag <- gsub( " ", "", paste( info$OldSequence, collapse=""))
+		newSeqFrag <- gsub( " ", "", paste( info$NewSequence, collapse=""))
+		protLen <- info$Length_AA
+	}
+	if ( mode == "Realign") {
+		# info is a list of details from the bowtie re-alignment step
+		nPep <- info$N_Peptides
+		cmd2 <- "Bowtie2"
+		protLen <- info$Length_AA
+	}
+	auditText <- paste( c( cmnd, dat, protLen, nPep, cmd2, locStr, oldSeqFrag, 
+				newSeqFrag), collapse="\t")
+	writeLines( auditText, con=con)
+	close( con)
 }
 

@@ -1,8 +1,9 @@
 # pipe.BAMpileup.R -- get the mpileup data from a BAM file
 
 `pipe.BAMpileup` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
-				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
-				summarize.calls=TRUE, verbose=FALSE) {
+				annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				max.depth=10000, results.path=NULL, summarize.calls=TRUE, 
+				verbose=FALSE) {
 				
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -41,7 +42,7 @@
 
 	# load that portion of the PILEUPS
 	curMPU <- BAM.mpileup( bamfile, seqID=seqID, fastaFile=genomicFastaFile, start=start, stop=stop, 
-			summarize.calls=summarize.calls, verbose=verbose)
+			max.depth=max.depth, summarize.calls=summarize.calls, verbose=verbose)
 
 	return( curMPU)
 }

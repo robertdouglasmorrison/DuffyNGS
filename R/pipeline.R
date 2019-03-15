@@ -4,7 +4,7 @@
 
 `pipeline` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", ...) {
 
-	checkSampleName( sampleID)
+	checkSampleNames( sampleID)
 	datatype <- getAnnotationValue( annotationFile, key=sampleID, columnArg="DataType", notfound="RNA-seq")
 
 	if ( datatype == "RNA-seq") {

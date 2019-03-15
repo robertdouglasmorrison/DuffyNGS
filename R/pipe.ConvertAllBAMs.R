@@ -182,7 +182,7 @@
 	results.path <- getOptionValue( optT, "results.path", notfound=".")
 	bowtie2Par.defaults( optionsFile)
 	readBufferSize <- as.integer( getOptionValue( optT, "readBufferSize", notfound="1000000"))
-	if (readBufferSize > 1000000) readBufferSize <- 1000000
+	#if (readBufferSize > 1000000) readBufferSize <- 1000000
 	genomicFile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 	riboFile <- file.path( results.path, "riboClear", paste( sampleID, "ribo.bam", sep="."))
 	riboFileOut <- file.path( results.path, "riboClear", paste( sampleID, "ribo.converted.bam", sep="."))
@@ -276,7 +276,7 @@
 	bowtie2Par.defaults( optionsFile)
 	readBufferSize <- as.integer( getOptionValue( optT, "readBufferSize", notfound="1000000"))
 	readBufferSize <- readBufferSize / 10
-	if ( readBufferSize > 200000) readBufferSize <- 200000
+	#if ( readBufferSize > 200000) readBufferSize <- 200000
 	genomicFile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 	spliceFile <- file.path( results.path, "splicing", paste( sampleID, "splice.bam", sep="."))
 	spliceFileOut <- file.path( results.path, "splicing", paste( sampleID, "splice.converted.bam", sep="."))

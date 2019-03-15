@@ -205,10 +205,12 @@
 						speciesID=allSpecies[1], results.path=results.path)
 		# don't treat these 2 P-values exactly as equals...
 		#worstPval <- max( strandAns$NonGene_Pvalue, strandAns$StrandValue_Pvalue, na.rm=T)
-		ng.Pval <- strandAns$NonGene_Pvalue
-		if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
-		strandCC.Pval <- strandAns$StrandValue_Pvalue
-		if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+		if ( ! is.null( strandAns)) {
+			ng.Pval <- strandAns$NonGene_Pvalue
+			if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
+			strandCC.Pval <- strandAns$StrandValue_Pvalue
+			if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+		}
 	}
 
 	# now make some gene plots

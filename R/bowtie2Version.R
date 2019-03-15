@@ -7,9 +7,9 @@
 	bp <- bowtie2Par()
 	if ( ! length(bp)) {
 		if ( file.exists( "./Options.txt")) {
-			bowtie2Par.defaults( optionsFile="./Options.txt")
+			bowtie2Par.defaults( optionsFile="./Options.txt", verbose=F)
 		} else {
-			bowtie2Par.defaults()
+			bowtie2Par.defaults( verbose=F)
 		}
 	}
 

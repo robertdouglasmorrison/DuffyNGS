@@ -2,9 +2,13 @@
 
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.5,
-				snpCallMode=c("consensus","all","multiallelic"), min.depth=1,
+				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, max.depth=10000, 
+				snpCallMode=c("consensus","all","multiallelic"), min.depth=1, 
+				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
+
+	# the SNP calling probability threshold is tuned for genomic DNA of uniform depth, and diploid organism.
+	# Use much higher cutoff for RNA-seq with hihgly variant read depth
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -40,9 +44,9 @@
 	snpCallMode <- match.arg( snpCallMode)
 
 	
-	`variantCallOneSeq` <- function( sid, ploidy=1) {
+	`variantCallOneSeq` <- function( sid, ploidy="1") {
 		ans <- BAM.variantCalls( bamfilelist, seqID=sid, fastaFile=fastaFile, 
-					start=start, stop=stop, min.depth=min.depth,
+					start=start, stop=stop, min.depth=min.depth, max.depth=max.depth, 
 					prob.variant=prob.variant, mpileupArgs=mpileupArgs, 
 					vcfArgs=vcfArgs, ploidy=ploidy, snpCallMode=snpCallMode,
 					verbose=verbose)
@@ -59,7 +63,9 @@
 	for ( speciesID in speciesSet) {
 		setCurrentSpecies( speciesID)
 		seqMap <- getCurrentSeqMap()
-		ploidy <- if ( speciesID %in% MAMMAL_SPECIES) 2 else 1
+		if ( length(speciesSet) > 1) {
+			ploidy <- if ( speciesID %in% MAMMAL_SPECIES) "" else "1"
+		}
 
 		# order to speed up the parallel computation
 		seqMap <- seqMap[ order( seqMap$LENGTH, decreasing=TRUE), ]
@@ -116,7 +122,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			next
 		}
 		tbl <- read.delim( infile, as.is=T)
-		if ( ! all( tbl$FORMAT == "GT:PL:DP")) stop( "Required VCF format of GT:PL:DP not present...")
+		if ( ! all( tbl$FORMAT %in% c( "GT:PL:DP", "GT:PL"))) stop( "Required VCF format of GT:PL:DP not present...")
 		tbl <- tbl[ , -match( c("FILTER","FORMAT"), colnames(tbl))]
 		colnames(tbl)[ ncol(tbl)] <- "GENOTYPE_CALL"
 
@@ -865,7 +871,7 @@ VCF.TotalDepth <- function( info) {
 
 `pipe.VariantTable` <- function( sampleIDset, seqID, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				min.depth=1, mpileupArgs="", 
+				min.depth=1, max.depth=max.depth, mpileupArgs="", 
 				explicit.reference=TRUE, call.mode=c("percents","counts"), findVariants=TRUE) {
 
 	# get needed paths, etc. from the options file
@@ -910,7 +916,7 @@ VCF.TotalDepth <- function( info) {
 		}
 
 		ans <- BAM.mpileup( bamfile, seqID=seqID, fastaFile=fastaFile, 
-					min.depth=min.depth, mpileupArgs=mpileupArgs, 
+					min.depth=min.depth, max.depth=max.depth, mpileupArgs=mpileupArgs, 
 					summarize.calls=FALSE)
 		if ( is.null(ans)) return(NULL)
 		N <- nrow(ans)

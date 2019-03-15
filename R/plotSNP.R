@@ -4,7 +4,7 @@
 plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, geneID=NULL, gmap=NULL,
 			tailWidth=50, cex.text=1.0, cex.legend=1.0, mode=c("single","multi"), 
 			label=sampleID, forceYmax=NULL, linewidth.factor=1, SNPwidth.factor=1.0,
-			show.legends=c( "all", "gene", "none"), verbose=TRUE, ...) {
+			max.depth=10000, show.legends=c( "all", "gene", "none"), verbose=TRUE, ...) {
 
 	mode <- match.arg( mode)
 	show.legends <- match.arg( show.legends)
@@ -65,7 +65,7 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	# get the bases to plot, and load that portion of the PILEUPS
 	loadKnownSNPtable(seqID, verbose=verbose)
 	SNP_curMPU <<- BAM.mpileup( bamfile, seqID, fastaFile, start=xLo, stop=xHi, summarize.calls=TRUE,
-					max.depth=500, verbose=FALSE)
+					max.depth=max.depth, verbose=FALSE)
 	if ( is.null( SNP_curMPU)) return(NULL)
 	SNP_curVCF <<- if ( file.exists(vcffile)) read.delim( vcffile, as.is=T) else data.frame()
 	genomicStr <- getFastaSeqFromFilePath( fastaFile, seqID)
@@ -390,6 +390,12 @@ multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffile
 		if ( nSamples > 30) mf <- c(6,6)
 		if ( nSamples > 36) mf <- c(6,7)
 		if ( nSamples > 42) mf <- c(6,8)
+		if ( nSamples > 48) mf <- c(6,9)
+		if ( nSamples > 54) mf <- c(7,9)
+		if ( nSamples > 63) mf <- c(7,10)
+		if ( nSamples > 70) mf <- c(7,11)
+		if ( nSamples > 77) mf <- c(8,11)
+		if ( nSamples > 88) mf <- c(8,12)
 	}
 	par( mfrow=mf)
 
@@ -443,6 +449,12 @@ multiPosition.plotSNP <- function( positionSet, seqIDset, sample, bamfile, vcffi
 		if ( nPlots > 30) mf <- c(6,6)
 		if ( nPlots > 36) mf <- c(6,7)
 		if ( nPlots > 42) mf <- c(6,8)
+		if ( nPlots > 48) mf <- c(6,9)
+		if ( nPlots > 54) mf <- c(7,9)
+		if ( nPlots > 63) mf <- c(7,10)
+		if ( nPlots > 70) mf <- c(7,11)
+		if ( nPlots > 77) mf <- c(8,11)
+		if ( nPlots > 88) mf <- c(8,12)
 	}
 	par( mfrow=mf)
 

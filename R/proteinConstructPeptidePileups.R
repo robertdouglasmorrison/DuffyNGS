@@ -417,12 +417,14 @@
 	pepTbl <- pepTbl[ ord, ]
 	if (nrow(pepTbl)) rownames(pepTbl) <- 1:nrow(pepTbl)
 	write.table( pepTbl, pepOutfile, sep="\t", quote=F, row.names=F)
+	totalPeptides <- sum( pepTbl$Count, na.rm=T)
 
 	# summarize
 	cat( "\nConstruct: ", constructName, "\tN_GoodScoring_Peptides: ", 
-		formatC( sum(pepTbl$Count), format="d", big.mark=","), "\n")
+		formatC( totalPeptides, format="d", big.mark=","), "\n")
 	
-	out <- list( "AA_Calls"=aaCalls, "AA_Weights"=aaWeights, "Construct"=seqAA)
+	out <- list( "AA_Calls"=aaCalls, "AA_Weights"=aaWeights, "Construct"=seqAA, 
+			"N_Peptides"=totalPeptides)
 	return( out)
 }
 

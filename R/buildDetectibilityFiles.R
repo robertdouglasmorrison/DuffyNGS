@@ -85,12 +85,15 @@
 			if (verbose) cat( "  selfAlign..")
 			# we must be unique against itself
 			options <- " -v 0 -m 1 -B 1 -f -p 4 --quiet "
+			# recent version sends info to stderr, trap & discard
+			trapStdErr <- " 2>/dev/null"
+
 			# make sure the given index exists
 			index <- file.path( bowtieIndexPath, selfGenomicIndex)
 			if ( ! file.exists( base::paste( index, "1.ebwt", sep="."))) {
 				stop( paste( "Bowtie index not found:  ", index))
 			}
-			cmdLine <- base::paste( bowtiePar( "Program"), options, index, smallFasta, smallAnswer, sep="  ")
+			cmdLine <- base::paste( bowtiePar( "Program"), options, index, smallFasta, smallAnswer, trapStdErr, sep="  ")
 			file.delete( smallAnswer)
 			callBowtie( cmdLine, verbose=FALSE)
 
@@ -113,7 +116,7 @@
 					stop( paste( "Bowtie index not found:  ", index))
 				}
 				cmdLine <- base::paste( bowtiePar( "Program"), options, index, smallFasta, 
-							smallAnswer, sep="  ")
+							smallAnswer, trapStdErr, sep="  ")
 				file.delete( smallAnswer)
 				callBowtie( cmdLine, verbose=FALSE)
 				# turn those unique alignments into detectable regions
