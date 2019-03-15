@@ -191,6 +191,7 @@
 	if ( 4 %in% steps) {
 	    if ( ! doingComboIndex) {
 		
+		cat( "\n\nPart 4a:  Detectability files...")
 		# verify the index we need is there
 		idxFiles <- dir( bowtie1IndexPath, pattern=paste( "^",genomicIndexFile,sep=""))
 		if ( ! length( idxFiles)) {
@@ -233,7 +234,6 @@
 			}
 		}
 
-		cat( "\n\nPart 4a:  Detectability files...")
 		ans <- buildDetectabilityFiles( speciesID=speciesID, genomicFastaFile=genomicFastaFile, 
 				selfGenomicIndex=genomicIndexFile, otherGenomicIndex=otherGenomicIndex,
 				chunkSize=chunkSize, verbose=verbose)
