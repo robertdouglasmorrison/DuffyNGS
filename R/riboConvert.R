@@ -90,7 +90,7 @@
 			if ( length( isContig)) {
 				# for each contig ID, make a set of positions that we can call fastFindInterval on
 				for ( j in isContig) {
-					smlMap <- subset( riboMap, CONTIG_ID == ridGID[j])
+					smlMap <- subset( riboMap, CONTIG_ID == ridGID[j] & SEQ_ID == ridSID[j])
 					ord <- order( smlMap$SEQ_POSITION)
 					# bacause 'findInterval' will map to 1...N-1, put an extra copy of the last row
 					smlMap <- smlMap[ c( ord, ord[length(ord)]), ]
