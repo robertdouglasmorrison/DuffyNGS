@@ -733,3 +733,52 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 	close( con)
 }
 
+
+CPP.AuditSummary <- function( sampleID, geneName, results.path=getOptionValue( "Options.txt", "results.path", verbose=F)) {
+
+	path <- file.path( results.path, "ConsensusProteins", sampleID)
+	f <- auditFileName( path, sampleID, geneName=geneName)
+	if ( ! file.exists( f)) {
+		cat( "\nCPP audit file not found: ", f)
+		return( NULL)
+	}
+
+	tbl <- read.delim( f, as.is=T)
+	cat( "\n\nAudit Summary: ", sampleID, "\n")
+	cat( "\nCounts by CPP Command Type:")
+	print( ans1 <- table( tbl$Command))
+	cat( "\nCounts by CPP 'Modify' Sub-Command Type:")
+	print( ans2 <- table( tbl$SubCommand[ tbl$Command == "Modify"]))
+
+	# if the gene is VAR2CSA, do more detailed analysis
+	if ( toupper(geneName) == "VAR2CSA") {
+		dmap <- getVar2csaDomainMap( strain="3D7")
+		# make a "findInterval" construct, using the midpoint between domains
+		domStarts <- dmap$REF_START
+		prevDomStops <- c( 1, dmap$REF_STOP[1:(nrow(dmap)-1)])
+		domStarts <- round( (prevDomStops + domStarts) / 2)
+		names( domStarts) <- dmap$DOMAIN_ID
+		# turn the "Location_DNA" info into  a AA location
+		dnaLocTerms <- strsplit( tbl$Location_DNA[ tbl$Command == "Modify"], split=":")
+		aaCenter <- sapply( dnaLocTerms, function( x) return( round( mean( as.numeric(x), na.rm=T) / 3)))
+		# bacause the CPP construct tends to be short early, and grow to full size, just using AA locs
+		# will have a bias.  Convert to percentages to do the find, show we are being fair
+		domStarts <- domStarts / max( domStarts)
+		aaLens <- as.numeric( tbl$Length_AA[ tbl$Command == "Modify"])
+		aaCenter <- aaCenter / aaLens
+		hits <- findInterval( aaCenter, domStarts, all.inside=T)
+		domHits <- names( domStarts)[hits]
+		domHitTbl <- table( factor( domHits, levels=dmap$DOMAIN_ID))
+		domHitPct <- round( domHitTbl * 100 / sum(domHitTbl), digits=1)
+		cat( "\nLocations of Modify Operations By Var2csa Domain: \n")
+		ans3 <- data.frame( "DomainID"=dmap$DOMAIN_ID, "N_Modify_Ops"=as.numeric(domHitTbl), 
+				"Pct_Modify_Ops"=as.numeric(domHitPct), stringsAsFactors=F)
+		rownames(ans3) <- 1:nrow(ans3)
+		print( ans3)
+
+		return( list( "CPP Commands"=ans1, "Modify_Subcommands"=ans2, "Var2csa Domains"=ans3))
+	} else {
+		return( list( "CPP Commands"=ans1, "Modify_Subcommands"=ans2))
+	}
+}
+

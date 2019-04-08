@@ -44,20 +44,21 @@
 	# plotting no longer works in multicore mode...
 	specialPlotMode <- FALSE
 	save.PLOT.FUN <- PLOT.FUN
+	save.multicore <- multicore.currentCoreCount()
 	if ( doDE && multicore.currentCoreCount() > 1 && (is.null(PLOT.FUN) || is.function(PLOT.FUN))) {
 		cat( "\nWarning:  no gene plotting in multicore mode..")
 		PLOT.FUN <- NA
 		specialPlotMode <- TRUE
 	}
 
-	if ( doDE || is.null(PLOT.FUN) || is.function(PLOT.FUN) ) {
+	toolFuncList <- vector( mode="list")
+	if ( "RoundRobin" %in% tools) toolFuncList <- c( toolFuncList, pipe.RoundRobin)
+	if ( "DESeq" %in% tools) toolFuncList <- c( toolFuncList, pipe.DESeq)
+	if ( "EdgeR" %in% tools) toolFuncList <- c( toolFuncList, pipe.EdgeR)
+	if ( "RankProduct" %in% tools) toolFuncList <- c( toolFuncList, pipe.RankProduct)
+	if ( "SAM" %in% tools) toolFuncList <- c( toolFuncList, pipe.SAM)
 
-		toolFuncList <- vector( mode="list")
-		if ( "RoundRobin" %in% tools) toolFuncList <- c( toolFuncList, pipe.RoundRobin)
-		if ( "DESeq" %in% tools) toolFuncList <- c( toolFuncList, pipe.DESeq)
-		if ( "EdgeR" %in% tools) toolFuncList <- c( toolFuncList, pipe.EdgeR)
-		if ( "RankProduct" %in% tools) toolFuncList <- c( toolFuncList, pipe.RankProduct)
-		if ( "SAM" %in% tools) toolFuncList <- c( toolFuncList, pipe.SAM)
+	if ( doDE || is.null(PLOT.FUN) || is.function(PLOT.FUN) ) {
 
 		saveMClapplyAns <<- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
@@ -70,6 +71,7 @@
 
 	if ( (specialPlotMode || makePlots) && exists( "toolFuncList")) {
 		cat( "\n\nNow recalling DE tools just to make plots..")
+		multicore.setup(1)
 		lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
@@ -78,6 +80,7 @@
 					targetID=targetID, verbose=verbose, label=label, PLOT.FUN=save.PLOT.FUN, 
 					doDE=FALSE, ...))
 		PLOT.FUN <- save.PLOT.FUN
+		multicore.setup( save.multicore)
 	}
 
 	# now we can do meta analysis

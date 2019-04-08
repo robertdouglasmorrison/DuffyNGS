@@ -39,17 +39,42 @@
 		cat( "  summarize..")
 		fac <- factor.align( chunk)
 		nReads <- nlevels( fac)
-		if ( readStatsAlignPhase == "Splicing") {
-			geneIDsets <- base::tapply( geneIDs, INDEX=fac, forceUnique, simplify=FALSE)
-		} else {
-			geneIDsets <- base::tapply( shortGeneName(geneIDs, keep=1), INDEX=fac, forceUnique, simplify=FALSE)
-		}
-		geneIDpatterns <- sapply( geneIDsets, base::paste, collapse="|")
+		PASTE <- base::paste
+
+		# let's try to do this faster
+		geneIDpatterns <- nSpecies <- speciesIDpatterns <- vector( length=nReads)
+		nNow <- 0
+		if ( readStatsAlignPhase != "Splicing") geneIDs <- shortGeneName(geneIDs, keep=1)
+		base::tapply( 1:N, INDEX=fac, function(x) {
+				x1 <- x[1]
+				nNow <<- nNow + 1
+				if ( length(x) > 1) {
+					geneIDpatterns[nNow] <<- paste( sort.int(unique.default(geneIDs[x])), collapse="|")
+					mySpecies <- sort.int(unique.default(speciesIDs[x]))
+					nSpecies[nNow] <<- ns <- length( mySpecies)
+					if ( ns == 1) speciesIDpatterns[nNow] <<- mySpecies
+				} else {
+					geneIDpatterns[nNow] <<- geneIDs[x1]
+					speciesIDpatterns[nNow] <<- speciesIDs[x1]
+					nSpecies[nNow] <<- 1
+				}
+			})
 		genePattTable <- base::table( geneIDpatterns)
-		speciesIDsets <- tapply( speciesIDs, INDEX=fac, forceUnique, simplify=FALSE)
-		uniqueSpecies <- which( sapply( speciesIDsets, FUN=testUnique, simplify=TRUE))
-		speciesTable <- base::table( base::unlist( speciesIDsets[ uniqueSpecies]))
-		nMultiSpecies <- nReads - length( uniqueSpecies)
+		speciesTable <- base::table( speciesIDpatterns[ nSpecies == 1])
+		nMultiSpecies <- sum( nSpecies > 1)
+
+		# old way...
+		#if ( readStatsAlignPhase == "Splicing") {
+		#	geneIDsets <- base::tapply( geneIDs, INDEX=fac, forceUnique, simplify=FALSE)
+		#} else {
+		#	geneIDsets <- base::tapply( shortGeneName(geneIDs, keep=1), INDEX=fac, forceUnique, simplify=FALSE)
+		#}
+		#geneIDpatterns <- sapply( geneIDsets, base::paste, collapse="|")
+		#genePattTable <- base::table( geneIDpatterns)
+		#speciesIDsets <- tapply( speciesIDs, INDEX=fac, forceUnique, simplify=FALSE)
+		#uniqueSpecies <- which( sapply( speciesIDsets, FUN=testUnique, simplify=TRUE))
+		#speciesTable <- base::table( base::unlist( speciesIDsets[ uniqueSpecies]))
+		#nMultiSpecies <- nReads - length( uniqueSpecies)
 
 		# push these results back to storage
 		readStatsNreads <<- readStatsNreads + nReads
