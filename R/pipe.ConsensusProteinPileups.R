@@ -376,7 +376,7 @@
 		file.copy( consensusAAfile, saveAAfile, overwrite=T)
 		file.copy( consensusDNAfile, saveDNAfile, overwrite=T)
 		file.copy( consensusBASEfile, saveBASEfile, overwrite=T)
-		oldFA <- loadFasta( consensusAAfile)
+		oldFA <- loadFasta( consensusAAfile, verbose=F)
 		myDesc <- oldFA$desc
 		writeFasta( as.Fasta( myDesc, aaSeq), consensusAAfile, line.width=100)
 		writeFasta( as.Fasta( myDesc, dnaSeq), consensusDNAfile, line.width=100)
@@ -416,8 +416,8 @@
 	readingFrame <- match.arg( readingFrame)
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
-	aaFA <- loadFasta( consensusAAfile)
-	dnaFA <- loadFasta( consensusDNAfile)
+	aaFA <- loadFasta( consensusAAfile, verbose=F)
+	dnaFA <- loadFasta( consensusDNAfile, verbose=F)
 	myDesc <- dnaFA$desc
 	aaMatch <- (aaSeq == aaFA$seq)
 	# for the DNA, ignore last bases after last AA
@@ -658,7 +658,7 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 		fa <- gene2Fasta( allGenes, genomicFastaFile, mode="gdna", verbose=T)
 		writeFasta( fa, geneDNAfile, line=100)
 	} else {
-		fa <- loadFasta( geneDNAfile, verb=F)
+		fa <- loadFasta( geneDNAfile, verbose=F)
 	}
 
 	# find the best hits of this DNA context to any gene in the genome
@@ -734,7 +734,7 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 }
 
 
-CPP.AuditSummary <- function( sampleID, geneName, results.path=getOptionValue( "Options.txt", "results.path", verbose=F)) {
+CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptionValue( "Options.txt", "results.path", verbose=F)) {
 
 	path <- file.path( results.path, "ConsensusProteins", sampleID)
 	f <- auditFileName( path, sampleID, geneName=geneName)
@@ -758,13 +758,16 @@ CPP.AuditSummary <- function( sampleID, geneName, results.path=getOptionValue( "
 		prevDomStops <- c( 1, dmap$REF_STOP[1:(nrow(dmap)-1)])
 		domStarts <- round( (prevDomStops + domStarts) / 2)
 		names( domStarts) <- dmap$DOMAIN_ID
+		# let's look at all the modifcation lines
+		isMOD <- which( tbl$Command == "Modify")
 		# turn the "Location_DNA" info into  a AA location
-		dnaLocTerms <- strsplit( tbl$Location_DNA[ tbl$Command == "Modify"], split=":")
+		dnaLocTerms <- strsplit( tbl$Location_DNA[ isMOD], split=":")
 		aaCenter <- sapply( dnaLocTerms, function( x) return( round( mean( as.numeric(x), na.rm=T) / 3)))
 		# bacause the CPP construct tends to be short early, and grow to full size, just using AA locs
 		# will have a bias.  Convert to percentages to do the find, show we are being fair
 		domStarts <- domStarts / max( domStarts)
-		aaLens <- as.numeric( tbl$Length_AA[ tbl$Command == "Modify"])
+		# more precisely, the length to use is the one from "before" this edit, as it was the location this edit occured on
+		aaLens <- as.numeric( tbl$Length_AA[ isMOD-1])
 		aaCenter <- aaCenter / aaLens
 		hits <- findInterval( aaCenter, domStarts, all.inside=T)
 		domHits <- names( domStarts)[hits]

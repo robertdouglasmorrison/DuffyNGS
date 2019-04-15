@@ -101,7 +101,7 @@
 
 
 	# set up to plot
-	xlim <- c( -10, nAA+15)
+	xlim <- c( -10, nAA+25)
 	ylim <- c( -1, maxDepth+2)
 	par( mai=c(0.8, 0.9, 0.8, 0.3))
 	plot( 1,1, type='n', main=paste( "Protein Construct:   ", constructName, "    Gene: ", geneName, 
