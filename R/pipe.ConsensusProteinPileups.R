@@ -376,7 +376,7 @@
 		file.copy( consensusAAfile, saveAAfile, overwrite=T)
 		file.copy( consensusDNAfile, saveDNAfile, overwrite=T)
 		file.copy( consensusBASEfile, saveBASEfile, overwrite=T)
-		oldFA <- loadFasta( consensusAAfile)
+		oldFA <- loadFasta( consensusAAfile, verbose=F)
 		myDesc <- oldFA$desc
 		writeFasta( as.Fasta( myDesc, aaSeq), consensusAAfile, line.width=100)
 		writeFasta( as.Fasta( myDesc, dnaSeq), consensusDNAfile, line.width=100)
@@ -416,8 +416,8 @@
 	readingFrame <- match.arg( readingFrame)
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
-	aaFA <- loadFasta( consensusAAfile)
-	dnaFA <- loadFasta( consensusDNAfile)
+	aaFA <- loadFasta( consensusAAfile, verbose=F)
+	dnaFA <- loadFasta( consensusDNAfile, verbose=F)
 	myDesc <- dnaFA$desc
 	aaMatch <- (aaSeq == aaFA$seq)
 	# for the DNA, ignore last bases after last AA
@@ -658,7 +658,7 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 		fa <- gene2Fasta( allGenes, genomicFastaFile, mode="gdna", verbose=T)
 		writeFasta( fa, geneDNAfile, line=100)
 	} else {
-		fa <- loadFasta( geneDNAfile, verb=F)
+		fa <- loadFasta( geneDNAfile, verbose=F)
 	}
 
 	# find the best hits of this DNA context to any gene in the genome
@@ -731,5 +731,60 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 				newSeqFrag), collapse="\t")
 	writeLines( auditText, con=con)
 	close( con)
+}
+
+
+CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptionValue( "Options.txt", "results.path", verbose=F)) {
+
+	path <- file.path( results.path, "ConsensusProteins", sampleID)
+	f <- auditFileName( path, sampleID, geneName=geneName)
+	if ( ! file.exists( f)) {
+		cat( "\nCPP audit file not found: ", f)
+		return( NULL)
+	}
+
+	tbl <- read.delim( f, as.is=T)
+	cat( "\n\nAudit Summary: ", sampleID, "\n")
+	cat( "\nCounts by CPP Command Type:")
+	print( ans1 <- table( tbl$Command))
+	cat( "\nCounts by CPP 'Modify' Sub-Command Type:")
+	print( ans2 <- table( tbl$SubCommand[ tbl$Command == "Modify"]))
+
+	# if the gene is VAR2CSA, do more detailed analysis
+	if ( toupper(geneName) == "VAR2CSA") {
+		dmap <- getVar2csaDomainMap( strain="3D7")
+		# make a "findInterval" construct, using the midpoint between domains
+		domStarts <- dmap$REF_START
+		prevDomStops <- c( 1, dmap$REF_STOP[1:(nrow(dmap)-1)])
+		domStarts <- round( (prevDomStops + domStarts) / 2)
+		names( domStarts) <- dmap$DOMAIN_ID
+		# let's look at all the modifcation lines
+		isMOD <- which( tbl$Command == "Modify")
+		# turn the "Location_DNA" info into  a AA location
+		dnaLocTerms <- strsplit( tbl$Location_DNA[ isMOD], split=":")
+		aaCenter <- sapply( dnaLocTerms, function( x) return( round( mean( as.numeric(x), na.rm=T) / 3)))
+		# bacause the CPP construct tends to be short early, and grow to full size, just using AA locs
+		# will have a bias.  Convert to percentages to do the find, show we are being fair
+		domStarts <- domStarts / max( domStarts)
+		# more precisely, the length to use is the one from "before" this edit, as it was the location this edit occured on
+		aaLens <- as.numeric( tbl$Length_AA[ isMOD-1])
+		# we except a typical Var2csa to be ~2650 long.  And we know that the worst, most likely missing region is DBL6
+		# thus, lets assume the length at a minimum to be more fair with our fractional guesses.
+		aaLens <- pmax( aaLens, rep.int(2600,length(aaLens)))
+		aaCenter <- aaCenter / aaLens
+		hits <- findInterval( aaCenter, domStarts, all.inside=T)
+		domHits <- names( domStarts)[hits]
+		domHitTbl <- table( factor( domHits, levels=dmap$DOMAIN_ID))
+		domHitPct <- round( domHitTbl * 100 / sum(domHitTbl), digits=1)
+		cat( "\nLocations of Modify Operations By Var2csa Domain: \n")
+		ans3 <- data.frame( "DomainID"=dmap$DOMAIN_ID, "N_Modify_Ops"=as.numeric(domHitTbl), 
+				"Pct_Modify_Ops"=as.numeric(domHitPct), stringsAsFactors=F)
+		rownames(ans3) <- 1:nrow(ans3)
+		print( ans3)
+
+		return( list( "CPP Commands"=ans1, "Modify_Subcommands"=ans2, "Var2csa Domains"=ans3))
+	} else {
+		return( list( "CPP Commands"=ans1, "Modify_Subcommands"=ans2))
+	}
 }
 

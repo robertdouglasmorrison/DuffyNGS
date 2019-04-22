@@ -98,7 +98,7 @@
 			# there is a tiny chance that one could die...  bale as soon as Genome is done
 			if ( ! watchGenomic) {
 				timeOutCount <- timeOutCount + 1
-				if ( timeOutCount > 240) {
+				if ( timeOutCount > 360) {
 					cat( "\nGenome done converting..  Timed out on some others..  Continuing on..")
 					break
 				}
@@ -182,7 +182,6 @@
 	results.path <- getOptionValue( optT, "results.path", notfound=".")
 	bowtie2Par.defaults( optionsFile)
 	readBufferSize <- as.integer( getOptionValue( optT, "readBufferSize", notfound="1000000"))
-	#if (readBufferSize > 1000000) readBufferSize <- 1000000
 	genomicFile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 	riboFile <- file.path( results.path, "riboClear", paste( sampleID, "ribo.bam", sep="."))
 	riboFileOut <- file.path( results.path, "riboClear", paste( sampleID, "ribo.converted.bam", sep="."))

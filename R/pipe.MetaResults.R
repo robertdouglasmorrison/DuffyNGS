@@ -9,7 +9,7 @@
 				tools=c("RoundRobin", "RankProduct", "SAM", "EdgeR", "DESeq"), 
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
-				keepIntergenics=FALSE, verbose=TRUE, label="", doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
+				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
 				nFDRsimulations=0,
 				addCellTypes=(speciesID %in% MAMMAL_SPECIES), 
 				addLifeCycle=(speciesID %in% PARASITE_SPECIES), PLOT.FUN=NULL, ...)
@@ -19,7 +19,7 @@
 		cat( verboseOutputDivider)
 		cat( "\nStarting pipe 'MetaResults' on Sample Set: \n")
 		print(sampleIDset)
-		cat("\n", label, "\n\nUsing results from Species:  ", speciesID,"\n")
+		cat("\n\nUsing results from Species:  ", speciesID,"\n")
 	}
 
 	# set up for this species...
@@ -44,40 +44,44 @@
 	# plotting no longer works in multicore mode...
 	specialPlotMode <- FALSE
 	save.PLOT.FUN <- PLOT.FUN
+	save.multicore <- multicore.currentCoreCount()
 	if ( doDE && multicore.currentCoreCount() > 1 && (is.null(PLOT.FUN) || is.function(PLOT.FUN))) {
 		cat( "\nWarning:  no gene plotting in multicore mode..")
 		PLOT.FUN <- NA
 		specialPlotMode <- TRUE
 	}
 
-	if ( doDE || is.null(PLOT.FUN) || is.function(PLOT.FUN) ) {
+	# put the slowest tools first, so they all end asap
+	toolFuncList <- vector( mode="list")
+	if ( "RoundRobin" %in% tools) toolFuncList <- c( toolFuncList, pipe.RoundRobin)
+	if ( "RankProduct" %in% tools) toolFuncList <- c( toolFuncList, pipe.RankProduct)
+	if ( "DESeq" %in% tools) toolFuncList <- c( toolFuncList, pipe.DESeq)
+	if ( "EdgeR" %in% tools) toolFuncList <- c( toolFuncList, pipe.EdgeR)
+	if ( "SAM" %in% tools) toolFuncList <- c( toolFuncList, pipe.SAM)
 
-		toolFuncList <- vector( mode="list")
-		if ( "RoundRobin" %in% tools) toolFuncList <- c( toolFuncList, pipe.RoundRobin)
-		if ( "DESeq" %in% tools) toolFuncList <- c( toolFuncList, pipe.DESeq)
-		if ( "EdgeR" %in% tools) toolFuncList <- c( toolFuncList, pipe.EdgeR)
-		if ( "RankProduct" %in% tools) toolFuncList <- c( toolFuncList, pipe.RankProduct)
-		if ( "SAM" %in% tools) toolFuncList <- c( toolFuncList, pipe.SAM)
+	if ( doDE) {
 
 		saveMClapplyAns <<- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
 					folderName=folderName, altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel,
 					Ngenes=Ngenes, geneColumnHTML=geneColumnHTML, keepIntergenics=keepIntergenics,
-					targetID=targetID, verbose=verbose, label=label, PLOT.FUN=PLOT.FUN, 
+					targetID=targetID, verbose=verbose, PLOT.FUN=PLOT.FUN, 
 					doDE=doDE, ...))
 	} # end of 'doDE'
 
 	if ( (specialPlotMode || makePlots) && exists( "toolFuncList")) {
 		cat( "\n\nNow recalling DE tools just to make plots..")
+		multicore.setup(1)
 		lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
 					folderName=folderName, altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel,
 					Ngenes=Ngenes, geneColumnHTML=geneColumnHTML, keepIntergenics=keepIntergenics,
-					targetID=targetID, verbose=verbose, label=label, PLOT.FUN=save.PLOT.FUN, 
+					targetID=targetID, verbose=verbose, PLOT.FUN=save.PLOT.FUN, 
 					doDE=FALSE, ...))
 		PLOT.FUN <- save.PLOT.FUN
+		multicore.setup( save.multicore)
 	}
 
 	# now we can do meta analysis
@@ -117,6 +121,10 @@
 		ord <- diffExpressMetaResultOrder( myFold, myPval, myRank, wt.fold=wt.fold, wt.pvalue=wt.pval, wt.rank=wt.rank)
 		out <- out[ ord, ]
 		rownames(out) <- 1:nrow(out)
+
+		# round to sensible digits of resolution
+		out$LOG2FOLD <- round( out$LOG2FOLD, digits=4)
+		out$AVG_RANK <- round( out$AVG_RANK, digits=2)
 
 		if (addCellTypes) {
 			cellType <- gene2CellType( out$GENE_ID)
@@ -244,7 +252,7 @@
 	if (verbose) {
 		cat( verboseOutputDivider)
 		cat( "\n\nFinished pipe 'MetaResults' on Sample Set:     ", unlist(sampleIDset), 
-			"\nSpecies: ", speciesID,"\n", label, "\n")
+			"\nSpecies: ", speciesID,"\n")
 	}
 	return()
 }

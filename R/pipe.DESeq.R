@@ -241,6 +241,11 @@
 	# after all tables and results, make those gene plots
 	genesToPlot <- sort( genesToPlot)
 	if ( ! is.null(altGeneMap)) genesToPlot <- sort( unique( sub( "::.+", "", genesToPlot)))
+
+	# put in chromosomal order?
+	whereGmap <- match( genesToPlot, gmap$GENE_ID, nomatch=NA)
+	genesToPlot <- genesToPlot[ order( whereGmap)]
+
 	if ( is.null(PLOT.FUN) || is.function( PLOT.FUN)) {
 		geneTableToHTMLandPlots( geneDF=NULL, RP_samples, RP_colors, N=Ngenes, htmlFile=htmlFile, 
 				html.path=htmlPath, results.path=resultsPath, makePlots=TRUE, 
@@ -309,7 +314,7 @@
 		dev.off()
 
 	} else {
-		if ( ncol(tm) < 3) cat( "\nNot able to cluster fewer than 3 transcripts...")
+		if ( ncol(tm) < 3) cat( "\nToo few samples to cluster...")
 	}
 	
 	if (verbose) {

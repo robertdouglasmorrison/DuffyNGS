@@ -248,6 +248,11 @@
 	# after all tables and results, make those gene plots
 	genesToPlot <- sort( genesToPlot)
 	if ( ! is.null(altGeneMap)) genesToPlot <- sort( unique( sub( "::.+", "", genesToPlot)))
+
+	# put in chromosomal order?
+	whereGmap <- match( genesToPlot, gmap$GENE_ID, nomatch=NA)
+	genesToPlot <- genesToPlot[ order( whereGmap)]
+
 	if ( is.null(PLOT.FUN) || is.function(PLOT.FUN)) {
 		geneTableToHTMLandPlots( geneDF=NULL, RP_samples, RP_colors, N=Ngenes, htmlFile=htmlFile, 
 				html.path=htmlPath, results.path=resultsPath, makePlots=TRUE, 
@@ -310,13 +315,14 @@
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
 				"\nTranscriptomes for species:   ", speciesID)
 		pngFile <- file.path( RP_path, paste( RP_prefix,"PCA.png",sep="."))
+		#matrix.PCAplot.family( tm, filename=pngFile, main=plotText, FUN=png, nPC=4, col=RR_colors)
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
 		png( filename=pngFile, width=800, height=800, bg="white")
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
 		dev.off()
 
 	} else {
-		if ( ncol(tm) < 3) cat( "\nNot able to cluster fewer than 3 transcripts...")
+		if ( ncol(tm) < 3) cat( "\nToo few samples to cluster...")
 	}
 	
 	if (verbose) {
