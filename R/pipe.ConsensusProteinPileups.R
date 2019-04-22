@@ -768,6 +768,9 @@ CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptio
 		domStarts <- domStarts / max( domStarts)
 		# more precisely, the length to use is the one from "before" this edit, as it was the location this edit occured on
 		aaLens <- as.numeric( tbl$Length_AA[ isMOD-1])
+		# we except a typical Var2csa to be ~2650 long.  And we know that the worst, most likely missing region is DBL6
+		# thus, lets assume the length at a minimum to be more fair with our fractional guesses.
+		aaLens <- pmax( aaLens, rep.int(2600,length(aaLens)))
 		aaCenter <- aaCenter / aaLens
 		hits <- findInterval( aaCenter, domStarts, all.inside=T)
 		domHits <- names( domStarts)[hits]

@@ -62,7 +62,7 @@
 	hasNG <- ( length(isNG) >= N * 0.01)
 
 	# test #1:  are the NonGenes near the bottom?
-	pval1 <- pval2 <- NA
+	sMean <- pval1 <- pval2 <- NA
 	if (hasNG && length(isG) > 3 && length(isNG) > 3) {
 		pval1 <- wilcox.test( isG, isNG, alternate="greater")$p.value
 	}

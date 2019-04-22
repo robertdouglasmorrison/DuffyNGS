@@ -4,8 +4,19 @@
 
 `pipe.DiffExpression` <- function( sampleIDset, groupSet=NULL, annotationFile="Annotation.txt", 
 		optionsFile="Options.txt", results.path=NULL, speciesID=NULL, 
-		altGeneMap=NULL, altGeneMapLabel=NULL, 
-		minRPKM=NULL, missingOnly=FALSE, verbose=TRUE) {
+		altGeneMap=NULL, altGeneMapLabel=NULL, minRPKM=NULL, missingOnly=FALSE, 
+		method=c("Matrix", "RatioFiles"), verbose=TRUE) {
+
+	# as of 2019, the Round Robin tool does not need the folder of "ratio" files for all 2-sample comparisons
+	# so check and tell user this is deprecated...
+	method <- match.arg( method)
+	if ( method == "Matrix") {
+		cat( "\n\nFunctions 'pipe.DiffExpression()' and 'runDiffExpression()' are now deprecated.")
+		cat( "\nThe Round Robin tool no longer needs the folder of 'ratio' files, so this")
+		cat( "\npipeline step is no longer required for doing differential expression comparisons.")
+		cat( "\n\nTo force creation of Ratio files, use optional argument:  method='RatioFiles'")
+		return()
+	}
 
 	# pre-catch the case of MissingOnly=TRUE and exactly 2 samples that are already done
 	# so we can silently return in a hurry

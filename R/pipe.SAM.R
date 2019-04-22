@@ -103,7 +103,8 @@
 	minRPKM <- as.numeric( getOptionValue( optT, "DE.minimumRPKM", speciesID=speciesID, 
 			notfound="1", verbose=T))
 
-	intensityColumn <- if (useMultiHits) "RPKM_M" else "RPKM_U"
+	#intensityColumn <- if (useMultiHits) "RPKM_M" else "RPKM_U"
+	intensityColumn <- getExpressionUnitsColumn( optionsFile, useMultiHits=useMultiHits)
 
 	# ready to do the SAM...
 	genesToPlot <- vector()
@@ -316,12 +317,17 @@
 		dev.off()
 
 	} else {
-		if (ncol(tm) < 3) cat( "\nNot able to make cluster plots...")
+		if (ncol(tm) < 3) cat( "\nToo few samples to make cluster plots...")
 	}
 	
 	# after all tables and results, make those gene plots
 	genesToPlot <- sort( genesToPlot)
 	if ( ! is.null(altGeneMap)) genesToPlot <- sub( "::.+", "", genesToPlot)
+
+	# put in chromosomal order?
+	whereGmap <- match( genesToPlot, gmap$GENE_ID, nomatch=NA)
+	genesToPlot <- genesToPlot[ order( whereGmap)]
+
 	if ( is.null(PLOT.FUN) || is.function( PLOT.FUN)) {
 		geneTableToHTMLandPlots( geneDF=NULL, SAM_samples, SAM_colors, N=Ngenes, htmlFile=htmlFile, 
 				html.path=htmlPath, results.path=resultsPath, makePlots=TRUE, 

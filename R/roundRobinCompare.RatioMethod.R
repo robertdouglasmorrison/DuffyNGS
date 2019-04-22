@@ -4,12 +4,12 @@
 # where each sample is a member of some 'group'.   Final results are group vs group gene rankings.
 
 
-`roundRobinCompare` <- function( sampleIDset, speciesID=getCurrentSpecies(), annotationFile="Annotation.txt",
+`roundRobinCompare.RatioMethod` <- function( sampleIDset, speciesID=getCurrentSpecies(), annotationFile="Annotation.txt",
 		optionsFile="Options.txt", useMultiHits=TRUE, keepIntergenics=FALSE, 
 		results.path=NULL, folderName="", groupColumn="Group", colorColumn="Color",
 		altGeneMap=NULL, altGeneMapLabel=NULL, geneColumnHTML="GENE_ID", 
 		average.FUN=sqrtmean, Ngenes=100, useLog=FALSE, 
-		verbose=!interactive(), label="", doDE=TRUE, PLOT.FUN=NULL, ...) {
+		verbose=!interactive(), doDE=TRUE, PLOT.FUN=NULL, ...) {
 
 	# set up for this species...  Target setup done up in the calling routine!
 	setCurrentSpecies( speciesID)
@@ -95,7 +95,8 @@
 
 	# also, build one giant matrix of all transcriptomes as another part of results...
 	transFileSet <- transFIDs <- vector()
-	intensityColumn <- if (useMultiHits) "RPKM_M" else "RPKM_U"
+	#intensityColumn <- if (useMultiHits) "RPKM_M" else "RPKM_U"
+	intensityColumn <- getExpressionUnitsColumn( optionsFile, useMultiHits=useMultiHits)
 
 
 	# local functions to do the Round Robin...
@@ -107,7 +108,7 @@
 		x <- v1 <- v2 <- ranks <- vector( "mode"="numeric")
 		pval <- pvalUp <- pvalDown <- vector( "mode"="numeric")
 		return( list( "GENE_ID"=g, "PRODUCT"=gprod, "LOG2FOLD"=x, "PVALUE"=pval, 
-				"RANK"=ranks, "RPKM_1"=v1, "RPKM_2"=v2, "P_UP"=pvalUp, 
+				"RANK"=ranks, "VALUE_1"=v1, "VALUE_2"=v2, "P_UP"=pvalUp, 
 				"P_DOWN"=pvalDown))
 	}
 
@@ -123,8 +124,8 @@
 		RR_List[[i]]$LOG2FOLD[ now] <<- x
 		RR_List[[i]]$PVALUE[ now] <<- pval
 		RR_List[[i]]$RANK[ now] <<- ranks
-		RR_List[[i]]$RPKM_1[ now] <<- v1
-		RR_List[[i]]$RPKM_2[ now] <<- v2
+		RR_List[[i]]$VALUE_1[ now] <<- v1
+		RR_List[[i]]$VALUE_2[ now] <<- v2
 		RR_List[[i]]$P_UP[ now] <<- pvalUp
 		RR_List[[i]]$P_DOWN[ now] <<- pvalDown
 		return()
@@ -135,8 +136,8 @@
 
 		mylist <- RR_List[[i]]
 		out <- data.frame( "GENE_ID"=mylist$GENE_ID, "PRODUCT"=mylist$PRODUCT, "LOG2FOLD"=mylist$LOG2FOLD, 
-				"PVALUE"=mylist$PVALUE, "RANK"=mylist$RANK, "RPKM_1"=mylist$RPKM_1, 
-				"RPKM_2"=mylist$RPKM_2, "P_UP"=mylist$P_UP, "P_DOWN"=mylist$P_DOWN, 
+				"PVALUE"=mylist$PVALUE, "RANK"=mylist$RANK, "VALUE_1"=mylist$VALUE_1, 
+				"VALUE_2"=mylist$VALUE_2, "P_UP"=mylist$P_UP, "P_DOWN"=mylist$P_DOWN, 
 				stringsAsFactors=FALSE)
 		RR_List[[i]] <<- out
 		return()
@@ -159,6 +160,7 @@
 		}
 
 		# extract the wanted terms from this Diff Expression dataset
+		# these Ratio objects still call them 'RPKM' for now...
 		g <- thisDE$GENE_ID
 		gProd <- thisDE$PRODUCT
 		x <- thisDE$LOG2FOLD_U
@@ -211,18 +213,19 @@
 		# extract the wanted terms from this transcript dataset
 		g <- thisT$GENE_ID
 		gProd <- thisT$PRODUCT
-		x <- thisT$RPKM_U
+		#x <- thisT$RPKM_U
+		x <- thisT[ , intensityColumn]
 
-		if ( useMultiHits) {
-			x <- thisT$RPKM_M
-		}
+		#if ( useMultiHits) {
+		#	x <- thisT$RPKM_M
+		#}
 
 		# set the rank order of each gene in this transcript, by RPKM
 		ord <- base::order( x, decreasing=TRUE)
 		ranks <- vector( length=length(g))
 		ranks[ ord] <- 1:length(g)
 		sml <- data.frame( g, gProd, x, ranks, stringsAsFactors=FALSE)
-		colnames( sml) <- c( "GENE_ID", "PRODUCT", "RPKM", "RANK")
+		colnames( sml) <- c( "GENE_ID", "PRODUCT", intensityColumn, "RANK")
 
 		# now add this set to it's group
 		if ( is.null( RR_TransList[[i]])) {
@@ -264,8 +267,8 @@
 				pout[i] <<- p.combine( mydf$PVALUE[ who])
 				poutUp[i] <<- p.combine( mydf$P_UP[ who])
 				poutDown[i] <<- p.combine( mydf$P_DOWN[ who])
-				rpkm1[i] <<- average.FUN( mydf$RPKM_1[ who])
-				rpkm2[i] <<- average.FUN( mydf$RPKM_2[ who])
+				rpkm1[i] <<- average.FUN( mydf$VALUE_1[ who])
+				rpkm2[i] <<- average.FUN( mydf$VALUE_2[ who])
 				gout[i] <<- mydf$GENE_ID[ who[1]]
 				gProd[i] <<- mydf$PRODUCT[ who[1]]
 				nout <<- i
@@ -280,10 +283,16 @@
 			# after the final rankings, then clip the terrible P-values
 			pout <- ifelse( pout > 1, 1, pout)
 
+			# round to sensible digits of resolution
+			fout <- round( fout, digits=4)
+			rout <- round( rout, digits=2)
+			rpkm1 <- round( rpkm1, digits=2)
+			rpkm2 <- round( rpkm2, digits=2)
+
 			out <- data.frame( gout, gProd, fout, pout, rout, rpkm1, rpkm2, poutUp, poutDown, 
 					stringsAsFactors=FALSE)
 			colnames( out) <- c( "GENE_ID", "PRODUCT", "LOG2FOLD", "PVALUE", "RANK", 
-					"RPKM_1", "RPKM_2", "P_UP", "P_DOWN")
+					"VALUE_1", "VALUE_2", "P_UP", "P_DOWN")
 			out <- out[ ord, ]
 			rownames( out) <- 1:nrow(out)
 			nColShow <- 7
@@ -363,8 +372,8 @@
 				out1$LOG2FOLD <- formatC( out1$LOG2FOLD, format="f", digits=3, flag="+")
 				out1$PVALUE <- formatC( out1$PVALUE, format="e", digits=2)
 				out1$RANK <- formatC( out1$RANK, format="f", digits=2)
-				out1$RPKM_1 <- formatC( out1$RPKM_1, format="f", digits=2)
-				out1$RPKM_2 <- formatC( out1$RPKM_2, format="f", digits=2)
+				out1$VALUE_1 <- formatC( out1$VALUE_1, format="f", digits=2)
+				out1$VALUE_2 <- formatC( out1$VALUE_2, format="f", digits=2)
 				colnames(out1)[3:5 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank")
 				colnames(out1)[6:7 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
 				# write it
@@ -386,8 +395,8 @@
 				out2$LOG2FOLD <- formatC( out2$LOG2FOLD, format="f", digits=3, flag="+")
 				out2$PVALUE <- formatC( out2$PVALUE, format="e", digits=2)
 				out2$RANK <- formatC( out2$RANK, format="f", digits=2)
-				out2$RPKM_1 <- formatC( out2$RPKM_1, format="f", digits=2)
-				out2$RPKM_2 <- formatC( out2$RPKM_2, format="f", digits=2)
+				out2$VALUE_1 <- formatC( out2$VALUE_1, format="f", digits=2)
+				out2$VALUE_2 <- formatC( out2$VALUE_2, format="f", digits=2)
 				colnames(out2)[3:5 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank")
 				colnames(out2)[6:7 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
 				# write it
@@ -405,6 +414,10 @@
 		ans <- multicore.lapply( 1:length( RR_List), FUN=do.oneRRresult)
 		genesToPlot <- sort( unique( unlist( ans)))
 		if ( ! is.null(altGeneMap)) genesToPlot <- sort( unique( sub( "::.+", "", genesToPlot)))
+
+		# put in chromosomal order?
+		whereGmap <- match( genesToPlot, gmap$GENE_ID, nomatch=NA)
+		genesToPlot <- genesToPlot[ order( whereGmap)]
 
 		# after all tables and results, make those gene plots
 		htmlPath <- RR_path
@@ -448,7 +461,7 @@
 			# build the consensus average for each
 			tapply( 1:nrow(mydf), gfac, function(who) {
 				i <- nout + 1
-				tout[i] <<- average.FUN( mydf$RPKM[ who])
+				tout[i] <<- average.FUN( mydf[ , intensityColumn][ who])
 				rout[i] <<- average.FUN( mydf$RANK[ who])
 				gout[i] <<- mydf$GENE_ID[ who[1]]
 				gProd[i] <<- mydf$PRODUCT[ who[1]]
@@ -626,6 +639,10 @@
 		}
 		genesToPlot <- unique.default( genesToPlot)
 		if ( ! is.null(altGeneMap)) genesToPlot <- sort( unique( sub( "::.+", "", genesToPlot)))
+
+		# put in chromosomal order?
+		whereGmap <- match( genesToPlot, gmap$GENE_ID, nomatch=NA)
+		genesToPlot <- genesToPlot[ order( whereGmap)]
 
 		roundRobinExtraPlots()
 

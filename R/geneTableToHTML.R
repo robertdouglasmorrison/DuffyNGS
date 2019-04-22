@@ -96,7 +96,9 @@
 `geneTableToHTMLandPlotsCleanup` <- function() {
 
 	# remove storage that made stuff easier
-	try( rm( GPLOT_WIGlist, GPLOT_colorset, GPLOT_path, GPLOT_tail, GPLOT_label, GPLOT_gname, 
+	if ( exists( "GPLOT_WIGlist")) {
+		try( rm( GPLOT_WIGlist, GPLOT_colorset, GPLOT_path, GPLOT_tail, GPLOT_label, GPLOT_gname, 
 			envir=.GlobalEnv))
+	}
 	return()
 }
