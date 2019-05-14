@@ -70,7 +70,7 @@
 					doDE=doDE, ...))
 	} # end of 'doDE'
 
-	if ( (specialPlotMode || makePlots) && exists( "toolFuncList")) {
+	if ( (specialPlotMode || (!doDE && makePlots)) && exists( "toolFuncList")) {
 		cat( "\n\nNow recalling DE tools just to make plots..")
 		multicore.setup(1)
 		lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 

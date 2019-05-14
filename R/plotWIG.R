@@ -1053,12 +1053,13 @@
 	xstop <- as.integer(mydf$STOP)
 
 	# turn these into a vector with NA where we do not draw..
+	# extend both edges by 1 so can catch the first UP, last DOWN events
 	minX <- as.integer( round( min( xstart)))
 	maxX <- as.integer( round( max( xstop)))
 	allX <- minX : maxX
 	N <- length( allX)
 	allY <- rep( 0, times=N)
-	allY[ xstart - minX +1] <- yval
+	allY[ xstart - minX + 1] <- yval
 
 	needFill <- which( xstart != xstop)
 	for( j in needFill) {
@@ -1073,7 +1074,11 @@
 		allY[ (which(flatZero)+1)] <- NA
 	}
 
-	lines( x=allX, y=allY, type="l", lwd=lwd, col=col)
+	# put explicit zeros at the ends to bring lines back to base
+	xx <- c( minX, allX, maxX)
+	yy <- c( 0, allY, 0)
+	#lines( x=allX, y=allY, type="l", lwd=lwd, col=col)
+	lines( x=xx, y=yy, type="l", lwd=lwd, col=col)
 }
 
 

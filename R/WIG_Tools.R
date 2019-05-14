@@ -19,7 +19,7 @@
 }
 
 # special form for doing any RPKM calls, to not excessively inflate very low count samples...
-`WIG_getTotalReadsForRPKM` <- function( WIG, minReadsPerSample=100000) {
+`WIG_getTotalReadsForRPKM` <- function( WIG, minReadsPerSample=1000) {
 
 	minUniques <- max( WIG$Info$UniqueReads, minReadsPerSample)
 	minMultis <- max( WIG$Info$TotalReads, minReadsPerSample)
