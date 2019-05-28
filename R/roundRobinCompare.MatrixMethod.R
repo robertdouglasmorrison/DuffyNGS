@@ -516,12 +516,10 @@
 	`roundRobinExtraPlots` <- function( tm=NULL) {
 
 		# make some cluster images...
-		cat( "\nDebug1: ", dim(tm))
 		if ( is.null( tm)) {
 			tmfile <- file.path( RR_path, paste( "All", RR_prefix, "GeneData.txt",sep="."))
 			tm <- read.delim( tmfile, as.is=T)
 		}
-		cat( "\nDebug1b: ", dim(tm))
 
 		# we may be given a data frame of the "All.GeneData.txt" object
 		if ( colnames(tm)[1] == "GENE_ID") tm <- as.matrix( tm[ ,3:ncol(tm)])

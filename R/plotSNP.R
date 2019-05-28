@@ -369,12 +369,14 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 
 
 multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffileSet, groupSet, geneID=NULL, gmap=NULL,
-			tailWidth=30, cex.text=1.0, cex.legend=1.0, forceYmax=NULL, 
+			tailWidth=30, cex.text=1.0, cex.legend=1.0, forceYmax=NULL, labelSet="",
 			show.legends=c("all", "gene", "none"), mf=NULL, verbose=TRUE, ...) {
 
 	# given a set of samples, draw that one location in all samples
 	nSamples <- length( sampleSet)
 	if ( nSamples < 2) stop( "Need at least 2 smaples for 'multiSample.plotSNP()'")
+	seqIDset <- rep( seqIDset, length.out=length(sampleSet))
+	labelSet <- rep( labelSet, length.out=length(sampleSet))
 
 	if ( is.null(mf)) {
 		mf <- c(1,1)
@@ -408,13 +410,15 @@ multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffile
 		# when few enough plots, the label will be made from sample/gene/etc.
 		# when too many, the label may get over simplified...
 		label <- groupSet[k]
-		if (nSamples > 2) {
+		if (nSamples > 2 && all(labelSet == "")) {
 			# combine the sampleID and the group into the label if its not already there
 			if ( regexpr( groupSet[k], sample) < 1) {
 				label <- paste( sample, groupSet[k], sep=":  ")
 			} else {
 				label <- sample
 			}
+		} else {
+			label <- labelSet[k]
 		}
 
 		plotSNP( position, seqID, sample, bamfile, vcffile, tailWidth=tailWidth, geneID=geneID, 

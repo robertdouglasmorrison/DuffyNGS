@@ -3,7 +3,7 @@
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, max.depth=10000, 
-				snpCallMode=c("consensus","all","multiallelic"), min.depth=1, 
+				snpCallMode=c("multiallelic","consensus"), min.depth=1, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
 
@@ -137,9 +137,11 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 		depth <- VCF.TotalDepth( tbl$INFO)
 		score <- VCF.Score( tbl$GENOTYPE_CALL)
+		pctRef <- VCF.PctReference( tbl$INFO)
 		tbl$INFO <- depth
 		colnames(tbl)[ match( "INFO",colnames(tbl))] <- "DEPTH"
 		tbl$SCORE <- score
+		tbl$PCT_REF <- pctRef
 		drops <- which( score < min.score | depth < min.depth)
 		if ( length( drops) > 0) tbl <- tbl [ -drops, ]
 
@@ -157,7 +159,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		null <- vector( mode="character", length=0)
 		out <- data.frame( "SEQ_ID"=null, "POSITION"=null, "GENE_ID"=null, "REF_BASE"=null,
 				"ALT_BASE"=null, "QUAL"=null, "DEPTH"=null, "GENOTYPE_CALL"=null,
-				"SCORE"=null, "ALT_AA"=null)
+				"SCORE"=null, "PCT_REF"=null, "ALT_AA"=null)
 	}
 	outfile <- paste( sampleID, prefix, "Summary.VCF.txt", sep=".")
 	outfile <- file.path( vcfPath, outfile)
@@ -398,7 +400,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 `pipe.VariantComparison` <- function( sampleIDset, groupSet=sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, 
 				min.deltaScore=40, exonOnly=TRUE, snpOnly=TRUE, AAsnpOnly=exonOnly, 
-				capScore=200, min.depth=10) {
+				capScore=200, min.depth=1) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -869,6 +871,26 @@ VCF.TotalDepth <- function( info) {
 }
 
 
+VCF.PctReference <- function( info) {
+
+	pctRef <- rep.int( NA, length(info))
+
+	dp4Str <- sub( "(^.*)(DP4=)([0-9]+,[0-9]+,[0-9]+,[0-9]+)(;.*$)", "\\3", info)
+	dp4 <- strsplit( dp4Str, split=",")
+	# these should be exactly 4 integers
+	dp4Len <- sapply( dp4, length)
+	good <- which( dp4Len == 4)
+	if ( length( good)) {
+		dp4M <- matrix( as.numeric( unlist( dp4[good])), nrow=4, ncol=length(good))
+		nRef <- apply( dp4M[ 1:2, , drop=F], MARGIN=2, sum, na.rm=T)
+		nAlt <- apply( dp4M[ 3:4, , drop=F], MARGIN=2, sum, na.rm=T)
+		myPct <- 100 * nRef / (nRef + nAlt)
+		pctRef[ good] <- round( myPct, digits=2)
+	}
+	return( pctRef)
+}
+
+
 `pipe.VariantTable` <- function( sampleIDset, seqID, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				min.depth=1, max.depth=max.depth, mpileupArgs="", 
@@ -1130,3 +1152,209 @@ VCF.TotalDepth <- function( info) {
 
 	return( vcfSet)
 }
+
+
+`pipe.VariantSimilarity` <- function( sampleIDset, speciesID=getCurrentSpecies(), 
+					annotationFile="Annotation.txt", optionsFile="Options.txt", 
+					results.path=NULL, min.qual=1,  min.depth=1, min.score=1, 
+					max.pctRef=33, max.SNPperGene=NULL,
+					dropIntergenics=TRUE, dropIndels=TRUE, dropIntrons=TRUE, geneSubset=NULL, 
+					debugPattern=NULL, verbose=TRUE) {
+
+	# get needed paths, etc. from the options file
+	optT <- readOptionsTable( optionsFile)
+	#target <- getAndSetTarget( optionsFile, sampleID=sampleIDset[1], annotationFile=annotationFile)
+
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
+	}
+	if ( getCurrentSpecies() != speciesID) setCurrentSpecies( speciesID)
+	prefix <- getCurrentSpeciesFilePrefix()
+
+	# if we trim to just SNPs in Exons, we need to do some setup
+	if (dropIntrons) {
+		if (verbose) cat( "\nSetting up for intron SNP removal..")
+		emap <- getCurrentExonMap()
+		seqIDs <- sort( unique( emap$SEQ_ID))
+		NSEQ <- length(seqIDs)
+		exonPosSets <- vector( mode="list", length=NSEQ)
+		names(exonPosSets) <- seqIDs
+		for( i in 1:NSEQ) {
+			sml <- subset.data.frame( emap, SEQ_ID == seqIDs[i])
+			ans <- mapply( sml$POSITION, sml$END, FUN=`:`, SIMPLIFY=F, USE.NAMES=F)
+			exonPosSets[[i]] <- unlist( ans)
+			if (verbose) cat( " ", seqIDs[i])
+		}
+		if (verbose) cat( "  Done.")
+	}
+
+	# go gather all the VCF summary calls over a set of samples
+	vcfSet <- list()
+	N <- 0
+	badGenes <- vector()
+
+	for ( sid in sampleIDset) { 
+		vcf.path <- file.path( results.path, "VariantCalls", sid)
+		f <- file.path( vcf.path, paste( sid, prefix, "Summary.VCF.txt", sep=".")) 
+		if ( ! file.exists( f)) {
+			cat( "\nVariant Call file not found.  Skip:  ", f)
+			next
+		}
+		sml <- read.delim( f, as.is=T) 
+		if (verbose) cat( "\nRead in: ", sid, "  N_SNP:", nrow(sml))
+
+		# small chance of having more than one call at a location
+		if ( any( duplicated( sml$POSITION))) {
+			ord <- order( sml$SEQ_ID, sml$POSITION, -sml$SCORE)
+			sml <- sml[ ord, ]
+			key <- paste( sml$GENE_ID, sml$POSITION, sep="::")
+			drops <- which( duplicated(key))
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Duplicates:", length(drops))
+			}
+		}
+
+		# perhaps drop low quality/score
+		if ( ! is.null( min.qual)) {
+			drops <- which( sml$QUAL < min.qual)
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Low Qual:", length(drops))
+			}
+		}
+		if ( ! is.null( min.depth)) {
+			drops <- which( sml$DEPTH < min.depth)
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Low Depth:", length(drops))
+			}
+		}
+		if ( ! is.null( min.score)) {
+			drops <- which( sml$SCORE < min.score)
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Low Score:", length(drops))
+			}
+		}
+		if ( ! is.null( max.pctRef) && "PCT_REF" %in% colnames(sml)) {
+			drops <- which( sml$PCT_REF > max.pctRef)
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop High PctRef:", length(drops))
+			}
+		}
+		# there is a format of Alternate base like "A,G" if more than one seen
+		# It's not an indel.  So catch here
+		sml$ALT_BASE <- sub( "\\,[ACGT,]+", "", sml$ALT_BASE)
+		if ( dropIndels) {
+			drops1 <- which( nchar( sml$REF_BASE) > 1)
+			drops2 <- which( nchar( sml$ALT_BASE) > 1)
+			drops <- sort( union( drops1, drops2))
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Indels:", length(drops))
+			}
+		}
+		if ( dropIntergenics) {
+			drops <- grep( "(ng)", sml$GENE_ID, fixed=T)
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Intergenics:", length(drops))
+			}
+		}
+		if ( dropIntrons) {
+			smlSIDs <- sort( unique( sml$SEQ_ID))
+			drops <- vector()
+			for ( s in smlSIDs) {
+				myrows <- which( sml$SEQ_ID == s)
+				myhits <- which( sml$POSITION[ myrows] %in% exonPosSets[[ s]])
+				mydrops <- setdiff( myrows, myrows[myhits])
+				drops <- c( drops, mydrops)
+			}
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Introns:", length(drops))
+			}
+		}
+		if ( ! is.null( geneSubset)) {
+			drops <- which( ! ( sml$GENE_ID %in% geneSubset))
+			if ( length( drops)) {
+				sml <- sml[ -drops, ]
+				if (verbose) cat( "  Drop Unwanted Genes:", length(drops))
+			}
+		}
+
+		# perhaps exclude whole genes for being too variant?
+		if ( ! is.null( max.SNPperGene)) {
+			snpTbl <- table( sml$GENE_ID)
+			flag <- which( snpTbl > max.SNPperGene)
+			if ( length(flag)) {
+				badGenes <- sort( unique( c( badGenes, names(snpTbl)[flag])))
+				if (verbose) cat( "  Flag HighSNP Genes:", length(flag))
+			}
+		}
+		if (verbose) cat( "  Final N_Variants:", nrow(sml))
+
+		N <- N + 1
+		vcfSet[[N]] <- sml
+		names(vcfSet)[N] <- sid
+	}
+	if (verbose) cat( "\n")
+
+	# report about bad genes
+	if ( length( badGenes)) {
+		badProds <- gene2Product( badGenes)
+		cat( "\n\nIgnoring genes with excessive SNP sites: ", length( badGenes), "\nTop Culprits:\n")
+		print( head( sort( table( badProds), decreasing=T), 10))
+	}
+
+	# OK, we have all the wanted SNP sites, get ready to compare them pairwise
+	outDist <- outJaccard <- matrix( NA, nrow=N, ncol=N)
+	colnames(outDist) <- colnames(outJaccard) <- names(vcfSet)
+	rownames(outDist) <- rownames(outJaccard) <- names(vcfSet)
+
+	# make a unique key string that fully captures the base call, so we can easily count matches & mismatches
+	for ( i in 1:N) {
+		sml1 <- vcfSet[[i]]
+		if ( length( badGenes)) {
+			drops <- which( sml1$GENE_ID %in% badGenes)
+			if ( length( drops)) sml1 <- sml1[ -drops, ]
+		}
+		key1 <- paste( sml1$GENE_ID, sml1$POSITION, sml1$ALT_BASE, sep="::")
+		for ( j in i:N) {
+			sml2 <- vcfSet[[j]]
+			if ( length( badGenes)) {
+				drops <- which( sml2$GENE_ID %in% badGenes)
+				if ( length( drops)) sml2 <- sml2[ -drops, ]
+			}
+			key2 <- paste( sml2$GENE_ID, sml2$POSITION, sml2$ALT_BASE, sep="::")
+
+			# Jaccard is intersection over union
+			both <- intersect( key1, key2)
+			nBoth <- length( both)
+			either <- union( key1, key2)
+			nEither <- length( either)
+			onlyOne <- setdiff( either, both)
+			nOnlyOne <- length(onlyOne)
+			jaccard <- nBoth / nEither
+			# special case if no SNPs at all
+			if (nEither == 0) jaccard <- 1
+
+			outDist[i,j] <- outDist[j,i] <- nOnlyOne
+			outJaccard[i,j] <- outJaccard[j,i] <- jaccard
+
+			if ( ! is.null( debugPattern)) {
+				if ( i != j && grepl(debugPattern, names(vcfSet)[i]) && grepl(debugPattern, names(vcfSet)[j])) {
+					cat( "\nDebug:   ", i, j, "|", length(key1), length(key2), "|", nBoth, nEither, nOnlyOne)
+					cat( "\nDebug I: ", head( key1, 100))
+					cat( "\nDebug J: ", head( key2, 100))
+					cat( "\nDebug ?: ", head( onlyOne, 50))
+				}
+			}
+		}
+	}
+
+	return( list( "Distance"=outDist, "Jaccard"=round(outJaccard, digits=3)))
+}
+

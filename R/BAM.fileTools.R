@@ -206,7 +206,7 @@
 `BAM.variantCalls` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, 
 				prob.variant=0.95, min.depth=1, max.depth=10000, min.gap.fraction=0.25,
 				mpileupArgs="", vcfArgs="", ploidy=1, geneMap=getCurrentGeneMap(), 
-				snpCallMode=c("all","multiallelic","consensus"), verbose=TRUE) {
+				snpCallMode=c("multiallelic","consensus"), verbose=TRUE) {
 
 	# the probability threshold is tuned for genomic DNA of uniform read depth, and diploid organism
 	# for highly variant read depth data, like RNA-seq, use a much higher cutoff to capture more SNPs
@@ -241,9 +241,9 @@
 		#cmdline <- paste( samtools, " mpileup -A -B -v -u -t DP -r ", region, " -f ", fastaFile, 
 		#		" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
 		#		" -L", max.depth, mpileupArgs, "  ", fileArg, 
-		cmdline <- paste( bcftools, " mpileup -A -B -r ", region, " -f ", fastaFile, 
+		cmdline <- paste( bcftools, " mpileup -A -B -r ", region, " -f ", fastaFile, " -Q 10 -x ",
 				" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
-				" -L", max.depth, mpileupArgs, "  ", fileArg, 
+				" -L", max.depth, " --no-version ", mpileupArgs, "  ", fileArg, 
 				" | ", bcftools, " call -v ", thisCallMode, " -p ", prob.variant, ploidyArg,
 				" -P 0 ", vcfArgs, " -O v -o ", tmpFile)
 		if (verbose) {
