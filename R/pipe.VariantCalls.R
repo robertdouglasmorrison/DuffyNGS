@@ -2,8 +2,8 @@
 
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, max.depth=10000, 
-				snpCallMode=c("multiallelic","consensus"), min.depth=1, 
+				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, 
+				snpCallMode=c("multiallelic","consensus"), min.depth=1, max.depth=10000, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
 
@@ -1157,9 +1157,9 @@ VCF.PctReference <- function( info) {
 `pipe.VariantSimilarity` <- function( sampleIDset, speciesID=getCurrentSpecies(), 
 					annotationFile="Annotation.txt", optionsFile="Options.txt", 
 					results.path=NULL, min.qual=1,  min.depth=1, min.score=1, 
-					max.pctRef=33, max.SNPperGene=NULL,
-					dropIntergenics=TRUE, dropIndels=TRUE, dropIntrons=TRUE, geneSubset=NULL, 
-					debugPattern=NULL, verbose=TRUE) {
+					max.pctRef=NULL, max.SNPperGene=NULL,
+					dropIntergenics=FALSE, dropIndels=TRUE, dropIntrons=TRUE, geneSubset=NULL, 
+					debugPattern=NULL, freqM=NULL, min.freqDifference=60, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -1186,6 +1186,36 @@ VCF.PctReference <- function( info) {
 			if (verbose) cat( " ", seqIDs[i])
 		}
 		if (verbose) cat( "  Done.")
+	}
+
+	useFM <- FALSE
+	fm <- NULL
+	if ( ! is.null( freqM)) {
+		# may be a filename
+		if ( is.character(freqM) && file.exists(freqM)) {
+			freqM <- read.delim( freqM, as.is=T)
+		}
+		# make sure we don't have the depth info
+		fm <- freqM[ , grep( "_Freq$", colnames(freqM))]
+		dm <- freqM[ , grep( "_Depth$", colnames(freqM))]
+		colnames(fm) <- sub( "_Freq$", "", colnames(fm))
+		colnames(dm) <- sub( "_Depth$", "", colnames(dm))
+		# set up the location info
+		fmKey <- rownames(fm)
+		fmTerms <- strsplit( fmKey, split="::")
+		fmSID <- sapply( fmTerms, `[`, 1)
+		fmGID <- sapply( fmTerms, `[`, 2)
+		fmPOS <- sapply( fmTerms, `[`, 3)
+		#fmBASE <- sapply( fmTerms, `[`, 4)
+		sidToFMptr <- match( sampleIDset, colnames(fm), nomatch=0)
+		if ( any( sidToFMptr == 0)) {
+			cat( "\nError:  given BaseFreqMatrix does not contain all SampleIDs.")
+			cat( "\nMissing:  ", sampleIDset[ sidToFMptr == 0])
+			cat( "\nIgnoring 'freqM' argument..")
+			useFM <- FALSE
+		} else {
+			useFM <- TRUE
+		}
 	}
 
 	# go gather all the VCF summary calls over a set of samples
@@ -1215,6 +1245,8 @@ VCF.PctReference <- function( info) {
 			}
 		}
 
+		# new idea:  don't frop them now, wait until we pair them up?
+		if (DROP_AT_READ <- FALSE) {
 		# perhaps drop low quality/score
 		if ( ! is.null( min.qual)) {
 			drops <- which( sml$QUAL < min.qual)
@@ -1243,6 +1275,7 @@ VCF.PctReference <- function( info) {
 				sml <- sml[ -drops, ]
 				if (verbose) cat( "  Drop High PctRef:", length(drops))
 			}
+		}
 		}
 		# there is a format of Alternate base like "A,G" if more than one seen
 		# It's not an indel.  So catch here
@@ -1315,29 +1348,83 @@ VCF.PctReference <- function( info) {
 	rownames(outDist) <- rownames(outJaccard) <- names(vcfSet)
 
 	# make a unique key string that fully captures the base call, so we can easily count matches & mismatches
+	smlDiffDF <- NULL
+	cat( "\nComparing ")
 	for ( i in 1:N) {
 		sml1 <- vcfSet[[i]]
 		if ( length( badGenes)) {
 			drops <- which( sml1$GENE_ID %in% badGenes)
 			if ( length( drops)) sml1 <- sml1[ -drops, ]
 		}
-		key1 <- paste( sml1$GENE_ID, sml1$POSITION, sml1$ALT_BASE, sep="::")
+		key1 <- paste( sml1$SEQ_ID, sml1$GENE_ID, sml1$POSITION, sml1$ALT_BASE, sep="::")
+		cat( " ", sampleIDset[i])
 		for ( j in i:N) {
 			sml2 <- vcfSet[[j]]
 			if ( length( badGenes)) {
 				drops <- which( sml2$GENE_ID %in% badGenes)
 				if ( length( drops)) sml2 <- sml2[ -drops, ]
 			}
-			key2 <- paste( sml2$GENE_ID, sml2$POSITION, sml2$ALT_BASE, sep="::")
+			key2 <- paste( sml2$SEQ_ID, sml2$GENE_ID, sml2$POSITION, sml2$ALT_BASE, sep="::")
+			myKey1 <- key1
 
-			# Jaccard is intersection over union
-			both <- intersect( key1, key2)
-			nBoth <- length( both)
+			# lets use the FreqM if we have it, instead of the simplistic set intersection method
 			either <- union( key1, key2)
 			nEither <- length( either)
-			onlyOne <- setdiff( either, both)
-			nOnlyOne <- length(onlyOne)
-			jaccard <- nBoth / nEither
+			# find where they live in the freqM
+			if (useFM) {
+				whereFM <- match( either, fmKey, nomatch=0)
+				keep <- which( whereFM > 0)
+				either <- either[ keep]
+				whereFM <- whereFM[ keep]
+				nEither <- length(keep)
+				myKey1 <- key1[ key1 %in% either]
+				key2 <- key2[ key2 %in% either]
+				column1 <- sidToFMptr[i]
+				column2 <- sidToFMptr[j]
+				freq1 <- fm[ whereFM, column1]
+				freq2 <- fm[ whereFM, column2]
+				deep1 <- dm[ whereFM, column1]
+				deep2 <- dm[ whereFM, column2]
+				minDeep <- pmin( deep1, deep2)
+				# given all freq values are in the range 0..100, let's require just over 50% difference
+				# to call the site truly a different allele
+				deltaF <- abs( freq1 - freq2)
+				# only use sites where both have data
+				keep1 <- which( ! is.na(deltaF))
+				deltaF <- deltaF[ keep1]
+				minDeep <- minDeep[ keep1]
+				either <- either[ keep1]
+				whereFM <- whereFM[ keep1]
+				nEither <- length(keep1)
+				# only keep those with enough read depth
+				keep2 <- which( minDeep >= min.depth)
+				deltaF <- deltaF[ keep2]
+				minDeep <- minDeep[ keep2]
+				either <- either[ keep2]
+				whereFM <- whereFM[ keep2]
+				nEither <- length(keep2)
+				# now we are ready to do the match / no match question
+				whoDiff <- which( deltaF >= min.freqDifference)
+				nDiff <- length(whoDiff)
+				nSame <- nEither - nDiff
+				# lastly, use these values for the Jaccard, Distance
+				nBoth <- nSame
+				nOnlyOne <- nDiff
+				jaccard <- nBoth / nEither
+				# make a data.frame of who are the diffs
+				if ( N == 2 && nDiff > 0) {
+					diffPtr <- whereFM[ whoDiff]
+					smlDiffDF <- data.frame( "SEQ_ID"=fmSID[diffPtr], "GENE_ID"=fmGID[diffPtr],
+								"POSITION"=as.numeric(fmPOS[diffPtr]), stringsAsFactors=F)
+				}
+			} else {
+				# Jaccard is intersection over union
+				both <- intersect( key1, key2)
+				nBoth <- length( both)
+				onlyOne <- setdiff( either, both)
+				nOnlyOne <- length(onlyOne)
+				jaccard <- nBoth / nEither
+			}
 			# special case if no SNPs at all
 			if (nEither == 0) jaccard <- 1
 
@@ -1355,6 +1442,10 @@ VCF.PctReference <- function( info) {
 		}
 	}
 
-	return( list( "Distance"=outDist, "Jaccard"=round(outJaccard, digits=3)))
+	if ( is.null(smlDiffDF)) {
+		return( list( "Distance"=outDist, "Jaccard"=round(outJaccard, digits=3)))
+	} else {
+		return( list( "Distance"=outDist, "Jaccard"=round(outJaccard, digits=3), "Differences"=smlDiffDF))
+	}
 }
 

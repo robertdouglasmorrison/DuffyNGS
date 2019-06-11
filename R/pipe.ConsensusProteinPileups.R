@@ -30,7 +30,11 @@
 				trim5.aligns=trim5.aligns, trim3.aligns=trim3.aligns, 
 				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits,
 				useCutadapt=useCutadapt)
-	if ( nAA < 1) return(NULL)
+	if ( nAA < 1) {
+		cat( "\nSetting up for CPP gave an empty protein sequence..")
+		return(NULL)
+	}
+
 	consensusAAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusAA.fasta", sep="."))
 	
 	mode <- match.arg( mode)

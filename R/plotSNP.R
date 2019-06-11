@@ -375,7 +375,7 @@ multiSample.plotSNP <- function( position, seqID, sampleSet, bamfileSet, vcffile
 	# given a set of samples, draw that one location in all samples
 	nSamples <- length( sampleSet)
 	if ( nSamples < 2) stop( "Need at least 2 smaples for 'multiSample.plotSNP()'")
-	seqIDset <- rep( seqIDset, length.out=length(sampleSet))
+	seqIDset <- rep( seqID, length.out=length(sampleSet))
 	labelSet <- rep( labelSet, length.out=length(sampleSet))
 
 	if ( is.null(mf)) {
