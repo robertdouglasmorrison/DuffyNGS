@@ -1415,7 +1415,11 @@ VCF.PctReference <- function( info) {
 				if ( N == 2 && nDiff > 0) {
 					diffPtr <- whereFM[ whoDiff]
 					smlDiffDF <- data.frame( "SEQ_ID"=fmSID[diffPtr], "GENE_ID"=fmGID[diffPtr],
-								"POSITION"=as.numeric(fmPOS[diffPtr]), stringsAsFactors=F)
+								"POSITION"=as.numeric(fmPOS[diffPtr]), "FREQ_Diff"=round(deltaF[whoDiff]),
+								stringsAsFactors=F)
+					ord <- order( -smlDIffDF$FREQ_Diff, smlDiffDF$SEQ_ID, smlDiffDF$POSITION)
+					smlDiffDF <- smlDiffDF[ ord, ]
+					rownames(smlDiffDF) <- 1:nrow(smlDiffDF)
 				}
 			} else {
 				# Jaccard is intersection over union
