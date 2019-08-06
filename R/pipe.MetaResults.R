@@ -61,7 +61,7 @@
 
 	if ( doDE) {
 
-		saveMClapplyAns <<- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
+		ans <- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
 					folderName=folderName, altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel,
