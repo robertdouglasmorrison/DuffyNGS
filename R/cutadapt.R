@@ -47,9 +47,9 @@
 	# make that command line
 	if ( isPaired) {
 		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, 
-				"-o", outfile1, "-p", outfile2, minLenTrimText, file1, file2, sep=" ")
+				"-o", outfile1, "-p", outfile2, minLenTrimText, cutadaptArgs, file1, file2, sep=" ")
 	} else {
-		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-o", outfile1, minLenTrimText, file1, sep=" ")
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
 	}
 	system( cmdLine)
 

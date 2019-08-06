@@ -61,7 +61,7 @@
 
 	if ( doDE) {
 
-		saveMClapplyAns <<- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
+		ans <- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
 					folderName=folderName, altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel,
@@ -70,7 +70,7 @@
 					doDE=doDE, ...))
 	} # end of 'doDE'
 
-	if ( (specialPlotMode || makePlots) && exists( "toolFuncList")) {
+	if ( (specialPlotMode || (!doDE && makePlots)) && exists( "toolFuncList")) {
 		cat( "\n\nNow recalling DE tools just to make plots..")
 		multicore.setup(1)
 		lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 

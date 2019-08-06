@@ -463,6 +463,7 @@
 		grpNams <- levels( rrFactors)
 		grpM <- rnkM <- matrix( 0, ng, ngrps)
 		colnames(grpM) <- colnames(rnkM) <- grpNams
+		grpSize <- vector( length=ngrps)
 
 		# load the ranks based on the intensities
 		ranksM <- tm
@@ -473,7 +474,6 @@
 
 		# OK, do each group
 		nDone <- 0
-		toDrop <- vector()
 		tapply( 1:ncol(tm), rrFactors, function(x) {
 				# given the columns of TM that all belong to one group
 				avgInten <- apply( tm[ , x, drop=F], MARGIN=1, sqrtmean)
@@ -481,9 +481,7 @@
 				nDone <<- nDone + 1
 				grpM[ , nDone] <<- avgInten
 				rnkM[ , nDone] <<- avgRank
-				# note that if a group had only a single sample, that group average is not real
-				# drop it later
-				if ( length(x) == 1) toDrop <<- c( toDrop, nDone)
+				grpSize[nDone] <- length(x)
 				return()
 			})
 
@@ -503,7 +501,12 @@
 
 		# lastly make the one final matrix of all samples and the group averages
 		outTM <- data.frame( "GENE_ID"=gnames, "PRODUCT"=gprods, round(tm,digits=4), 
-						round(grpM,digits=4), stringsAsFactors=FALSE)
+						stringsAsFactors=FALSE)
+		# but only add group averages if there was 2+ replicates in the group
+		if( sum( grpSize > 1)) {
+			grpM <- grpM[ , grpSize > 1]
+			outTM <- cbind( outTM, grpM, stringsAsFactors=FALSE)
+		}
 		rownames(outTM) <- 1:nrow(outTM)
 		write.table( outTM, file=outfile, sep="\t", quote=F, row.names=F)
 		return( outTM)
@@ -551,12 +554,20 @@
 	    		}
 
 	    		# PCA plot too...
+			# knowing the colors to show can be tricky, as the number of "group average" columns can vary
+			pcaColors <- RR_colors
+			if ( ncol(tm) > length( pcaColors)) {
+				extraGroups <- colnames(tm)[ (length(pcaColors)+1):ncol(tm)]
+				wh <- match( extraGroups, annT[[ groupColumn]])
+				extraColors <- annT[[colorColumn]][wh]
+				pcaColors <- c( pcaColors, extraColors)
+			}
 			pltText <- paste( "Transcriptome PCA:   ", folderName,
 					"\nTranscriptomes for species:   ", speciesID)
 			pngFile <- file.path( RR_path, paste( RR_prefix,"PCA.png",sep="."))
-			matrix.PCAplot( tm, main=pltText, col=c( RR_colors, unique_RR_colors))
+			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			png( filename=pngFile, width=800, height=800, bg="white")
-			matrix.PCAplot( tm, main=pltText, col=c( RR_colors, unique_RR_colors))
+			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			dev.off()
 		} else {
 			if (ncol(tm) < 3) cat( "\nToo few samples to make cluster plots...")

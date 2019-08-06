@@ -111,6 +111,12 @@
 		}
 	}
 
+	# there is a chance of gaps being in the final set, drop them
+	dropGaps <- which( bestProtein == "-")
+	if ( length(dropGaps)) bestProtein <- bestProtein[ -dropGaps]
+	dropGaps <- which( secondProtein == "-")
+	if ( length(dropGaps)) secondProtein <- secondProtein[ -dropGaps]
+
 	out <- c(paste(bestProtein,collapse=""), paste(secondProtein,collapse=""))
 	return(out)
 }

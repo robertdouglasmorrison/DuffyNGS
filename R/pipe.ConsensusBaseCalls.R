@@ -1,9 +1,10 @@
-# pipe.ConsensusBaseCalls.R
+# pipe.ConsensusBaseCalls.R -- tools for pulling sequence infrom from BAM file results
+
 
 `pipe.ConsensusBaseCalls` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
 				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, utr.tail.length=0,
-				verbose=TRUE) {
+				SNP.only=FALSE, verbose=TRUE) {
 				
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -26,12 +27,12 @@
 	# we have what we need, call the lower level tool
 	ans <- consensusBaseCalls( bamfile, genomicFastaFile, geneID=geneID, seqID=seqID, 
 			start=start, stop=stop, aaToo=aaToo, noReadCalls=noReadCalls, utr.tail.length=utr.tail.length, 
-			verbose=verbose)
+			SNP.only=SNP.only, verbose=verbose)
 	if ( is.null(ans)) return(NULL)
 
 	# translate genomic info back to cDNA units if we want
 	if ( ! is.null(geneID) && as.cDNA) {
-		ans <- consensusBaseCallsToCDNA( ans, geneID=geneID, start=start, stop=stop)
+		ans <- consensusBaseCallsToCDNA( ans, geneID=geneID, start=start, stop=stop, verbose=verbose)
 	} else {
 		ans$callsTable <- NULL
 	}
@@ -41,7 +42,7 @@
 
 `consensusBaseCalls` <- function( bamfile, genomicFastaFile, geneID=NULL, seqID=NULL, 
 				start=NULL, stop=NULL, aaToo=TRUE, noReadCalls=c("blank","genomic"),
-				utr.tail.length=0, verbose=TRUE) {
+				utr.tail.length=0, SNP.only=FALSE, verbose=TRUE) {
 				
 	# let's be a bit more flexible with what we pass in
 	# Could be a genomic range {seqID, start, stop}, a gene {geneID}, or any generic sequence...
@@ -151,7 +152,7 @@
 		notSeen <- base::setdiff( allBases, xLocs)
 		if ( length( notSeen)) {
 			where <- MATCH( notSeen, allBases)
-			genomeSNPtext[where] <= ""
+			genomeSNPtext[where] <- ""
 		}
 	}
 
@@ -161,6 +162,12 @@
 		myLocs <- as.integer( names(snpTopBase)[whoSNP])
 		where <- MATCH( myLocs, allBases)
 		genomeSNPtext[ where] <- snpTopBase[ whoSNP]
+	}
+
+	# we may have been asked to only allow SNPs, and disregard any indels
+	if (SNP.only) {
+		isIndel <- which( nchar(genomeSNPtext) != 1)
+		if ( length( isIndel)) genomeSNPtext[ isIndel] <- genomeBaseText[ isIndel]
 	}
 
 	# perhaps make the protein amino acid letters too
@@ -180,7 +187,7 @@
 }
 
 
-`consensusBaseCallsToCDNA` <- function( baseCallAns, geneID=NULL, start=NULL, stop=NULL) {
+`consensusBaseCallsToCDNA` <- function( baseCallAns, geneID=NULL, start=NULL, stop=NULL, verbose=TRUE) {
 
 	# get the gene facts we need to make cDNA
 	if ( ! is.null(geneID)) {
@@ -276,10 +283,10 @@
 				"IndelDetails"=indel.details, stringsAsFactors=F)
 
 	# force this table to be fully translatable, even if we have to trim a few rows
-	cat( "  phasing reading frames..")
-	if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable)
+	if (verbose) cat( "  phasing reading frames..")
+	if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable, verbose=verbose)
 	baseCallAns$callsTable <- callsTable
-	cat( "  Done.\n")
+	if (verbose) cat( "  Done.\n")
 	return( baseCallAns)
 }
 
@@ -348,7 +355,7 @@
 }
 
 
-`forceValidTranslation` <- function( callsTable) {
+`forceValidTranslation` <- function( callsTable, verbose=TRUE) {
 
 	# we have the output of Mpileup, with all its base details and AA translations
 	# force the entire table to be a valid translation in reading frame 1
@@ -358,14 +365,14 @@
 	dnaBaseLen <- nchar( dnaVec)
 	zeros <- which( dnaBaseLen == 0)
 	if ( length( zeros)) {
-		cat( "  remove deletions: ", length(zeros))
+		if (verbose) cat( "  remove deletions: ", length(zeros))
 		callsTable <- callsTable[ -zeros, ]
 		dnaVec <- callsTable$DNA
 		dnaBaseLen <- nchar( dnaVec)
 	}
 	oversize <- which( dnaBaseLen > 1)
 	if ( nOver <- length( oversize)) {
-		cat( "  expand insertions: ", length(nOver))
+		if (verbose) cat( "  expand insertions: ", length(nOver))
 		# step along and expand each
 		headDF <-  tailDF <- data.frame()
 		if ( oversize[1] > 1) headDF <- callsTable[ 1:(oversize[1]-1), ]
@@ -395,12 +402,12 @@
 	# step 2:  find all the best longest reading frames
 	dnaStr <- paste( dnaVec, collapse="")
 	if ( nchar(dnaStr) != length(dnaVec)) {
-		cat( "\nWarning: 'ConsensusBaseCalls' DNA sequence length error!")
+		if (verbose) cat( "\nWarning: 'ConsensusBaseCalls' DNA sequence length error!")
 	}
 	ans <- DNAtoFrameShiftingPeptides( dnaStr, min.aa.length=2)
 
 	# now re-concatenate just those chunks
-	cat( "  concatenating chunks: ", nrow(ans))
+	if (verbose) cat( "  concatenating chunks: ", nrow(ans))
 	outDF <- data.frame()
 	for ( i in 1:nrow(ans)) {
 		from <- ans$DNA_Start[i]
@@ -410,7 +417,7 @@
 	}
 
 	# test it
-	cat( "  validate..")
+	if (verbose) cat( "  validate..")
 	testStr <- paste( outDF$DNA, collapse="")
 	testAA <- DNAtoAA( testStr, clip=F, readingFrame=1)
 	nStops <- sum( gregexpr( STOP_CODON_PATTERN, testAA)[[1]] > 0)

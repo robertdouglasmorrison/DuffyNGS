@@ -80,7 +80,7 @@
 
 	if (doMultiSample) {
 		multiSample.plotSNP( position=position, seqID=seqID, sampleSet=sampleIDs, bamfileSet=bamfiles, 
-				vcffileSet=vcffiles, fastaFile=fastaFile, groupSet=groups, 
+				vcffileSet=vcffiles, fastaFile=fastaFile, groupSet=groups, labelSet=label,
 				tailWidth=tailWidth, geneID=geneID, gmap=gmap, mf=mf, verbose=verbose, ...)
 	} else if (doMultiPosition) {
 		multiPosition.plotSNP( positionSet=position, seqIDset=seqID, sample=sampleIDs[1], bamfile=bamfiles[1], 

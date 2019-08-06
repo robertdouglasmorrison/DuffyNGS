@@ -207,9 +207,13 @@
 		#worstPval <- max( strandAns$NonGene_Pvalue, strandAns$StrandValue_Pvalue, na.rm=T)
 		if ( ! is.null( strandAns)) {
 			ng.Pval <- strandAns$NonGene_Pvalue
-			if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
+			if ( ! is.na( ng.Pval)) {
+				if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
+			}
 			strandCC.Pval <- strandAns$StrandValue_Pvalue
-			if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+			if ( ! is.na( strandCC.Pval)) {
+				if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+			}
 		}
 	}
 

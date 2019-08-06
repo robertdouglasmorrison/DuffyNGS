@@ -27,7 +27,7 @@
 	subfolders <- c( "align", "fastq", "html", "ratios", "riboClear", "splicing", "summary", 
 			"transcript", "wig", "AlignStats", "USR", "VariantCalls", 
 			"VelvetContigs", "VelvetPeptides", "CR", "HLA.typing", "ConsensusProteins",
-			"SieveAnalysis", "Viral.BAMS")
+			"SieveAnalysis", "Viral.BAMS", "LineageCalls")
 	dataType <- getAnnotationValue( annotationFile, key=sampleID, columnArg="DataType", notfound="RNA-seq")
 	if ( dataType == "ChIP-seq") subfolders <- c( subfolders, "ChIPpeaks")
 
@@ -112,6 +112,8 @@ renameFileContents <- function( newfile, sampleID, newSampleID) {
 	doText <- FALSE
 	if (regexpr( "\\.html$", newfile) > 0) doText <- TRUE
 	if (regexpr( "Summary.txt$", newfile) > 0) doText <- TRUE
+	if (regexpr( "FileLineCounts.+txt$", newfile) > 0) doText <- TRUE
+	if (regexpr( "log.txt$", newfile) > 0) doText <- TRUE
 
 	if ( doText) {
 		cat( "\nRenaming contents in file: ", basename(newfile))
