@@ -3,14 +3,13 @@
 
 `pipe.BAMtoProteins` <- function( sampleID, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				SNP.only=TRUE, verbose=TRUE) {
+				SNP.only=TRUE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
-	#fastaFile <- getOptionValue( optT, "genomicFastaFile", verbose=F)
 
 	# make sure we have the BAM file already sorted
 	bamfile <- paste( sampleID, "genomic.bam", sep=".")
@@ -42,7 +41,8 @@
 		ans <- pipe.ConsensusBaseCalls( sampleID, geneID=gid, seqID=mySID, start=myStart, stop=myStop, 
 					annotationFile=annotationFile,
 					optionsFile=optionsFile, results.path=results.path,
-					aaToo=TRUE, noReadCalls="genomic", as.cDNA=TRUE, SNP.only=SNP.only, verbose=FALSE)
+					aaToo=TRUE, noReadCalls="genomic", as.cDNA=TRUE, SNP.only=SNP.only, 
+					minReadCalls=minReadCalls, minPercentSNP=minPercentSNP, verbose=FALSE)
 
 		# by default, indels can hose the translation into proteins
 		# do we want to prevent that?
