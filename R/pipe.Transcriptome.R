@@ -198,28 +198,30 @@
 	pipe.Transcriptome( sampleID, annotationFile, optionsFile, speciesID=NULL,
 			results.path=results.path, loadWIG=loadWIG, mode=mode)
 	
-	# do we want a strand specific check?
-	isStranded <- getAnnotationTrue( annotationFile, key=sampleID, columnArg="StrandSpecific", verbose=F)
-	if ( isStranded && is.null(triggerWarning)) {
-		strandAns <- pipe.StrandVerify( sampleID, annotationFile=annotationFile, optionsFile=optionsFile,
-						speciesID=allSpecies[1], results.path=results.path)
-		# don't treat these 2 P-values exactly as equals...
-		#worstPval <- max( strandAns$NonGene_Pvalue, strandAns$StrandValue_Pvalue, na.rm=T)
-		if ( ! is.null( strandAns)) {
-			ng.Pval <- strandAns$NonGene_Pvalue
-			if ( ! is.na( ng.Pval)) {
-				if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
-			}
-			strandCC.Pval <- strandAns$StrandValue_Pvalue
-			if ( ! is.na( strandCC.Pval)) {
-				if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
-			}
-		}
-	}
-
 	# now make some gene plots
 	nGenes <- 25
 	for( s in allSpecies) {
+
+		# do we want a strand specific check?
+		isStranded <- getAnnotationTrue( annotationFile, key=sampleID, columnArg="StrandSpecific", verbose=F)
+		if ( isStranded && is.null(triggerWarning)) {
+			strandAns <- pipe.StrandVerify( sampleID, annotationFile=annotationFile, optionsFile=optionsFile,
+							speciesID=s, results.path=results.path)
+			# don't treat these 2 P-values exactly as equals...
+			#worstPval <- max( strandAns$NonGene_Pvalue, strandAns$StrandValue_Pvalue, na.rm=T)
+			if ( ! is.null( strandAns)) {
+				ng.Pval <- strandAns$NonGene_Pvalue
+				if ( ! is.na( ng.Pval)) {
+					if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
+				}
+				strandCC.Pval <- strandAns$StrandValue_Pvalue
+				if ( ! is.na( strandCC.Pval)) {
+					if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+				}
+			}
+		}
+
+		# now make those plots
 		pipe.TranscriptToHTML( sampleID, annotationsFile, optionsFile,
 				speciesID=s, results.path=results.path, 
 				pause=pause, N=nGenes, label=banner, triggerWarning=triggerWarning, ...)
