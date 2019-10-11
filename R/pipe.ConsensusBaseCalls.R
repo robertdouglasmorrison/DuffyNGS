@@ -4,7 +4,7 @@
 `pipe.ConsensusBaseCalls` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
 				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, utr.tail.length=0,
-				SNP.only=FALSE, verbose=TRUE) {
+				SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE) {
 				
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -27,7 +27,7 @@
 	# we have what we need, call the lower level tool
 	ans <- consensusBaseCalls( bamfile, genomicFastaFile, geneID=geneID, seqID=seqID, 
 			start=start, stop=stop, aaToo=aaToo, noReadCalls=noReadCalls, utr.tail.length=utr.tail.length, 
-			SNP.only=SNP.only, verbose=verbose)
+			SNP.only=SNP.only, minReadCalls=minReadCalls, minPercentSNP=minPercentSNP, verbose=verbose)
 	if ( is.null(ans)) return(NULL)
 
 	# translate genomic info back to cDNA units if we want
@@ -42,8 +42,11 @@
 
 `consensusBaseCalls` <- function( bamfile, genomicFastaFile, geneID=NULL, seqID=NULL, 
 				start=NULL, stop=NULL, aaToo=TRUE, noReadCalls=c("blank","genomic"),
-				utr.tail.length=0, SNP.only=FALSE, verbose=TRUE) {
+				utr.tail.length=0, SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL,
+				verbose=TRUE) {
 				
+	GENOME_BASE <- ","
+
 	# let's be a bit more flexible with what we pass in
 	# Could be a genomic range {seqID, start, stop}, a gene {geneID}, or any generic sequence...
 	isRange <- isGene <- isGeneric <- FALSE
@@ -94,7 +97,8 @@
 	# load that portion of the PILEUPS
 	curMPU <- BAM.mpileup( bamfile, seqID=seqID, fastaFile=genomicFastaFile, start=start, stop=stop, 
 			summarize.calls=TRUE, verbose=FALSE)
-	if ( is.null(curMPU)) return(NULL)
+	#if ( is.null(curMPU)) return(NULL)
+	if ( is.null(curMPU)) curMPU <- data.frame()
 
 	# add the reference genome
 	genomicStr <- getFastaSeqFromFilePath( genomicFastaFile, seqID)
@@ -102,6 +106,7 @@
 
 	# decide how we will treat missing data
 	noReadCalls <- match.arg( noReadCalls)
+
 	# gather the reference genome bases in this range
 	allBases <- start : stop
 	genomeBaseText <- curGenomeDNA[ allBases]
@@ -111,12 +116,29 @@
 		names(genomeSNPtext) <- allBases
 	} else {
 		genomeSNPtext <- genomeBaseText
+		names(genomeSNPtext) <- allBases
 	}
+
+	# make a default flips matrix that is all reference genome
+	oneVec <- rep.int( 1, length(allBases))
+	zeroVec <- rep.int( 0, length(allBases))
+	genomicNonFlips <- data.frame( "Ref"=oneVec, "A"=zeroVec, "C"=zeroVec, "G"=zeroVec, "T"=zeroVec,
+					"N"=zeroVec, "Indel"=zeroVec, stringsAsFactors=F)
+	colnames(genomicNonFlips)[1] <- GENOME_BASE
+	rownames(genomicNonFlips) <- allBases
 
 	hasBaseCalls <- ( nrow( curMPU) > 0)
 	if ( ! hasBaseCalls) {
-		out <- list( "ref"=genomeBaseText, "callsMatrix"=NULL, "dna.consensus"=genomeSNPtext, 
-				"aa.consensus"="", "indel.details"="")
+		genomeAminoText <- ""
+		if (aaToo && isGene && noReadCalls == "genomic") {
+			ans <- convertGenomicBasesToCodingAA( seqID, position=start, end=stop, 
+						strand=geneStrand, dnaQuery=genomeBaseText, genomeDNA=curGenomeDNA,
+						geneMap=gmap, cdsMap=cmap)
+			genomeAminoText <- ans$query
+			names( genomeAminoText) <- allBases
+		}
+		out <- list( "ref"=genomeBaseText, "callsMatrix"=genomicNonFlips, "dna.consensus"=genomeSNPtext, 
+				"aa.consensus"=genomeAminoText, "indel.details"="")
 		return( out)
 	}
 
@@ -124,7 +146,7 @@
 
 	# turn the base calls into an explicit matrix in order: genomic,A,C,G,T,N, indel
 	flips <- MPU.callStringsToMatrix( curMPU$BASE_TABLE)
-	rownames(flips) <- xLocs
+	if ( nrow(flips)) rownames(flips) <- xLocs
 
 	# get the majority base at each SNP spot, if not a SNP it will be ',' (matches the reference
 	WHICH <- base::which
@@ -133,6 +155,27 @@
 
 	snpTopBase <- apply( flips, MARGIN=1, function(x) colnames(flips)[ WHICH.MAX(x)])
 	names( snpTopBase) <- xLocs
+
+	# allow a special mode when we are doing "use genomic for missing" mode
+	# if given a minimum read depth, then any spots too shallow get called as reference
+	# i.e.  not enough read depth to trust the base calls
+	if (noReadCalls == "genomic" && ! is.null(minReadCalls)) {
+		minReadCalls <- as.numeric( minReadCalls)
+		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
+		tooLow <- which( depth < minReadCalls)
+		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
+	}
+
+	# if given a minimum percent SNP, then any spots too 'mixed' get called reference
+	# i.e.  not enough consensus to trust the base calls
+	if (noReadCalls == "genomic" && ! is.null(minPercentSNP)) {
+		minPercentSNP <- as.numeric( minPercentSNP)
+		big <- apply( flips, MARGIN=1, max, na.rm=T)
+		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
+		pct <- big / depth
+		tooLow <- which( pct < minPercentSNP)
+		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
+	}
 
 	# the Indels are tougher, we need to get the actual bases for both the reference and the indels and figure if
 	# its an insertion or deletion
@@ -179,6 +222,22 @@
 					geneMap=gmap, cdsMap=cmap)
 		genomeAminoText <- ans$query
 		names( genomeAminoText) <- allBases
+	}
+
+	# we need to make the 'flips' matrix look full when we were asked to use 'genomic' for missing...
+	if ( noReadCalls == "genomic") {
+		# now merge this with what we were given
+		if ( nrow(flips)) {
+			drops <- which( rownames(genomicNonFlips) %in% rownames(flips))
+			if ( length(drops)) {
+				genomicNonFlips <- genomicNonFlips[ -drops, ]
+			}
+			flips <- rbind( flips, genomicNonFlips)
+			ord <- order( rownames(flips))
+			flips <- flips[ ord, ]
+		} else {
+			flips <- genomicNonFlips
+		}
 	}
 
 	out <- list( "ref"=genomeBaseText, "callsMatrix"=flips, "dna.consensus"=genomeSNPtext, 
@@ -272,7 +331,9 @@
 
 	# the AA can't be converted, re-calc from first principles
 	aaAns <- consensusTranslation( dna.consensus)
-	baseCallAns$aa.consensus <- aaAns$BestFrame
+	aaVec <- aaAns$BestFrame
+	names(aaVec) <- 1:length(aaVec)
+	baseCallAns$aa.consensus <- aaVec
 
 	# lastly, make a table that combines all the useful facts for resolving the consensus
 	# trim to just entries where we have pileup data!
