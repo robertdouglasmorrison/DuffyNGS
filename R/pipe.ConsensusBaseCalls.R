@@ -186,6 +186,11 @@
 	}
 	indelText <- indelDetails$indelText
 	names( indelText) <- xLocs
+	# note that due to lack of pileups, the indel details may have gaps
+	indelOut <- rep.int( "", length( genomeBaseText))
+	names(indelOut) <- names(genomeBaseText)
+	where <- match( names(indelOut), names( indelText), nomatch=0)
+	indelOut[ where > 0] <- indelText[ where]
 
 	# there may be places with no read depth at all
 	# default is to use genomic... or delete those bases
@@ -232,16 +237,20 @@
 			if ( length(drops)) {
 				genomicNonFlips <- genomicNonFlips[ -drops, ]
 			}
+			flipRows <- as.numeric( rownames( flips))
+			gnfRows <- as.numeric( rownames( genomicNonFlips))
 			flips <- rbind( flips, genomicNonFlips)
-			ord <- order( rownames(flips))
+			newRows <- c( flipRows, gnfRows)
+			ord <- order( newRows)
 			flips <- flips[ ord, ]
+			rownames(flips) <- as.integer( newRows[ ord])
 		} else {
 			flips <- genomicNonFlips
 		}
 	}
 
 	out <- list( "ref"=genomeBaseText, "callsMatrix"=flips, "dna.consensus"=genomeSNPtext, 
-			"aa.consensus"=genomeAminoText, "indel.details"=indelText)
+			"aa.consensus"=genomeAminoText, "indel.details"=indelOut)
 	return( out)
 }
 
@@ -338,10 +347,12 @@
 	# lastly, make a table that combines all the useful facts for resolving the consensus
 	# trim to just entries where we have pileup data!
 	colnames( calls) <- c( "Ref", colnames(calls)[2:ncol(calls)])
-	callBases <- match( rownames(calls), names(dna.consensus))
-	callsTable <- data.frame( "POSITION"=as.numeric(rownames(calls)), calls, "DNA"=dna.consensus[callBases], 
-				"AA"=aaAns$BestFrame[callBases], aaAns[ callBases, c("Frame1","Frame2","Frame3")], 
-				"IndelDetails"=indel.details, stringsAsFactors=F)
+	callBasesDNA <- match( rownames(calls), names(dna.consensus))
+	callBasesAA <- match( rownames(calls), rownames(aaAns))
+	callsTable <- data.frame( "POSITION"=as.numeric(rownames(calls)), calls, "DNA"=dna.consensus[callBasesDNA], 
+				"AA"=aaAns$BestFrame[callBasesAA], aaAns[ callBasesAA, c("Frame1","Frame2","Frame3")], 
+				#"IndelDetails"=indel.details, stringsAsFactors=F)
+				"IndelDetails"=indel.details[ callBasesDNA], stringsAsFactors=F)
 
 	# force this table to be fully translatable, even if we have to trim a few rows
 	if (verbose) cat( "  phasing reading frames..")
@@ -481,7 +492,8 @@
 	if (verbose) cat( "  validate..")
 	testStr <- paste( outDF$DNA, collapse="")
 	testAA <- DNAtoAA( testStr, clip=F, readingFrame=1)
-	nStops <- sum( gregexpr( STOP_CODON_PATTERN, testAA)[[1]] > 0)
+	whereStops <- gregexpr( STOP_CODON_PATTERN, testAA)[[1]]
+	nStops <- sum( whereStops > 0 & whereStops < nchar(testAA))
 	if ( nStops > 0) {
 		cat( "\nWarning: 'ConsensusBaseCalls' removing stop codons failed.. N_Stops: ", nStops)
 	}
