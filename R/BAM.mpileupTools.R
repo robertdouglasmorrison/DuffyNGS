@@ -12,6 +12,7 @@ ORDER <- base::order
 PASTE <- base::paste
 SAPPLY <- base::sapply
 SORT <- base::sort
+STRSPLIT <- base::strsplit
 SUBSTR <- base::substr
 TOUPPER <- base::toupper
 UNION <- base::union
@@ -58,7 +59,7 @@ MPU.callBases <- function( baseCalls, referenceBase,  minDepth=3, debug=F,
 
 	# make the simple call based on what's most common
 	if (debug) cat( "  split..")
-	allbases <- strsplit( strs, split="")
+	allbases <- STRSPLIT( strs, split="")
 
 	if (debug) cat( "  count..")
 	myTABLE <- oneDtable
@@ -189,7 +190,7 @@ MPU.strandDepth <- function( baseCalls, pos=NULL, debug=F) {
 
 	# make the simple call based on what's most common
 	if (debug) cat( "  split..")
-	allbases <- strsplit( strs, split="")
+	allbases <- STRSPLIT( strs, split="")
 
 	if (debug) cat( "  count..")
 	myTABLE <- oneDtable
@@ -309,10 +310,10 @@ MPU.callTableToString <- function( callTables) {
 
 MPU.callStringToTable <- function( callStrings) {
 
-	terms <- strsplit( callStrings, split=";")
-	callTables <- lapply( terms, function(x) {
+	terms <- STRSPLIT( callStrings, split=";")
+	callTables <- LAPPLY( terms, function(x) {
 					if ( length(x) == 0) return( NULL)
-					subterms <- unlist( strsplit( x, split="="))
+					subterms <- unlist( STRSPLIT( x, split="="))
 					if ( length(subterms) == 0) return( NULL)
 					namptrs <- seq.int( 1, length(subterms), by=2)
 					nams <- subterms[ namptrs]
@@ -336,7 +337,7 @@ MPU.callStringsToMatrix <- function( callStrings) {
 	
 	listOfTables <- MPU.callStringToTable( callStrings)
 
-	lapply( 1:N, function(x) {
+	LAPPLY( 1:N, function(x) {
 			thisTable <- listOfTables[[x]]
 			if ( is.null( thisTable)) return()
 			where <- MATCH( names( thisTable), CALLS, nomatch=0)
@@ -455,7 +456,7 @@ callTable.totalSum <- function( callTables, verbose=FALSE) {
 		} else { 
 			odd <- FALSE
 		}
-		newTables <- lapply( who, function(x) {
+		newTables <- LAPPLY( who, function(x) {
 					return( mergeTables( callTables[[x]], callTables[[x+1]]))
 					})
 		if (odd) newTables[[ newN + 1]] <- callTables[[N]]
@@ -501,7 +502,7 @@ callTable.totalSum <- function( callTables, verbose=FALSE) {
 	who2 <- WHICH( flips[ ,INDEL_COLUMN] > 0)
 	if ( length( who2)) {
 		top3indels <- SAPPLY( curMPU$BASE_TABLE[who2], function( txt) {
-					terms <- strsplit( txt, split=";", fixed=T)[[1]]
+					terms <- STRSPLIT( txt, split=";", fixed=T)[[1]]
 					# reference and SNPs have a easy format
 					notIndel <- grep( "^[,ACGT]=", terms)
 					isIndel <- setdiff( 1:length(terms), notIndel)
