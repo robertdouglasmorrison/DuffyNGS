@@ -3,7 +3,9 @@
 
 `pipe.ConsensusBaseCalls` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
-				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, utr.tail.length=0,
+				genomicFastaFile=NULL, genomicVector=NULL,
+				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, 
+				best.frame=as.cDNA, utr.tail.length=0,
 				SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE) {
 				
 	# get needed paths, etc. from the options file
@@ -11,7 +13,9 @@
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
-	genomicFastaFile <- getOptionValue( optT, "genomicFastaFile", verbose=F)
+	if ( is.null( genomicFastaFile)) {
+		genomicFastaFile <- getOptionValue( optT, "genomicFastaFile", verbose=F)
+	}
 
 	bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 
@@ -25,14 +29,16 @@
 	}
 
 	# we have what we need, call the lower level tool
-	ans <- consensusBaseCalls( bamfile, genomicFastaFile, geneID=geneID, seqID=seqID, 
+	ans <- consensusBaseCalls( bamfile, genomicFastaFile=genomicFastaFile, geneID=geneID, seqID=seqID, 
 			start=start, stop=stop, aaToo=aaToo, noReadCalls=noReadCalls, utr.tail.length=utr.tail.length, 
-			SNP.only=SNP.only, minReadCalls=minReadCalls, minPercentSNP=minPercentSNP, verbose=verbose)
+			SNP.only=SNP.only, minReadCalls=minReadCalls, minPercentSNP=minPercentSNP, 
+			genomicVector=genomicVector, verbose=verbose)
 	if ( is.null(ans)) return(NULL)
 
 	# translate genomic info back to cDNA units if we want
 	if ( ! is.null(geneID) && as.cDNA) {
-		ans <- consensusBaseCallsToCDNA( ans, geneID=geneID, start=start, stop=stop, verbose=verbose)
+		ans <- consensusBaseCallsToCDNA( ans, geneID=geneID, start=start, stop=stop, 
+					best.frame=best.frame, verbose=verbose)
 	} else {
 		ans$callsTable <- NULL
 	}
@@ -43,7 +49,7 @@
 `consensusBaseCalls` <- function( bamfile, genomicFastaFile, geneID=NULL, seqID=NULL, 
 				start=NULL, stop=NULL, aaToo=TRUE, noReadCalls=c("blank","genomic"),
 				utr.tail.length=0, SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL,
-				verbose=TRUE) {
+				genomicVector=NULL, verbose=TRUE) {
 				
 	GENOME_BASE <- ","
 
@@ -101,8 +107,14 @@
 	if ( is.null(curMPU)) curMPU <- data.frame()
 
 	# add the reference genome
-	genomicStr <- getFastaSeqFromFilePath( genomicFastaFile, seqID)
-	curGenomeDNA <- strsplit( as.character(genomicStr), split="")[[1]]
+	# we may have passed in the vector of bases explicitly
+	explicitVector <- ( length(genomicVector) == subset(getCurrentSeqMap(), SEQ_ID == seqID)$LENGTH[1])
+	if ( explicitVector) {
+		curGenomeDNA <- genomicVector
+	} else {
+		genomicStr <- getFastaSeqFromFilePath( genomicFastaFile, seqID)
+		curGenomeDNA <- base::strsplit( as.character(genomicStr), split="")[[1]]
+	}
 
 	# decide how we will treat missing data
 	noReadCalls <- match.arg( noReadCalls)
@@ -162,7 +174,7 @@
 	if (noReadCalls == "genomic" && ! is.null(minReadCalls)) {
 		minReadCalls <- as.numeric( minReadCalls)
 		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
-		tooLow <- which( depth < minReadCalls)
+		tooLow <- WHICH( depth < minReadCalls)
 		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
 	}
 
@@ -173,7 +185,7 @@
 		big <- apply( flips, MARGIN=1, max, na.rm=T)
 		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
 		pct <- big / depth
-		tooLow <- which( pct < minPercentSNP)
+		tooLow <- WHICH( pct < minPercentSNP)
 		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
 	}
 
@@ -214,7 +226,7 @@
 
 	# we may have been asked to only allow SNPs, and disregard any indels
 	if (SNP.only) {
-		isIndel <- which( nchar(genomeSNPtext) != 1)
+		isIndel <- WHICH( nchar(genomeSNPtext) != 1)
 		if ( length( isIndel)) genomeSNPtext[ isIndel] <- genomeBaseText[ isIndel]
 	}
 
@@ -233,7 +245,7 @@
 	if ( noReadCalls == "genomic") {
 		# now merge this with what we were given
 		if ( nrow(flips)) {
-			drops <- which( rownames(genomicNonFlips) %in% rownames(flips))
+			drops <- WHICH( rownames(genomicNonFlips) %in% rownames(flips))
 			if ( length(drops)) {
 				genomicNonFlips <- genomicNonFlips[ -drops, ]
 			}
@@ -241,7 +253,7 @@
 			gnfRows <- as.numeric( rownames( genomicNonFlips))
 			flips <- rbind( flips, genomicNonFlips)
 			newRows <- c( flipRows, gnfRows)
-			ord <- order( newRows)
+			ord <- base::order( newRows)
 			flips <- flips[ ord, ]
 			rownames(flips) <- as.integer( newRows[ ord])
 		} else {
@@ -255,12 +267,13 @@
 }
 
 
-`consensusBaseCallsToCDNA` <- function( baseCallAns, geneID=NULL, start=NULL, stop=NULL, verbose=TRUE) {
+`consensusBaseCallsToCDNA` <- function( baseCallAns, geneID=NULL, start=NULL, stop=NULL, 
+					best.frame=TRUE, verbose=TRUE) {
 
 	# get the gene facts we need to make cDNA
 	if ( ! is.null(geneID)) {
-		gmap <- subset( getCurrentGeneMap(), GENE_ID == geneID)
-		cmap <- subset( getCurrentCdsMap(), GENE_ID == geneID)
+		gmap <- subset.data.frame( getCurrentGeneMap(), GENE_ID == geneID)
+		cmap <- subset.data.frame( getCurrentCdsMap(), GENE_ID == geneID)
 		if ( any( c( nrow(gmap), nrow(cmap)) == 0)) {
 			cat( "\nGeneID not found in current species..")
 			cat( "\nFailed to convert to cDNA.")
@@ -281,12 +294,12 @@
 
 		# drop the intron data, and do the RevComp if need be
 		ref <- baseCallAns$ref
-		keep <- which(  names(ref) %in% cdsBases)
+		keep <- base::which(  names(ref) %in% cdsBases)
 		ref <- ref[ keep]
 		if ( strand == "-") {
-			dna <- paste( ref, collapse="")
+			dna <- base::paste( ref, collapse="")
 			dna <- myReverseComplement(dna)
-			ref <- strsplit( dna, split="")[[1]]
+			ref <- base::strsplit( dna, split="")[[1]]
 		}
 		names(ref) <- 1:length(ref)
 		baseCallAns$ref <- ref
@@ -299,7 +312,7 @@
 			return( baseCallAns)
 		}
 		indel.details <- baseCallAns$indel.details
-		keep <- which( rownames(calls) %in% cdsBases)
+		keep <- base::which( rownames(calls) %in% cdsBases)
 		calls <- calls[ keep, ]
 		indel.details <- indel.details[ keep]
 		if ( strand == "-" && nrow(calls)) {
@@ -317,18 +330,18 @@
 		# there is no gaurantee that the calls have all base locations, so 
 		# rename them specifically
 		if ( nrow(calls)) {
-			where <- match( rownames(calls), cdsBases)
+			where <- base::match( rownames(calls), cdsBases)
 			rownames(calls) <- names(cdsBases)[where]
 		}
 		baseCallAns$callsMatrix <- calls
 
 		dna.consensus <- baseCallAns$dna.consensus
-		keep <- which(  names(dna.consensus) %in% cdsBases)
+		keep <- base::which(  names(dna.consensus) %in% cdsBases)
 		dna.consensus <- dna.consensus[ keep]
 		if ( strand == "-") {
-			dna <- paste( dna.consensus, collapse="")
+			dna <- base::paste( dna.consensus, collapse="")
 			dna <- myReverseComplement(dna)
-			dna.consensus <- strsplit( dna, split="")[[1]]
+			dna.consensus <- base::strsplit( dna, split="")[[1]]
 		}
 		names(dna.consensus) <- 1:length(dna.consensus)
 		baseCallAns$dna.consensus <- dna.consensus
@@ -340,25 +353,31 @@
 
 	# the AA can't be converted, re-calc from first principles
 	aaAns <- consensusTranslation( dna.consensus)
-	aaVec <- aaAns$BestFrame
+	if ( best.frame) {
+		aaVec <- aaAns$BestFrame
+	} else {
+		aaVec <- aaAns$Frame1
+	}
 	names(aaVec) <- 1:length(aaVec)
-	baseCallAns$aa.consensus <- aaVec
+	baseCallAns$aa.consensus <- aa.consensus <- aaVec
 
 	# lastly, make a table that combines all the useful facts for resolving the consensus
 	# trim to just entries where we have pileup data!
 	colnames( calls) <- c( "Ref", colnames(calls)[2:ncol(calls)])
-	callBasesDNA <- match( rownames(calls), names(dna.consensus))
-	callBasesAA <- match( rownames(calls), rownames(aaAns))
+	callBasesDNA <- base::match( rownames(calls), names(dna.consensus))
+	callBasesAA <- base::match( rownames(calls), rownames(aaAns))
 	callsTable <- data.frame( "POSITION"=as.numeric(rownames(calls)), calls, "DNA"=dna.consensus[callBasesDNA], 
-				"AA"=aaAns$BestFrame[callBasesAA], aaAns[ callBasesAA, c("Frame1","Frame2","Frame3")], 
+				"AA"=aa.consensus[callBasesDNA], aaAns[ callBasesAA, c("Frame1","Frame2","Frame3")], 
 				#"IndelDetails"=indel.details, stringsAsFactors=F)
 				"IndelDetails"=indel.details[ callBasesDNA], stringsAsFactors=F)
 
 	# force this table to be fully translatable, even if we have to trim a few rows
-	if (verbose) cat( "  phasing reading frames..")
-	if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable, verbose=verbose)
+	if (best.frame) {
+		if (verbose) cat( "  phasing reading frames..")
+		if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable, verbose=verbose)
+		if (verbose) cat( "  Done.\n")
+	}
 	baseCallAns$callsTable <- callsTable
-	if (verbose) cat( "  Done.\n")
 	return( baseCallAns)
 }
 
@@ -384,7 +403,7 @@
 
 	# test for are we noisy enough
 	pctNoise <- noiseReads / totalReads
-	isNoise <- which( totalReads >= min.depth & pctNoise >= min.noise)
+	isNoise <- WHICH( totalReads >= min.depth & pctNoise >= min.noise)
 
 	out <- baseCallAns
 	if ( length(isNoise)) {
@@ -407,11 +426,11 @@
 	rownames(aa.consensus) <- dnaNames
 	colnames(aa.consensus) <- c( "Frame1", "Frame2", "Frame3")
 
-	consensusDNA <- paste( dna.consensus, collapse="")
+	consensusDNA <- base::paste( dna.consensus, collapse="")
 	consensusAA <- DNAtoAA( consensusDNA, clipAtStop=FALSE, readingFrames=1:3)
-	nStops <- sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
-	bestFrame <- which.min( nStops)
-	aaVector <- strsplit( consensusAA, split="")
+	nStops <- base::sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
+	bestFrame <- base::which.min( nStops)
+	aaVector <- base::strsplit( consensusAA, split="")
 	for ( frame in 1:3) {
 		theseAA <- aaVector[[frame]]
 		aaLocs <- seq( frame, Ndna, by=3) + 1
@@ -435,14 +454,14 @@
 	# step 1:  if any indels (length != 1), force everybody to one DNA letter per row
 	dnaVec <- callsTable$DNA
 	dnaBaseLen <- nchar( dnaVec)
-	zeros <- which( dnaBaseLen == 0)
+	zeros <- base::which( dnaBaseLen == 0)
 	if ( length( zeros)) {
 		if (verbose) cat( "  remove deletions: ", length(zeros))
 		callsTable <- callsTable[ -zeros, ]
 		dnaVec <- callsTable$DNA
 		dnaBaseLen <- nchar( dnaVec)
 	}
-	oversize <- which( dnaBaseLen > 1)
+	oversize <- base::which( dnaBaseLen > 1)
 	if ( nOver <- length( oversize)) {
 		if (verbose) cat( "  expand insertions: ", length(nOver))
 		# step along and expand each
@@ -452,27 +471,27 @@
 		outDF <- headDF
 		for (i in 1:nOver) {
 			thisRow <- oversize[i]
-			myDNA <- strsplit( dnaVec[thisRow], split="")[[1]]
+			myDNA <- base::strsplit( dnaVec[thisRow], split="")[[1]]
 			nDNA <- length(myDNA)
 			sml <- callsTable[ rep.int(thisRow,nDNA), ]
 			sml$DNA <- myDNA
 			sml$POSITION <- round( as.numeric(callsTable$POSITION[thisRow]) + (((1:nDNA) - 1) / nDNA), digits=3)
 			sml$AA <- ""
-			outDF <- rbind( outDF, sml)
+			outDF <- base::rbind( outDF, sml)
 			# if more indels, append the next non-indel segment
 			if ( i != nOver) {
 				otherDF <- callsTable[ (thisRow+1):(oversize[i+1]-1), ]
-				outDF <- rbind( outDF, otherDF)
+				outDF <- base::rbind( outDF, otherDF)
 			}
 		}
-		callsTable <- rbind( outDF, tailDF)
+		callsTable <- base::rbind( outDF, tailDF)
 		rm( headDF, tailDF, sml, outDF)
 		dnaVec <- callsTable$DNA
 		dnaBaseLen <- nchar( dnaVec)
 	}
 
 	# step 2:  find all the best longest reading frames
-	dnaStr <- paste( dnaVec, collapse="")
+	dnaStr <- base::paste( dnaVec, collapse="")
 	if ( nchar(dnaStr) != length(dnaVec)) {
 		if (verbose) cat( "\nWarning: 'ConsensusBaseCalls' DNA sequence length error!")
 	}
@@ -485,12 +504,12 @@
 		from <- ans$DNA_Start[i]
 		to <- ans$DNA_Stop[i]
 		sml <- callsTable[ from:to, ]
-		outDF <- rbind( outDF, sml)
+		outDF <- base::rbind( outDF, sml)
 	}
 
 	# test it
 	if (verbose) cat( "  validate..")
-	testStr <- paste( outDF$DNA, collapse="")
+	testStr <- base::paste( outDF$DNA, collapse="")
 	testAA <- DNAtoAA( testStr, clip=F, readingFrame=1)
 	whereStops <- gregexpr( STOP_CODON_PATTERN, testAA)[[1]]
 	nStops <- sum( whereStops > 0 & whereStops < nchar(testAA))
@@ -500,7 +519,7 @@
 
 	# store it
 	outDF$AA <- ""
-	aaVec <- strsplit( testAA, split="")[[1]]
+	aaVec <- base::strsplit( testAA, split="")[[1]]
 	outDF$AA[ seq( 2, nrow(outDF), by=3)] <- aaVec
 	
 	# and restore all the reading frames

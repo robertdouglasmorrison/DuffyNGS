@@ -85,7 +85,40 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	xLocs <- SNP_curMPU$POSITION
 
 	# turn the base calls into an explicit matrix in order: genomic,A,C,G,T,N, indel
-	flips <- csums <- MPU.callStringsToMatrix( SNP_curMPU$BASE_TABLE)
+	flips <- MPU.callStringsToMatrix( SNP_curMPU$BASE_TABLE)
+
+	# the Indels are tougher, we need to get the actual bases for both the reference and the indels and figure if
+	# its an insertion or deletion
+	indelDetails <- MPU.getIndelDetails( flips, SNP_curMPU)
+	isIndel <- isDeletions <- vector()
+	if ( indelDetails$nIndels > 0) {
+		isIndel <- indelDetails$who
+		#snpTopBase[isIndel] <- indelDetails$bases
+		# indels that are the start of deletions are actually the genomic base, followed by 1+ '*' deletions
+		# we want to visualize these as genomic at the first location, not as an indel, so fudge those counts
+		isDeletion <- which( substr( indelDetails$indelText, 1, 2) == ",-")
+		# those deletions we need to fix are the intersect of Indel and Deletion
+		isDeletion <- intersect( isIndel, isDeletion)
+		if ( length( isDeletion)) {
+			delRows <- isDeletion
+			# extract the first numeric
+			delStrings <- indelDetails$indelText[ isDeletion]
+			delCountString <- sub( "^,\\-[ACGT]+=", "", delStrings)
+			delCountString <- sub( ";.+","",delCountString)
+			delCount <- as.integer( delCountString)
+			delCount[is.na(delCount)] <- 0
+			# now tweak those counts
+			gCntsNow <- flips[ delRows, 1] + delCount
+			indelCntsNow <- flips[ delRows, 7] - delCount
+			indelCntsNow[ indelCntsNow < 0] <- 0
+			flips[ delRows, 1] <- gCntsNow
+			flips[ delRows, 7] <- indelCntsNow
+			# lastly, flag these deletion starts as looking like the genome
+			indelDetails$bases[ which( isIndel %in% isDeletion)] <- ","
+		}
+	}
+
+	# now tabulate the cummulative sums to know what to draw
 	csums <- apply( flips, MARGIN=1, cumsum)
 	csums <- t( csums)
 	rownames( flips) <- rownames( csums) <- xLocs
@@ -93,12 +126,9 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	# get the majority base at each SNP spot, if not a SNP it will be ',' (matches the reference
 	snpTopBase <- apply( flips, MARGIN=1, function(x) colnames(flips)[ which.max(x)])
 	names( snpTopBase) <- xLocs
-
-	# the Indels are tougher, we need to get the actual bases for both the reference and the indels and figure if
-	# its an insertion or deletion
-	indelDetails <- MPU.getIndelDetails( flips, SNP_curMPU)
-	if ( indelDetails$nIndels > 0) {
-		isIndel <- indelDetails$who
+	
+	# now stuff in the indel calls
+	if ( length(isIndel)) {
 		snpTopBase[isIndel] <- indelDetails$bases
 	}
 
