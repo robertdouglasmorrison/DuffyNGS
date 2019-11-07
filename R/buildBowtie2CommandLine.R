@@ -3,12 +3,12 @@
 
 `buildBowtie2CommandLine` <- 
 function( inputFastqFile, outputFile=sub( "fastq$", "bam", inputFastqFile[1]),  
-		optionsFile="Options.txt", metricsFile="bowtie2Metrics.txt",
+		optionsFile="Options.txt", annotationFile="Annotation.txt", metricsFile="bowtie2Metrics.txt",
 		k=NULL, asMatePairs=FALSE, noHitsFile=NULL, 
 		alignIndex=getOptionValue( optionsFile, "GenomicIndex", verbose=F), index.path=NULL,
 		alignPolicy=getOptionValue( optionsFile, "GenomicAlignmentPolicy", verbose=F),
 		maxReads=NULL, skipReads=NULL, keepUnaligned=FALSE, quiet=FALSE, 
-		verbose=TRUE, debug=FALSE) {
+		sampleID="", verbose=TRUE, debug=FALSE) {
 
 	optT <- readOptionsTable( optionsFile)
 
@@ -26,8 +26,11 @@ function( inputFastqFile, outputFile=sub( "fastq$", "bam", inputFastqFile[1]),
 	out <- mypaste( out, getOptionValue( optT, "bowtie2InputOptions", notfound="", verbose=verbose))
 
 	# next is any hard trimming
-	trim5 <- as.integer( getOptionValue( optT, "trim5", notfound="0", verbose=verbose))
-	trim3 <- as.integer( getOptionValue( optT, "trim3", notfound="0", verbose=verbose))
+	#trim5 <- as.integer( getOptionValue( optT, "trim5", notfound="0", verbose=verbose))
+	#trim3 <- as.integer( getOptionValue( optT, "trim3", notfound="0", verbose=verbose))
+	trim <- getReadTrimming( sampleID=sampleID, annotationFile=annotationFile, optionsFile=optionsFile)
+	trim5 <- trim$trim5
+	trim3 <- trim$trim3
 	if ( trim5 > 0) out <- mypaste( out, " --trim5", trim5)
 	if ( trim3 > 0) out <- mypaste( out, " --trim3", trim3)
 

@@ -44,7 +44,7 @@
 
 	# call bowtie against the genomic index
 	ans <- fastqToBAM( noHitFileIn, tempResultAlignFile, sampleID=sampleID, optionsFile=optionsFile,
-			noHitsFile=tempResultNoHitsFile, asMatePairs=FALSE)
+			annotationFile=annotationFile, noHitsFile=tempResultNoHitsFile, asMatePairs=FALSE)
 	if (verbose) {
 		cat( "  Done.\n")
 	}

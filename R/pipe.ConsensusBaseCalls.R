@@ -378,6 +378,12 @@
 		if (verbose) cat( "  Done.\n")
 	}
 	baseCallAns$callsTable <- callsTable
+
+	# lastly, and some confidence scores
+	confAns <- consensusConfidence( baseCallAns)
+	baseCallAns$dna.confidence <- confAns$dna.confidence
+	baseCallAns$aa.confidence <- confAns$aa.confidence
+
 	return( baseCallAns)
 }
 
@@ -425,8 +431,12 @@
 	aa.consensus <- matrix( "", nrow=Ndna, ncol=3)
 	rownames(aa.consensus) <- dnaNames
 	colnames(aa.consensus) <- c( "Frame1", "Frame2", "Frame3")
+	errorOut <- data.frame( "BestFrame"=aa.consensus[,1], aa.consensus, stringsAsFactors=FALSE)
+	if ( Ndna < 3) return( errorOut)
 
 	consensusDNA <- base::paste( dna.consensus, collapse="")
+	if ( nchar(consensusDNA) < 3) return( errorOut)
+
 	consensusAA <- DNAtoAA( consensusDNA, clipAtStop=FALSE, readingFrames=1:3)
 	nStops <- base::sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
 	bestFrame <- base::which.min( nStops)
@@ -457,10 +467,12 @@
 	zeros <- base::which( dnaBaseLen == 0)
 	if ( length( zeros)) {
 		if (verbose) cat( "  remove deletions: ", length(zeros))
-		callsTable <- callsTable[ -zeros, ]
+		callsTable <- callsTable[ -zeros, , drop=F]
 		dnaVec <- callsTable$DNA
 		dnaBaseLen <- nchar( dnaVec)
 	}
+	if ( nrow(callsTable) < 3) return( callsTable)
+
 	oversize <- base::which( dnaBaseLen > 1)
 	if ( nOver <- length( oversize)) {
 		if (verbose) cat( "  expand insertions: ", length(nOver))
@@ -527,4 +539,40 @@
 	outDF[ , c("Frame1", "Frame2", "Frame3")] <- aaAns[ , c("Frame1","Frame2","Frame3")]
 
 	return( outDF)
+}
+
+
+`consensusConfidence` <- function( baseCallAns) {
+
+	# given the base call consensus, assess a Phred score like confidence to each base
+	if ( is.null(baseCallAns)) return( NULL)
+	cm <- baseCallAns$callsMatrix
+	if ( is.null(cm)) return( NULL)
+	if ( ! nrow(cm)) return( NULL)
+
+	# see how deep and how consistent
+	totalReads <- apply( cm, 1, sum, na.rm=T)
+	callReads <- apply( cm, 1, max, na.rm=T)
+
+	# prevent divide by zero
+	totalReads[ totalReads < 1] <- 1
+	pctCall <- callReads / totalReads
+
+	# certainty is a function of read depth
+	certainty <- 1.0 - (2 ^ -totalReads)
+
+	# confidence is the product of the dominant percentage times the certainty
+	# always on the interval 0..1
+	conf <- pctCall * certainty
+
+	# the overall DNA confidence is the average of all DNA calls
+	avgDNAconf <- mean( conf, na.rm=T)
+
+	# but the AA calls are relative to what came before, so their confidence calls
+	# ca't be better than what came previously along the translation
+	# we are assuming the call matrix is in CDNA ordering
+	aaConf <- cummin( conf)
+	avgAAconf <- mean( aaConf, na.rm=T)
+
+	return( list( "dna.confidence"=avgDNAconf, "aa.confidence"=avgAAconf))
 }

@@ -41,7 +41,8 @@
 	genomicInFiles <- notRiboFiles
 	notGenomicFiles <- getNotGenomicFastqFileNames( sampleID, asMatePairs)
 	status <- pipe.GenomicAlign( inputFastqFile=genomicInFiles, sampleID, optionsFile=optionsFile, 
-				asMatePairs=asMatePairs, verbose=verbose, rawReadCount=nReadsIn)
+				annotationFile=annotationFile, asMatePairs=asMatePairs, verbose=verbose, 
+				rawReadCount=nReadsIn)
 
 	# now we really know how many reads we started with...
 	nReadsInGenomic <- status$RawReads

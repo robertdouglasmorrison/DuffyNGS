@@ -147,7 +147,7 @@
 		# try to reinsert local gaps
 		outPeps <- peps
 
-		localPatts <- as.character( pattern( paAns))
+		localPatts <- as.character( alignedPattern( paAns))
 		hasGap <- grep( "-", localPatts, fixed=TRUE)
 		for (i in hasGap) {
 			withGaps <- localPatts[i]

@@ -3,7 +3,7 @@
 # turn a .fastq file into an aligned .bam file, by calling Bowtie2
 
 `fastqToBAM` <- function( inputFastqFile, outputFile=sub( "(fastq|fq|gz)$", "bam", inputFastqFile[1]),  
-		k=NULL, sampleID="", optionsFile="Options.txt",  noHitsFile=NULL, 
+		k=NULL, sampleID="", optionsFile="Options.txt",  annotationFile="Annotation.txt", noHitsFile=NULL, 
 		alignIndex=getOptionValue( optionsFile, "GenomicIndex"), index.path=NULL,
 		alignPolicy=getOptionValue( optionsFile, "GenomicAlignmentPolicy", verbose=F), 
 		maxReads=NULL, skipReads=NULL, asMatePairs=FALSE, keepUnaligned=TRUE,
@@ -41,11 +41,11 @@
 	# turn all the arguments into one Bowtie command line
 	metricsFile <- paste( sampleID, "Bowtie2.AlignMetrics.txt", sep=".")
 	cmd <- buildBowtie2CommandLine( inputFastqFile=inputFastqFile, outputFile=outputFile, 
-			optionsFile=optionsFile, metricsFile=metricsFile,
+			optionsFile=optionsFile, annotationFile=annotationFile, metricsFile=metricsFile,
 			k=k, noHitsFile=noHitsFile, 
 			alignIndex=alignIndex, index.path=index.path, alignPolicy=alignPolicy, 
 			maxReads=maxReads, skipReads=skipReads, asMatePairs=asMatePairs, 
-			keepUnaligned=keepUnaligned, verbose=verbose)
+			keepUnaligned=keepUnaligned, sampleID=sampleID, verbose=verbose)
 
 	# Run the alignment program
 	bowtieTiming <- callBowtie2( cmd, verbose=verbose)

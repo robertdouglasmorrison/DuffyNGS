@@ -401,7 +401,7 @@
 
 `realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", results.path=NULL,
+				optionsFile="Options.txt", annotationFile=annotationFile, results.path=NULL,
 				exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
 
 	require(Biostrings)
@@ -515,7 +515,8 @@
 	bamFile <- file.path( peptide.path, "ConsensusProtein.bam")
 	nhFile <- file.path( peptide.path, "ConsensusProtein.noHits.fastq.gz")
 	bowtieAns <- fastqToBAM( inputFastqFile=allReadsFiles, outputFile=bamFile, sampleID=sampleID, 
-			optionsFile=optionsFile, alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
+			optionsFile=optionsFile, annotationFile=annotationFile, 
+			alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
 	nReadsAligned <- bowtieAns$UniqueReads + bowtieAns$MultiReads
 	
 	# step 4:  get the new consensus from this BAM file

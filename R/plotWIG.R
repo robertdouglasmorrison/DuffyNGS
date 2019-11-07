@@ -1074,11 +1074,14 @@
 		allY[ (which(flatZero)+1)] <- NA
 	}
 
-	# put explicit zeros at the ends to bring lines back to base
-	xx <- c( minX, allX, maxX)
-	yy <- c( 0, allY, 0)
-	#lines( x=allX, y=allY, type="l", lwd=lwd, col=col)
-	lines( x=xx, y=yy, type="l", lwd=lwd, col=col)
+	# put explicit zeros at the ends to bring lines back to base?
+	if (FORCE_ZERO_EDGES <- FALSE) {
+		xx <- c( minX, allX, maxX)
+		yy <- c( 0, allY, 0)
+		lines( x=xx, y=yy, type="l", lwd=lwd, col=col)
+	} else {
+		lines( x=allX, y=allY, type="l", lwd=lwd, col=col)
+	}
 }
 
 

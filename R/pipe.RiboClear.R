@@ -50,7 +50,7 @@ function( inputFastqFile, sampleID, annotationFile="Annotation.txt", optionsFile
 	# we do it all in one pass now
 	nrHit <- nrNohit <- nrForward <- 0
 	ans <- fastqToBAM( inputFastqFile, finalHit, k=maxMultiHits, sampleID=sampleID,
-			noHitsFile=nohitPrefix, optionsFile=optionsFile, 
+			noHitsFile=nohitPrefix, optionsFile=optionsFile, annotationFile=annotationFile,
 			alignIndex=alignIndex, alignPolicy=alignPolicy, 
 			asMatePairs=asMatePairs, maxReads=maxFastqReads, verbose=verbose)
 

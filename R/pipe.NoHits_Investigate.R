@@ -140,6 +140,7 @@
 
 	for( i in 1:length( targets)) {
 		ans <- fastqToBAM( infile, outfile, m=NULL, k=1, sampleID=sampleID, 
+				optionsFile=optionsFile, annotationFile=annotationFile,
 				alignIndex=targets[i], alignPolicy=" ", verbose=FALSE)
 		nHitTargets[i] <- ans$ReadsAligned
 		outTxt[nOut+i] <- paste( "    ", names(targets)[i], "\t", nHitTargets[i], 
