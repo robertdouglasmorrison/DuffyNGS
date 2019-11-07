@@ -50,7 +50,8 @@
 			cat( "\nAligning ", sampleID, " against: ", thisGenome)
 			bowtieIndexFile <- paste( "VSA", thisGenome, "vargenes", sep="_")
 			ans <- fastqToBAM( inputFastqFileSet, bamFile, k=1, sampleID=sampleID, optionsFile=optionsFile,
-					noHitsFile=NULL, alignIndex=bowtieIndexFile, keepUnaligned=FALSE, verbose=F)
+					annotationFile=annotationFile, noHitsFile=NULL, alignIndex=bowtieIndexFile, 
+					keepUnaligned=FALSE, verbose=F)
 			cat( "\nBowtie done for genome: ", thisGenome, "\n")
 			print( ans)
 			if ( !file.exists(bamFile)) {

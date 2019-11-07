@@ -57,7 +57,7 @@
 
 	if ( nReadsIn > 0) {
 		ans <- fastqToBAM( inputFastqFile, spliceHit, k=maxMultiHits, sampleID=sampleID,
-				optionsFile=optionsFile, noHitsFile=nohitPrefix, 
+				optionsFile=optionsFile, annotationFile=annotationFile, noHitsFile=nohitPrefix, 
 				alignIndex=alignIndex, alignPolicy=alignPolicy, 
 				asMatePairs=asMatePairs, verbose=verbose)
 		nReadsIn <- ans$RawReads

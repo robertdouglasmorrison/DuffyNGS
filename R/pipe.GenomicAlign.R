@@ -2,7 +2,7 @@
 
 # run a sample's  .fastq file thru the Genomic Alignment pipeline
 
-`pipe.GenomicAlign` <- function( inputFastqFile, sampleID, optionsFile="Options.txt", 
+`pipe.GenomicAlign` <- function( inputFastqFile, sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				asMatePairs=FALSE, rawReadCount=NULL, verbose=TRUE) {
 
 	if (verbose) {
@@ -43,7 +43,7 @@
 
 	# do the genomic alignment
 	ans <- fastqToBAM( inputFastqFile, finalHit, k=maxMultiHits, sampleID=sampleID,
-			optionsFile=optionsFile, noHitsFile=nohitPrefix, 
+			optionsFile=optionsFile, annotationFile=annotationFile, noHitsFile=nohitPrefix, 
 			alignIndex=alignIndex, alignPolicy=alignPolicy, asMatePairs=asMatePairs,
 			maxReads=maxFastqReads, verbose=verbose)
 	nReadsIn <- ans$RawReads

@@ -43,7 +43,8 @@
 			myPolicy <- " --very-sensitive-local  --score-min L,50,0 "
 		}
 		ans <- fastqToBAM( noHitsFile, bamOutfile, sampleID=sampleID, optionsFile=optionsFile, 
-				noHitsFile=newNoHitsFile, alignIndex=myIndex, alignPolicy=myPolicy, verbose=TRUE)
+				annotationFile=annotationFile, noHitsFile=newNoHitsFile, alignIndex=myIndex, 
+				alignPolicy=myPolicy, verbose=TRUE)
 		nNoHits <- ans$NoHitReads
 		nHits <- ans$UniqueReads + ans$MultiReads
 

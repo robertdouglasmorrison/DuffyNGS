@@ -142,7 +142,7 @@
 
 		cat( verboseOutputDivider, "\nPre-Alignment against Ribo Clearing Index...\n")
 		ans <- fastqToBAM( filein, riboFile, sampleID=sample, k=5,
-				optionsFile=optionsFile, noHitsFile=notRiboFile,
+				optionsFile=optionsFile, annotationFile=annotationFile, noHitsFile=notRiboFile,
 				alignIndex=riboIndex, alignPolicy=riboPolicy, maxReads=maxReads, verbose=T)
 		nRawReads <- ans$RawReads
 		nRibos <-  ans$UniqueReads + ans$MultiReads
@@ -164,7 +164,7 @@
 	genomicIndex <- getOptionValue( optTbl, "GenomicIndex", notfound="Pf.Genomic_idx")
 	genomicPolicy <- getOptionValue( optTbl, "GenomicAlignmentPolicy", notfound=" ")
 	ans <- fastqToBAM( notRiboFile, genomicFile, sampleID=sample, k=5,
-			optionsFile=optionsFile, noHitsFile=notGenomicFile,
+			optionsFile=optionsFile, annotationFile=annotationFile, noHitsFile=notGenomicFile,
 			alignIndex=genomicIndex, alignPolicy=genomicPolicy, maxReads=maxReads, verbose=T)
 	nNotGenomic <- ans$NoHitReads
 	quickFileLineCountRecord( notGenomicFile, sample, lineCount=(nNotGenomic*4), readCount=nNotGenomic)
@@ -214,7 +214,7 @@
 
 		cat( verboseOutputDivider, "\nAlignment against Splice Index...\n")
 		ans <- fastqToBAM( notGenomicFile, spliceFile, sampleID=sample, k=5,
-				optionsFile=optionsFile, noHitsFile=nohitFile,
+				optionsFile=optionsFile, annotationFile=annotationFile, noHitsFile=nohitFile,
 				alignIndex=spliceIndex, alignPolicy=splicePolicy, maxReads=maxReads, verbose=T)
 		nSplice <-  ans$UniqueReads + ans$MultiReads
 		nNoHit <- ans$NoHitReads
