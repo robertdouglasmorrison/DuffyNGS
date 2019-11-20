@@ -1,7 +1,7 @@
 #
-# DuffyNGS  ver 1.8.0
+# DuffyNGS  ver 1.8.1
 
-VER = 1.8.0
+VER = 1.8.1
 
 DuffyNGS.tar.gz : 
 	rm  -f ./DuffyNGS_*.tar.gz

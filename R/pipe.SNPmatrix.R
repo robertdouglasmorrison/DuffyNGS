@@ -71,7 +71,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 
 `pipe.SNP.BaseDepth` <- function( sampleID, optionsFile="Options.txt", 
 				results.path=NULL, seqIDset=NULL, SNPtablePath="~/SNPs/",
-				otherSNPs=NULL, indelsToo=TRUE, keepIntergenics=TRUE) {
+				otherSNPs=NULL, indelsToo=TRUE, keepIntergenics=TRUE,
+				baseDepthTableToMatch=NULL) {
 
 	BASES <- c("A","C","G","T")
 	N_BASES <- 4
@@ -111,7 +112,24 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		otherSNPsToo <- TRUE
 	}
 
+	# default behavior is to query all the SNP sites explicitly seen in this sample, with
+	# all 'known' SNP sites from database object for this species.
 
+	# new optional behavior:  if given a base depth table object, then use that as the set
+	# of sites.  Assuring that the new created base depth for this sample is the same SNP
+	# sites as the given one
+	ForceSnpSites <- FALSE
+	if ( ! is.null( baseDepthTableToMatch)) {
+		rnames <- rownames( baseDepthTableToMatch)
+		snpTerms <- strsplit( rnames, split="::", fixed=T)
+		forceSnpSeq <- sapply( snpTerms, `[`, 1)
+		forceSnpGene <- sapply( snpTerms, `[`, 2)
+		forceSnpPos <- as.integer( sapply( snpTerms, `[`, 3))
+		ForceSnpSites <- TRUE
+	}
+
+
+	# local functoin to process one SeqID
 	getSNPmatrixOneSeq <- function( seqID) {
 
 		# gmap <- subset.data.frame( geneMap, REAL_G == TRUE & SEQ_ID %in% allSeqID)
@@ -124,34 +142,42 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		snpSeq <- snpPos <- snpGene <- vector()
 		nSNP <- 0
 
-		loadKnownSNPtable( seqID)
-		if ( nrow(SNP_curSNPtable)) {
-			keepers <- which( SNP_curSNPtable$GENE_ID %in% allGenes)
-			snpSeq <- SNP_curSNPtable$SEQ_ID[ keepers]
-			snpPos <- SNP_curSNPtable$POSITION[ keepers]
-			snpGene <- SNP_curSNPtable$GENE_ID[ keepers]
-			nSNP <- length( snpPos)	
-			cat( "\nKnown SNPs table:    ", length(keepers))
-		}
-		if (otherSNPsToo) {
-			smlOtherSNPs <- subset.data.frame( otherSNPs, SEQ_ID == seqID)
-			if ( nrow(smlOtherSNPs)) {
-				keepers <- which( smlOtherSNPs$GENE_ID %in% allGenes)
-				snpSeq <- c( snpSeq, smlOtherSNPs$SEQ_ID[ keepers])
-				snpPos <- c( snpPos, smlOtherSNPs$POSITION[ keepers])
-				snpGene <- c( snpGene, smlOtherSNPs$GENE_ID[ keepers])
+		if ( ! ForceSnpSites) {
+			loadKnownSNPtable( seqID)
+			if ( nrow(SNP_curSNPtable)) {
+				keepers <- which( SNP_curSNPtable$GENE_ID %in% allGenes)
+				snpSeq <- SNP_curSNPtable$SEQ_ID[ keepers]
+				snpPos <- SNP_curSNPtable$POSITION[ keepers]
+				snpGene <- SNP_curSNPtable$GENE_ID[ keepers]
 				nSNP <- length( snpPos)	
-				cat( "\nOther SNPs table:    ", length(keepers))
+				cat( "\nKnown SNPs table:    ", length(keepers))
 			}
-		}
-		# catch any duplicates!
-		drops <- which( duplicated( snpPos))
-		if ( length(drops)) {
-			snpSeq <- snpSeq[ -drops]
-			snpPos <- snpPos[ -drops]
-			snpGene <- snpGene[ -drops]
+			if (otherSNPsToo) {
+				smlOtherSNPs <- subset.data.frame( otherSNPs, SEQ_ID == seqID)
+				if ( nrow(smlOtherSNPs)) {
+					keepers <- which( smlOtherSNPs$GENE_ID %in% allGenes)
+					snpSeq <- c( snpSeq, smlOtherSNPs$SEQ_ID[ keepers])
+					snpPos <- c( snpPos, smlOtherSNPs$POSITION[ keepers])
+					snpGene <- c( snpGene, smlOtherSNPs$GENE_ID[ keepers])
+					nSNP <- length( snpPos)	
+					cat( "\nOther SNPs table:    ", length(keepers))
+				}
+			}
+			# catch any duplicates!
+			drops <- which( duplicated( snpPos))
+			if ( length(drops)) {
+				snpSeq <- snpSeq[ -drops]
+				snpPos <- snpPos[ -drops]
+				snpGene <- snpGene[ -drops]
+				nSNP <- length( snpPos)	
+				cat( "\nDrop SNP duplicates: ", length(drops))
+			}
+		} else {
+			use <- which( forceSnpSeq == seqID)
+			snpSeq <- forceSnpSeq[use]
+			snpGene <- forceSnpGene[use]
+			snpPos <- forceSnpPos[use]
 			nSNP <- length( snpPos)	
-			cat( "\nDrop SNP duplicates: ", length(drops))
 		}
 		if ( ! nSNP) return( NULL)
 
@@ -161,7 +187,11 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		snpPos <- snpPos[ ord]
 		snpGene <- snpGene[ ord]
 
-		cat( "\nMeasuring Base Depth @ Known SNPs:  ", seqID, "\tN_SNP: ", nSNP, "\n")
+		if ( ! ForceSnpSites) {
+			cat( "\nMeasuring Base Depth @ Known SNP sites:  ", seqID, "\tN_SNP: ", nSNP, "\n")
+		} else {
+			cat( "\nMeasuring Base Depth @ Match SNP sites:  ", seqID, "\tN_SNP: ", nSNP, "\n")
+		}
 		out <- matrix( NA, nrow=N_BASES, ncol=nSNP)
 		rownames(out) <- BASES
 		colnames(out) <- paste( seqID, snpGene, snpPos, sep="::")
@@ -522,6 +552,59 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		out <- fm
 	}
 	return(out)
+}
+
+
+`freqMatrix.PCAplot` <- function( m, min.depth=1, min.diff=1, dropNA=TRUE, ... ) {
+
+	# given a SNP Freq Matrix
+	m <- as.matrix(m)
+
+	freqCols <- grep( "_Freq$", colnames(m))
+	depthCols <- grep( "_Depth$", colnames(m))
+	freqM <- m[ , freqCols]
+	colnames(freqM) <- sub( "_Freq$", "", colnames(freqM))
+	depthToo <- FALSE
+	if ( length(depthCols)) {
+		depthToo <- TRUE
+		depthM <- m[ , depthCols]
+		colnames(depthM) <- sub( "_Depth$", "", colnames(depthM))
+	}
+
+	# use the depth and diff tnd NA erms to reduce rows before PCA.
+	# to narrow down to the most relevant features
+	if ( dropNA) {
+		# find all rows that have missing data
+		nNAf <- apply( freqM, 1, function(x) sum( is.na(x)))
+		dropF <- which( nNAf > 0)
+		if (depthToo) {
+			nNAd <- apply( depthM, 1, function(x) sum( is.na(x)))
+			dropD <- which( nNAd > 0)
+			dropF <- sort( union( dropF, dropD))
+		}
+		if ( length( dropF)) {
+			freqM <- freqM[ -dropF, ]
+			depthM <- depthM[ -dropF, ]
+		}
+	}
+	if ( depthToo) {
+		minDeep <- apply( depthM, 1, min, na.rm=T)
+		dropD <- which( minDeep < min.depth)
+		if ( length( dropD)) {
+			freqM <- freqM[ -dropD, ]
+			depthM <- depthM[ -dropD, ]
+		}
+	}
+	minDiff <- apply( freqM, 1, function(x) diff( range( x, na.rm=T)))
+	dropD <- which( minDiff < min.diff)
+	if ( length( dropD)) {
+		freqM <- freqM[ -dropD, ]
+		depthM <- depthM[ -dropD, ]
+	}
+
+	# OK, ready to PCA and draw
+	ans <- matrix.PCAplot( freqM, ...)
+	return( ans)
 }
 
 
