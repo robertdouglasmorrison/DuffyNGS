@@ -3,7 +3,7 @@
 
 `pipe.BAMproteins` <- function( sampleID, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				noReadCalls=NULL, SNP.only=TRUE, minReadCalls=NULL, minPercentSNP=NULL, 
+				noReadCalls=NULL, SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, 
 				makeFastaFile=TRUE, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
@@ -178,17 +178,22 @@
 	fa1 <- loadFasta( f1, short=F, verbose=F)
 	fa2 <- loadFasta( f2, short=F, verbose=F)
 
+	NCHAR <- base::nchar
+	PASTE <- base::paste
+	STRSPLIT <- base::strsplit
+	SAPPLY <- base::sapply
+
 	# the descriptors may have confidence scores and products
-	desc1Terms <- strsplit( fa1$desc, split=" | ", fixed=T)
-	desc1 <- sapply( desc1Terms, `[`, 1)
-	conf1 <- as.numeric( sub( "Confidence=", "", sapply( desc1Terms, `[`, 2)))
+	desc1Terms <- STRSPLIT( fa1$desc, split=" | ", fixed=T)
+	desc1 <- SAPPLY( desc1Terms, `[`, 1)
+	conf1 <- as.numeric( sub( "Confidence=", "", SAPPLY( desc1Terms, `[`, 2)))
 	if (hasConfidence2) {
-		desc2Terms <- strsplit( fa2$desc, split=" | ", fixed=T)
-		desc2 <- sapply( desc2Terms, `[`, 1)
-		conf2 <- as.numeric( sub( "Confidence=", "", sapply( desc2Terms, `[`, 2)))
+		desc2Terms <- STRSPLIT( fa2$desc, split=" | ", fixed=T)
+		desc2 <- SAPPLY( desc2Terms, `[`, 1)
+		conf2 <- as.numeric( sub( "Confidence=", "", SAPPLY( desc2Terms, `[`, 2)))
 	} else {
-		desc2Terms <- strsplit( fa2$desc, split=" | ", fixed=T)
-		desc2 <- sapply( desc2Terms, `[`, 1)
+		desc2Terms <- STRSPLIT( fa2$desc, split=" | ", fixed=T)
+		desc2 <- SAPPLY( desc2Terms, `[`, 1)
 		conf2 <- rep.int( 100, length(desc2))
 	}
 
@@ -216,6 +221,12 @@
 	prot1 <- fa1$seq[ wh1]
 	prot2 <- fa2$seq[ wh2]
 
+	# to prevent any runtime erorrs, catch/fix any invalid AA calls here
+	prot1 <- gsub( "?", "X", prot1, fixed=T)
+	prot2 <- gsub( "?", "X", prot2, fixed=T)
+	prot1 <- gsub( "U", "X", prot1, fixed=T)
+	prot2 <- gsub( "U", "X", prot2, fixed=T)
+
 	# find out how many differences
 	ed <- td <- conf <- nistop <- dSize <- pctDiff <- ngap <- vector( length=NG)
 	details <- rep.int( "", NG)
@@ -230,21 +241,25 @@
 		# gracefully catch completed deleted proteins
 		if ( s1 == "") s1 <- "*"
 		if ( s2 == "") s2 <- "*"
-		nc <- nchar( c( s1, s2))
-		ed[i] <- d <- adist( s1, s2)[1]
+		nc <- NCHAR( c( s1, s2))
 		td[i] <- l <- max( nc)
+		if ( s1 == s2) {
+			ed[i] <- d <- 0
+		} else {
+			ed[i] <- d <- adist( s1, s2)[1]
+		}
 		conf[i] <- min( conf1[wh1[i]], conf2[wh2[i]])
 		dSize[i] <- nc[1] - nc[2]
 		pctDiff[i] <- d * 100 / l
 		if (show.details && d > 0) {
 			pa <- pairwiseAlignment( s1, s2, type="global", substitutionMatrix=BLOSUM62)
-			ch1 <- strsplit( as.character( alignedPattern(pa)), split="")[[1]]
-			ch2 <- strsplit( as.character( alignedSubject(pa)), split="")[[1]]
+			ch1 <- STRSPLIT( as.character( alignedPattern(pa)), split="")[[1]]
+			ch2 <- STRSPLIT( as.character( alignedSubject(pa)), split="")[[1]]
 			diffs <- which( ch1 != ch2)
 			if ( length(diffs)) {
-				deltas <- paste( ch2[diffs], as.character(diffs), ch1[diffs], sep="")
+				deltas <- PASTE( ch2[diffs], as.character(diffs), ch1[diffs], sep="")
 				if ( length( deltas) > nMutations) deltas <- c( deltas[1:nMutations], "...")
-				details[i] <- paste( deltas, collapse="; ")
+				details[i] <- PASTE( deltas, collapse="; ")
 				nistop[i] <- sum( ch1[diffs] == "*")
 				ngap[i] <- sum( ch1[diffs] == "-")
 			}
@@ -254,7 +269,7 @@
 			nistop[i] <- 0
 			ngap[i] <- 0
 			if ( d > 0) {
-				chV <- strsplit( s1, split="")[[1]]
+				chV <- STRSPLIT( s1, split="")[[1]]
 				lm1 <- length(chV) - 1
 				if ( lm1) {
 					nistop[i] <- sum( chV[1:lm1] == "*")
@@ -264,7 +279,7 @@
 		}
 		if ( verbose && i %% 100 == 0) cat( "\r", i, gids[i], l, d, round(pctDiff[i],digits=2))
 	}
-	if (verbose) cat( "\nDone.\n")
+	if (verbose) cat( "\nDone.\n") else cat( " ", sampleID1)
 
 	# total it up
 	ted <- sum( ed, na.rm=T)
@@ -291,7 +306,7 @@
 `pipe.BAMprotein.GroupCompare` <- function( sampleIDset, groupSet, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				comparison=c("reference","pairwise"), tbl=NULL, dropGenes=NULL, min.confidence=40,
-				wt.estimate=1, wt.pvalue=1, verbose=T) {
+				wt.estimate=1, wt.pvalue=1, folder=NULL, Ngenes=50, verbose=T) {
 
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
@@ -314,15 +329,18 @@
 		bigDF <- data.frame()
 		if ( comparison == "reference") {
 			cat( "\nBuilding protein Difference data for", length(sampleIDset), "samples against reference proteome..")
+			cat( "\nUsing multicore..")
+			mcAns <- multicore.lapply( sampleIDset, FUN=pipe.BAMprotein.Difference, sampleID2=NULL, optionsFile=optionsFile,
+							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
+							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
+			cat( "\nMerging..")
 			for (i in 1:NS) {
 				s <- sampleIDset[i]
 				g <- groupSet[i]
-				ans <- pipe.BAMprotein.Difference( s, sampleID2=NULL, optionsFile=optionsFile,
-							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
-							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
+				ans <- mcAns[[i]]
 				sml <- data.frame( "SampleID"=s, "Group"=g, ans$Worst.Genes, stringsAsFactors=F)
 				bigDF <- rbind( bigDF, sml)
-				cat( ".")
+				cat( " ", s, sep="")
 			}
 		} else {
 			cat( "\nBuilding protein Difference data between", length(sampleIDset), "samples against each other..")
@@ -518,14 +536,49 @@
 
 	wh <- matrix( c(whED,whDL,whPD,whSC,whIG,whCD), nrow=NG2, ncol=6)
 	colnames(wh) <- c( "EditDist", "DeltaLen", "PctDiff", "StopCodons", "IndelGaps", "Confidence")
+	# how to score/rank those that are missing...
 	wh[ is.na(wh)] <- NG2 + 1
-	avg <- apply( wh, 1, sqrtmean)
+	#wh[ is.na(wh)] <- NA
+	avg <- apply( wh, 1, logmean)
 	out2 <- data.frame( "GENE_ID"=gset, "PRODUCT"=gene2Product(gset), "AVG_RANK"=avg, wh, stringsAsFactors=F)
 	ord <- order( out2$AVG_RANK)
 	out2 <- out2[ ord, ]
 	rownames(out2) <- 1:nrow(out2)
+	out2 <- addNameIDterms( out2)
 
 	finalAns <- list( "difference.details"=tbl, "model.results"=out1, "meta.ranks"=out2)
+
+	# allow the tool to write results and plots to a subfolder
+	if ( ! is.null( folder)) {
+		out.path <- file.path( results.path, "ConsensusProteins", paste( "BAM.Protein.Compare", folder, sep="_"))
+		if ( ! file.exists( out.path)) dir.create( out.path, recursive=T)
+		cat( "\nWriting BAP protein results files to: ", out.path)
+		f1 <- file.path( out.path, paste( folder, "DifferenceDetails.txt", sep="."))
+		write.table( tbl, f1, sep="\t", quote=F, row.names=F)
+		f2 <- file.path( out.path, paste( folder, "ModelResults.txt", sep="."))
+		write.table( out1, f2, sep="\t", quote=F, row.names=F)
+		f3 <- file.path( out.path, paste( folder, "MetaRanks.txt", sep="."))
+		write.table( out2, f3, sep="\t", quote=F, row.names=F)
+		# also create a HTML of that final meta ranks answer, with plots
+		f3 <- file.path( out.path, paste( folder, "MetaRanks.html", sep="."))
+		localLinkPath <- "pngPlots"
+		globalLinkPath <- file.path( out.path, localLinkPath)
+		if ( ! file.exists( globalLinkPath)) dir.create( globalLinkPath, recursive=T)
+		table2html( out2, f3, title=paste( "Top Genes in 'BAM Protein Group Compare': ", "&nbsp; &nbsp;", folder),
+			maxRows=Ngenes, linkPaths=localLinkPath)
+		# lastly, make those plots
+		nShow <- min( nrow(out2), Ngenes)
+		genesToPlot <- out2$GENE_ID[ 1:nShow]
+		cat( "\nMaking BAM protein comparison plots..\n")
+		for ( g in genesToPlot) {
+			plotBAMproteinDifference( g, tbl=tbl, show.labels=T)
+			plotfile <- file.path( globalLinkPath, paste( g, "png", sep="."))
+			dev.print( png, plotfile, width=1200)
+			cat( "\r", g)
+		}
+		cat( "\nDone.\n")
+	}
+
 	return( finalAns)
 }
 
@@ -561,6 +614,7 @@
 	on.exit( par( "mai"=savMAI))
 	par( mai=c( 0.4, 0.6, 0.6, 0.2))
 	par( mfrow=c( 2, 3))
+	on.exit( par( mfrow=c(1,1)))
 
 	vCol <- colSet[ as.numeric( grps)]
 	xx <- jitter( as.numeric( grps), amount=0.1)

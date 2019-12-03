@@ -1,8 +1,8 @@
 Package: DuffyNGS
 Type: Package
 Title: Duffy Lab NGS Analysis Pipeline for RNA-seq, DNA-seq, ChIP-seq, and RIP-seq
-Version: 1.8.0
-Date: 2019-04-22
+Version: 1.8.1
+Date: 2019-11-20
 Author: Bob Morrison <robert.morrison@nih.org>
 Maintainer: Bob Morrison <robert.morrison@nih.org>
 Description: A package of functions used to analyze mixed organism Next Gen Sequencing data, typically RNA-seq
