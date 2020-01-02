@@ -108,7 +108,8 @@
 
 	# add the reference genome
 	# we may have passed in the vector of bases explicitly
-	explicitVector <- ( length(genomicVector) == subset(getCurrentSeqMap(), SEQ_ID == seqID)$LENGTH[1])
+	explicitVector <- ( !isGeneric && ! is.null(genomicVector) && (seqID %in% seqMap$SEQ_ID) && 
+				(length(genomicVector) == subset(seqMap, SEQ_ID == seqID)$LENGTH[1]))
 	if ( explicitVector) {
 		curGenomeDNA <- genomicVector
 	} else {

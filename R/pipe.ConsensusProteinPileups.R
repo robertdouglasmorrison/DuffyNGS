@@ -401,7 +401,7 @@
 
 `realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", annotationFile=annotationFile, results.path=NULL,
+				optionsFile="Options.txt", annotationFile="Annotation.txt", results.path=NULL,
 				exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
 
 	require(Biostrings)
@@ -488,6 +488,7 @@
 
 	# step 2.2:  make a temp sequence that has these flanks
 	tmpdna <- paste( leftFlank, dnaSeq, rightFlank, sep="", collapse="")
+	#tmpdnaV <- strsplit( tmpdna, split="")[[1]]
 	consensusDNAflankFile <- sub( "ConsensusDNA", "ConsensusDNAwithFlanks", consensusDNAfile)
 	writeFasta( as.Fasta( myDesc, tmpdna), consensusDNAflankFile, line.width=100)
 	indexFile <- file.path( peptide.path, "ConsensusProteinIndex")

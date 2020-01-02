@@ -28,7 +28,7 @@ function( inputFastqFile, outputFile=sub( "fastq$", "bam", inputFastqFile[1]),
 	# next is any hard trimming
 	#trim5 <- as.integer( getOptionValue( optT, "trim5", notfound="0", verbose=verbose))
 	#trim3 <- as.integer( getOptionValue( optT, "trim3", notfound="0", verbose=verbose))
-	trim <- getReadTrimming( sampleID=sampleID, annotationFile=annotationFile, optionsFile=optionsFile)
+	trim <- getReadTrimming( sampleID=sampleID, annotationFile=annotationFile, optionsFile=optionsFile, verbose=verbose)
 	trim5 <- trim$trim5
 	trim3 <- trim$trim3
 	if ( trim5 > 0) out <- mypaste( out, " --trim5", trim5)

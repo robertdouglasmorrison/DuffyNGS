@@ -10,7 +10,7 @@ getReadTrimming <- function( sampleID="", annotationFile="Annotation.txt", optio
 
 	# there may also be trim arguments in the annotation file, and these would override
 	if ( sampleID != "") {
-		originalID <- originalSamplePairID(sampleID, annotationFile) 
+		originalID <- originalSamplePairID(sampleID, annotationFile=annotationFile) 
 		annT <- readAnnotationTable( annotationFile)
 		if ( "Trim5" %in% colnames(annT)) {
 			trim5.a <- getAnnotationValue( annT, key=originalID, columnArg="Trim5", notfound="0", verbose=F)
