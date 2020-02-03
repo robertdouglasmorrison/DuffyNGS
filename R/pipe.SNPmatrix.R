@@ -3,7 +3,7 @@
 
 
 # wrapper function to do all the steps we need
-pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqMatrix.txt",
+pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
 					optionsFile="Options.txt", results.path=NULL,
 					speciesID=getCurrentSpecies(), missingOnly=TRUE, 
 					prob.variant=0.95, min.depth=1, max.depth=10000,
@@ -31,18 +31,23 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	}
 
 	# part 2:  combine them to find the set of SNPs seen in any sample
-	vcfFile <- file.path( variants.path, "AllSamples.AllVCFs.txt")
+	# current species 'could' get altered by each step, in mixed target mode
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+	vcfFile <- paste( outfileKeyword, prefix, "AllVCFs.txt", sep=".")
+	vcfFile <- file.path( variants.path, vcfFile)
 	if ( ! file.exists( vcfFile)) {
 		cat( "\n\nStep 2:  Merging all SNPs sites..")
 		vcfSet <- pipe.VariantMerge( sampleIDset, outfile=vcfFile, optionsFile=optionsFile,
 						results.path=results.path)
 	} else {
-		cat( "\nStep 2:  Using existing 'AllSamples.AllVCFs.txt' SNP file..")
+		cat( "\nStep 2:  Using existing 'xxxx.AllVCFs.txt' SNP file..")
 		vcfSet <- read.delim( vcfFile, as.is=T)
 	}
 
 	# part 3:  measure actual pileup depths and base calls at all those sites
-	baseDepthFiles <- paste( sampleIDset, "SNP.BaseDepth.txt", sep=".")
+	# current species 'could' get altered by each step, in mixed target mode
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+	baseDepthFiles <- paste( sampleIDset, prefix, "SNP.BaseDepth.txt", sep=".")
 	baseDepthFiles <- file.path( variants.path, sampleIDset, baseDepthFiles)
 	need <- which( ! file.exists( baseDepthFiles))
 	if ( ! missingOnly) need <- 1:length(baseDepthFiles)
@@ -55,11 +60,15 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	}
 
 	# part 4:  combine into the giant table
+	# current species 'could' get altered by each step, in mixed target mode
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	cat( "\n\nStep 4:  Turn Base Depths into Frequency Matrix of all samples..")
 	freqM <- pipe.SNP.FreqMatrix( sampleIDset, optionsFile=optionsFile, results.path=results.path, 
-					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads)
+					na.rm=na.rm, min.freq=min.freq, 
+					min.diff=min.diff, min.reads=min.reads)
 
 	# write out the results
+	outfile <- paste( outfileKeyword, prefix, "BaseFreqMatrix.txt", sep=".")
 	outfile <- file.path( variants.path, outfile)
 	cat( "\nWriting final results: ", outfile)
 	write.table( freqM, outfile, sep="\t", quote=F, row.names=T)
@@ -98,7 +107,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 
 	snpfolder <- file.path( results.path, "VariantCalls", sampleID)
 	if ( ! file.exists( snpfolder)) dir.create( snpfolder, recursive=T)
-	snpfile <- file.path( snpfolder, paste( sampleID, "SNP.BaseDepth.txt", sep="."))
+	snpfile <- file.path( snpfolder, paste( sampleID, prefix, "SNP.BaseDepth.txt", sep="."))
 
 	if ( is.null( seqIDset)) seqIDset <- getCurrentSeqMap()$SEQ_ID
 	allSeqID <- seqIDset
@@ -188,9 +197,9 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		snpGene <- snpGene[ ord]
 
 		if ( ! ForceSnpSites) {
-			cat( "\nMeasuring Base Depth @ Known SNP sites:  ", seqID, "\tN_SNP: ", nSNP, "\n")
+			cat( "\nMeasuring Base Depth @ Known SNP sites:  ", sampleID, "\t", seqID, "\tN_SNP: ", nSNP, "\n")
 		} else {
-			cat( "\nMeasuring Base Depth @ Match SNP sites:  ", seqID, "\tN_SNP: ", nSNP, "\n")
+			cat( "\nMeasuring Base Depth @ Match SNP sites:  ", sampleID, "\t", seqID, "\tN_SNP: ", nSNP, "\n")
 		}
 		out <- matrix( NA, nrow=N_BASES, ncol=nSNP)
 		rownames(out) <- BASES
@@ -266,7 +275,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 
 	# write it out
 	write.table( out, snpfile, sep="\t", quote=F, row.names=TRUE)
-	cat( "\nWrote SNP file:  ", snpfile)
+	cat( "\nWrote SNP file:  ", snpfile, "\n")
 }
 
 
@@ -344,7 +353,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	}
 	snpPath <- file.path( results.path, "VariantCalls")
 
-	snpfiles <- file.path( snpPath, sampleIDset, paste( sampleIDset, "SNP.BaseDepth.txt", sep="."))
+	snpfiles <- file.path( snpPath, sampleIDset, paste( sampleIDset, prefix, "SNP.BaseDepth.txt", sep="."))
 	finfo <- file.info( snpfiles)
 	missing <- which( is.na( finfo$size))
 	if ( length(missing)) {
@@ -374,6 +383,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 			tbl <- tbl[ , 1:4]
 			nBases <- 4
 		}
+		# if we asked for Indels, and they're not present, ignore
+		if (nBases > ncol(tbl)) nBases <- ncol(tbl)
 
 		tblFreq <- tblCnt <- as.matrix( tbl)
 
@@ -571,7 +582,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		colnames(depthM) <- sub( "_Depth$", "", colnames(depthM))
 	}
 
-	# use the depth and diff tnd NA erms to reduce rows before PCA.
+	# use the depth and diff and NA terms to reduce rows before PCA.
 	# to narrow down to the most relevant features
 	if ( dropNA) {
 		# find all rows that have missing data
@@ -608,26 +619,131 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 }
 
 
-`SNP.FreqMatrix2Calls` <- function( tbl, indelsToo=TRUE) {
+`freqMatrix.PhyloTree` <- function( m, min.depth=1, min.diff=1, dropNA=TRUE, 
+					keepIntergenics=TRUE, keepIndels=TRUE, ... ) {
 
-	BASES <- c("A","C","G","T")
-	N_BASES <- 4
-	if (indelsToo) {
-		BASES <- c("A","C","G","T","Indel")
-		N_BASES <- 5
+	# given a SNP Freq Matrix
+	m <- as.matrix(m)
+
+	freqCols <- grep( "_Freq$", colnames(m))
+	depthCols <- grep( "_Depth$", colnames(m))
+	freqM <- m[ , freqCols]
+	colnames(freqM) <- sub( "_Freq$", "", colnames(freqM))
+	depthToo <- FALSE
+	if ( length(depthCols)) {
+		depthToo <- TRUE
+		depthM <- m[ , depthCols]
+		colnames(depthM) <- sub( "_Depth$", "", colnames(depthM))
 	}
 
-	snpID <- rownames(tbl)
-	snpLoc <- sub( ":[ACGT]$", "", snpID)
-	snpBase <- sub( ".+:[0-9]+:", "", snpID)
+	# use the depth and diff and NA terms to reduce rows before PCA.
+	# to narrow down to the most relevant features
+	if ( dropNA) {
+		# find all rows that have missing data
+		nNAf <- apply( freqM, 1, function(x) sum( is.na(x)))
+		dropF <- which( nNAf > 0)
+		if (depthToo) {
+			nNAd <- apply( depthM, 1, function(x) sum( is.na(x)))
+			dropD <- which( nNAd > 0)
+			dropF <- sort( union( dropF, dropD))
+		}
+		if ( length( dropF)) {
+			freqM <- freqM[ -dropF, ]
+			depthM <- depthM[ -dropF, ]
+		}
+	}
+	if ( depthToo) {
+		minDeep <- apply( depthM, 1, min, na.rm=T)
+		dropD <- which( minDeep < min.depth)
+		if ( length( dropD)) {
+			freqM <- freqM[ -dropD, ]
+			depthM <- depthM[ -dropD, ]
+		}
+	}
+	minDiff <- apply( freqM, 1, function(x) diff( range( x, na.rm=T)))
+	dropD <- which( minDiff < min.diff)
+	if ( length( dropD)) {
+		freqM <- freqM[ -dropD, ]
+		depthM <- depthM[ -dropD, ]
+	}
 
+	# OK, ready to see the actual base calls at those lacations
+	baseCalls <- freqMatrix.BaseCalls( freqM, keepIntergenics=keepIntergenics, keepIndels=keepIndels)
+
+	# now decide which rows to use for the final base 'string'
+	nN <- apply( baseCalls, MARGIN=1, function(x) sum( x == "N"))
+	drops <- which( nN > 0)
+	if ( length( drops)) {
+		cat( "\nDropping sites with no call in at least one sample: ", length(drops))
+		baseCalls <- baseCalls[ -drops, ]
+	}
+
+	# Only keep those base calls where 'something' is different
+	nCh <- apply( baseCalls, MARGIN=1, function(x) length( unique.default( x)))
+	drops <- which( nCh == 1)
+	if ( length( drops)) {
+		cat( "\nDropping sites with all same one base called: ", length(drops))
+		baseCalls <- baseCalls[ -drops, ]
+	}
+
+	# since we want each string to be exactly the same length, and any indels to be 1 char, 
+	# force that now
+	baseCalls <- substr( baseCalls, 1, 1)
+
+	# good, now turn these into strings
+	baseString <- apply( baseCalls, MARGIN=2, paste, collapse="")
+	cat( "\nFinal Base Call String length: ", nrow(baseCalls))
+	
+	# finally make this into a distance matrix
+	cat( "\nBuilding String Distance Matrix..")
+	dm <- adist( baseString)
+
+	# and show it
+	plotPhyloTree( baseString, dm=dm, ...)
+
+	out <- list( "dm"=dm, "base.calls"=baseCalls, "base.strings"=baseString)
+	return( invisible(out))
+}
+
+
+`freqMatrix.BaseCalls` <- function( tbl, keepIntergenics= TRUE, keepIndels=TRUE) {
+
+	# the freq matrix may have the "Freq" and "Depth" columns both
+	if ( length( grep( "(Freq|Depth)$", colnames(tbl)))) {
+		keep <- grep( "_Freq$", colnames(tbl))
+		tbl <- tbl[ , keep]
+		colnames(tbl) <- sub( "_Freq$", "", colnames(tbl))
+	}
+
+	# do we want the intergenic stuff removed?
+	if ( ! keepIntergenics) {
+		drops <- grep( "(ng)", rownames(tbl), fixed=T)
+		if ( length(drops)) tbl <- tbl[ -drops, ]
+		cat( "\nDropped intergenic SNP sites: ", length(drops))
+	}
+
+	# do we want the Indels?
+	if ( ! keepIndels) {
+		drops <- grep( "Indel$", rownames(tbl))
+		if ( length(drops)) tbl <- tbl[ -drops, ]
+		cat( "\nDropped Indel SNP calls: ", length(drops))
+	}
+
+	# extract the gene/position and the base call for each row
+	snpID <- rownames(tbl)
+	snpLoc <- sub( "::[ACGT]$", "", snpID)
+	if (keepIndels) snpLoc <- sub( "::Indel$", "", snpLoc)
+	snpBase <- sub( ".+::[0-9]+::", "", snpID)
 	snpFac <- factor( snpLoc)
 
-	out <- matrix( NA, nrow=nlevels(snpFac), ncol=ncol(tbl))
+	# build storage for the result
+	out <- matrix( "N", nrow=nlevels(snpFac), ncol=ncol(tbl))
 	colnames(out) <- colnames(tbl)
 	rownames(out) <- levels(snpFac)
 	rowOut <- 0
 
+	# visit each base location and see what's the top call
+	cat( "\n")
 	tapply( 1:nrow(tbl), snpFac, function(x) {
 
 			rowsIn <- x
@@ -640,7 +756,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 				mybase <- snpBase[ x1 + best - 1]
 				out[ rowOut, j] <<- mybase
 			}
-			if ( rowOut %% 100 == 0) cat( "\r", rowOut, x1, snpLoc[x1])
+			if ( rowOut %% 1000 == 0) cat( "\r", rowOut, x1, snpLoc[x1])
 		})
 
 	return( out)
@@ -652,8 +768,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 
 	snpID <- rownames(charM)
 
-	snpLoc <- as.integer( sub( "(.+:)([0-9]+$)", "\\2", snpID))
-	snpSeq <- sub( ":.+", "", snpID)
+	snpLoc <- as.integer( sub( "(.+::)([0-9]+$)", "\\2", snpID))
+	snpSeq <- sub( "::.+", "", snpID)
 
 	seqFac <- factor( snpSeq)
 
@@ -696,12 +812,14 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
 
-	snpfile <- file.path( results.path, "VariantCalls", sampleID, paste( sampleID, "SNP.BaseDepth.txt", sep="."))
+	snpfile <- paste( sampleID, prefix, "SNP.BaseDepth.txt", sep=".")
+	snpfile <- file.path( results.path, "VariantCalls", sampleID, snpfile)
 	cat( "\nReading SNP BaseDepth table..")
 	snpTbl <- as.matrix( read.delim( snpfile, as.is=T))
 	cat( "\nTotal SNP sites: ", nrow(snpTbl))
 
-	moifile <- file.path( results.path, "VariantCalls", sampleID, paste( sampleID, "SNP.MOIcall.txt", sep="."))
+	moifile <- paste( sampleID, prefix, "SNP.MOIcall.txt", sep=".")
+	moifile <- file.path( results.path, "VariantCalls", sampleID, moifile)
 
 	# drop any with NA no data
 	drops <- which( is.na( snpTbl[ ,1]))
@@ -817,8 +935,9 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	}
+	prefix <- getCurrentSpeciesFilePrefix()
 
-	f <- paste( sampleID, "SNP.MOIcall.txt", sep=".")
+	f <- paste( sampleID, prefix, "SNP.MOIcall.txt", sep=".")
 	f <- file.path( results.path, "VariantCalls", sampleID, f)
 	if ( ! file.exists( f)) {
 		cat( "\nMOI calls file not found:  ", f)
@@ -870,12 +989,13 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfile="AllSamples.BaseFreqM
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	}
+	prefix <- getCurrentSpeciesFilePrefix()
 
 	bigDF <- data.frame()
 
 	cat( "\nGathering Multiple Allele Sites..")
 	for (s in sampleIDset) {
-		f <- paste( s, "SNP.MOIcall.txt", sep=".")
+		f <- paste( s, prefix, "SNP.MOIcall.txt", sep=".")
 		f <- file.path( results.path, "VariantCalls", s, f)
 		if ( ! file.exists( f)) {
 			cat( "\nMOI calls file not found:  ", f)
