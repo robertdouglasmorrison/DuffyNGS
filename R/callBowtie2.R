@@ -11,7 +11,7 @@
 	
 	## Run the alignment program
 	timeIn <- proc.time()
-	ans = system( command=bowtie2CommandLine, wait=wait);
+	ans = catch.system( command=bowtie2CommandLine, wait=wait);
 	timeOut <- proc.time()
 	return( list( "timeIn"=timeIn, "timeOut"=timeOut))
 }
@@ -26,7 +26,7 @@
 	
 	## Run the alignment program
 	timeIn <- proc.time()
-	ans = system( command= paste( bowtie2CommandLine, "  2>&1 "), intern=TRUE, wait=wait);
+	ans = catch.system( command= paste( bowtie2CommandLine, "  2>&1 "), intern=TRUE, wait=wait);
 	timeOut <- proc.time()
 
 	if (verbose) {

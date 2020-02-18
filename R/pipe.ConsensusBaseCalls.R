@@ -512,6 +512,7 @@
 
 	# now re-concatenate just those chunks
 	if (verbose) cat( "  concatenating chunks: ", nrow(ans))
+	if ( ! nrow(ans)) return( callsTable)
 	outDF <- data.frame()
 	for ( i in 1:nrow(ans)) {
 		from <- ans$DNA_Start[i]

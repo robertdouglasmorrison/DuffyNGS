@@ -107,7 +107,7 @@
 	}
 
 	# do it
-	system( cmdline, wait=TRUE)
+	catch.system( cmdline, wait=TRUE)
 	Sys.sleep( 0.1)
 
 	# verify we see the new file

@@ -51,7 +51,7 @@
 	} else {
 		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
 	}
-	system( cmdLine)
+	catch.system( cmdLine)
 
 	out <- outfile1
 	if (isPaired) out <- c( out, outfile2)

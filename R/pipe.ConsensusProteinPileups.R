@@ -185,8 +185,12 @@
 		ans <- pipe.ConsensusBaseCalls( sampleID, geneID, start=exonStart, stop=exonStop, as.cDNA=TRUE, 
 				noReadCalls="blank")
 		callsTable <- ans$callsTable
-		myAA <- paste( callsTable$AA, collapse="")
-		myDNA <- paste( callsTable$DNA, collapse="")
+		myAAvec <- callsTable$AA
+		myAAvec[ is.na(myAAvec)] <- ""
+		myDNAvec <- callsTable$DNA
+		myDNAvec[ is.na(myDNAvec)] <- ""
+		myAA <- paste( myAAvec, collapse="")
+		myDNA <- paste( myDNAvec, collapse="")
 		myDesc <- paste( sampleID, geneName, exonSuffix, sep="_")
 		writeFasta( as.Fasta( myDesc, myAA), consensusAAfile, line.width=100)
 		writeFasta( as.Fasta( myDesc, myDNA), consensusDNAfile, line.width=100)

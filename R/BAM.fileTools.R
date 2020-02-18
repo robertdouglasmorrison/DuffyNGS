@@ -22,7 +22,7 @@
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	cmdline <- paste( samtools, " sort ", sortOpt, memOpt, " -o", bamOutFile, " -T", prefix, " -@", threads, file)
 	if (verbose) cat( "\nSorting BAM file (threads=",threads, "):   ", basename(file), sep="")
-	system( cmdline)
+	catch.system( cmdline)
 	if (verbose) cat( "\nDone.")
 
 	if ( index) BAM.index( bamOutFile, verbose=verbose)
@@ -41,7 +41,7 @@
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	if (verbose) cat( "\nIndexing BAM file:  ", basename(file))
 	cmdline <- paste( samtools, " index ", file)
-	system( cmdline)
+	catch.system( cmdline)
 	if (verbose) cat( "\nDone.")
 	return( idxfile)
 }
@@ -94,7 +94,7 @@
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	cmdline <- paste( samtools, " merge -f -c ", newfile, " ", paste( files, collapse=" "))
 	if (verbose) cat( "\nMerging BAM files:  ", basename(files))
-	system( cmdline)
+	catch.system( cmdline)
 	if (verbose) cat( "\nDone.  Created new merged file: ", basename(newfile), "\n")
 
 	if ( index) BAM.index( newfile, verbose=verbose)
@@ -115,7 +115,7 @@
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	cmdline <- paste( samtools, " faidx ", file)
 	if (verbose) cat( "\nIndexing FASTA file:  ", basename(file))
-	system( cmdline)
+	catch.system( cmdline)
 	if (verbose) cat( "\nDone.")
 	return( newfile)
 }
@@ -167,7 +167,7 @@
 	if ( !verbose) cmdline <- paste( cmdline, "  2> /dev/null")
 
 	if (verbose) cat( "\nGenerating Pileups for ", region, " of:  ", basename(files), "\n")
-	system( cmdline)
+	catch.system( cmdline)
 	# force the reference bases to be characters
 	ans <- try( read.delim( tmpFile, header=FALSE, comment.char="", quote="", as.is=T, 
 				colClasses=c("V3"="character")), silent=TRUE)
@@ -250,7 +250,7 @@
 			cat( "\nGenerating Variant Calls for ", region, " of:  ", basename(files), "\n")
 			cat( "Command Line:   ", cmdline, "\n")
 		}
-		system( cmdline)
+		catch.system( cmdline)
 		ans <- try( read.delim( tmpFile, header=FALSE, comment.char="#", as.is=T), silent=TRUE)
 		file.remove( tmpFile)
 
@@ -428,7 +428,7 @@ cleanupBAMfiles <- function( path="results") {
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	if (verbose) cat( "\nCompressing SAM file:  ", basename(file))
 	cmdline <- paste( samtools, " view -b -o ", outfile, " ", file)
-	system( cmdline)
+	catch.system( cmdline)
 	if (verbose) cat( "\nDone.")
 
 	if (delete.SAM) {

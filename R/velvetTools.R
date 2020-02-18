@@ -34,7 +34,7 @@
 				pairedEndArgs, fastaFile, velveth.args, sep=" ")
 		cat( "\n\nCalling VelvetH to build kmer hash table...\n")
 		if (verbose) cat( "\nCommand Line: ", cmdline, "\n")
-		systemAns <- system( cmdline, intern=doInternal)
+		systemAns <- catch.system( cmdline, intern=doInternal)
 		if ( doInternal) {
 			lines2show <- grep( "Reading FastQ", systemAns)
 			lines2show <- c( lines2show, grep( "sequences found", systemAns)[1:NF])
@@ -53,7 +53,7 @@
 		cmdline <- paste( file.path( velvet.path, "velvetg"), outpath, velvetg.args)
 		cat( "\nCalling VelvetG to build contigs...\n")
 		if (verbose) cat( "\nCommand Line: ", cmdline, "\n")
-		systemAns <- system( cmdline, intern=doInternal)
+		systemAns <- catch.system( cmdline, intern=doInternal)
 		if ( doInternal) {
 			estCoverLine <- grep( "Estimated Coverage =", systemAns, value=T)[1]
 			cutCoverLine <- grep( "Estimated Coverage cutoff =", systemAns, value=T)[1]
@@ -83,7 +83,7 @@
 	}
 	cat( "\nCalling VelvetG to extract 'good' contigs...\n")
 	if (verbose) cat( "\nCommand Line: ", cmdline, "\n")
-	systemAns <- system( cmdline, intern=doInternal)
+	systemAns <- catch.system( cmdline, intern=doInternal)
 	if ( doInternal) {
 		estCoverLine <- grep( "Estimated Coverage =", systemAns, value=T)[1]
 		cutCoverLine <- grep( "Estimated Coverage cutoff =", systemAns, value=T)[1]

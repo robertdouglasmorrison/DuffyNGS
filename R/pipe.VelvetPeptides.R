@@ -40,21 +40,21 @@
 	if ( buildHash) {
 		cmdline <- paste( file.path( velvetPath, "velveth"), outpath, kmerSize, filesArgs, sep=" ")
 		cat( "\n\nCalling VelvetH to build kmer hash table...\n")
-		system( cmdline)
+		catch.system( cmdline)
 	}
 
 	# step 2:  VelvetG to build the contigs
 	if (buildContigs) {
 		cmdline <- paste( file.path( velvetPath, "velvetg"), outpath, " -exp_cov auto")
 		cat( "\n\nCalling VelvetG to build contigs...\n")
-		system( cmdline)
+		catch.system( cmdline)
 	}
 
 	# final call is to extract just the 'good' contigs
 	cmdline <- paste( file.path( velvetPath, "velvetg"), outpath, "-min_contig_lgth", minLength, 
 			"-exp_cov auto", "-cov_cutoff", minCoverage) 
 	cat( "\n\nCalling VelvetG to extract 'good' contigs...\n")
-	system( cmdline)
+	catch.system( cmdline)
 
 	# grap the final set
 	contigs <- loadFasta( file.path( outpath, "contigs.fa"))

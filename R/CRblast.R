@@ -59,7 +59,7 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 					blastFlags, sep=" ")
 			if ( verbose) cat( "\nTry: ",k, "\tBLAST command line:\n", cmdLine)
 			
-			system( cmdLine,  input=stdin)
+			catch.system( cmdLine,  input=stdin)
 		
 			# extract the answer
 			ansOut <- extractBlastXMLdetails( xmlOutFile, crIDs=crIDs)
