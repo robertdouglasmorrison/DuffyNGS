@@ -151,3 +151,55 @@
 	return( out)
 }
 
+
+`uncompressResults` <- function( path=NULL) {
+
+	if ( is.null( path)) path <- getOptionValue( "Options.txt", "results.path", verbose=F, notfound="results")
+
+	# intended to be run from the main Experiment level folder, with the intent of 
+	# reversing the above 'compress' function
+	if ( ! file.exists( path)) stop( paste( "Results folder not found: ", path))
+
+	# Step 1:  get the list of compressed files under this top path
+	#	   every compressed file will have a special name
+	fSet <- dir( path, pattern="CompressedResults.tar.gz$", recursive=T, full.names=T)
+	if ( ! length( fSet)) return(NULL)
+
+	# Step 2:  visit each one, and uncompress it from this top level location
+	cat( "\nFound", length(fSet), "compressed results tar ball files..")
+	for ( f in fSet) {
+		cat( "\nUncompressing file: ", f)
+		uncompressFile(f)
+	}
+	cat( "\nDone Compressing Folders:  ", length(fSet), "\n")
+}
+
+
+`uncompressFile` <- function( compFile) {
+
+	# given the full path name of a tar ball file, uncompress the entire thing
+	# then delete the original
+
+	# create the uncompress command
+	cmdline <- paste( "tar -xz -f ", compFile)
+
+	# do it
+	catch.system( cmdline, wait=TRUE)
+	Sys.sleep( 0.1)
+
+	# verify we see the folder we think we should see
+	fPath <- dirname( compFile)
+	fBase <- basename( compFile)
+	expectedFolder <- file.path( fPath, sub( ".CompressedResults.tar.gz$", "", fBase))
+	fExists <- file.exists( expectedFolder)
+	fIsDir <- file.info( expectedFolder)$isdir
+	if ( ! fExists || ! fIsDir) {
+		cat( "\nUncompression error. Result folder not successfully remade: ", expectedFolder)
+		return(NULL)
+	}
+
+	# OK, clear to delete this .tar.gz file
+	file.delete( compFile)
+	return(NULL)
+}
+

@@ -134,7 +134,8 @@
 
 `pipe.BAMprotein.Difference` <- function( sampleID1, sampleID2=NULL, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, dropGenes=NULL,
-				min.confidence=40, min.editDist=1, nWorst=20, show.details=T, nMutations=10, verbose=T) {
+				min.confidence=40, min.editDist=1, nWorst=20, show.details=T, nMutations=10, 
+				folder=NULL, otherIDs=NULL, verbose=T) {
 
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
@@ -296,10 +297,114 @@
 	worstDF <- subset( worstDF, EditDistance >= min.editDist)
 	if (nrow(worstDF)) rownames(worstDF) <- 1:nrow(worstDF)
 
-	out <- list( "N_Genes"=NG, "N_ExactMatch"=sum( ed == 0, na.rm=T), "N_Different"=sum( ed > 0, na.rm=T), 
+	out <- list( "SampleID"=sampleID1, "Comparitor"=sampleID2, "N_Genes"=NG, 
+			"N_ExactMatch"=sum( ed == 0, na.rm=T), "N_Different"=sum( ed > 0, na.rm=T), 
 			"TotalEditDist"=ted, "AvgEditDist"=round( mean(ed,na.rm=T), digits=2), 
 			"Overall_PctDifferent"=round( ted*100/ttd, digits=3), "Worst.Genes"=worstDF)
-	out
+
+	# call the plotter function too?
+	if ( ! is.null( folder)) {
+		plotBAMproteinDifferences( out, folder=folder, otherIDs=otherIDs,
+				results.path=results.path, optionsFile=optionsFile)
+	}
+
+	return( out)
+}
+
+
+`plotBAMproteinDifferences` <- function( differences, folder=paste("Top.BAM.Protein.Differences", differences$SampleID, sep="_"), 
+					otherIDs=NULL, results.path=NULL, optionsFile="Options.txt", ...) {
+
+	# create a HTML file with plot links to images of the biggest protein differences
+
+	# given the list of results from a call to 'pipe.BAMproteinDifference()'
+	if ( ! ("Worst.Genes" %in% names(differences))) {
+		cat( "\nError: Difference object does not contain expected 'Worst.Genes' data frame.")
+		return( NULL)
+	}
+	sampleID1 <- differences$SampleID
+	sampleID2 <- differences$Comparitor
+
+	# create the folders to hold these results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	out.path <- file.path( results.path, "ConsensusProteins", folder)
+	if ( ! file.exists( out.path)) dir.create( out.path, recursive=T)
+	png.path <- file.path( out.path, "SNP_Plots")
+	if ( ! file.exists( png.path)) dir.create( png.path, recursive=T)
+	htmlFile <- paste( "BAM.Protein.Differences_", sampleID1, ".v.", sampleID2, ".html", sep="")
+	htmlFile <- file.path( out.path, htmlFile)
+	textFile <- paste( "BAM.Protein.Differences_", sampleID1, ".v.", sampleID2, ".txt", sep="")
+	textFile <- file.path( out.path, textFile)
+
+	# extract what we want to make the HTML table
+	tbl <- differences$Worst.Genes
+	if ( ! nrow(tbl)) {
+		cat( "\nNo Proteins flagged as different...")
+		return(NULL)
+	}
+
+	# re-arrange the columns and rename a bit
+	tbl <- tbl[ , c(1,9,5,3,6,7,10)]
+	colnames(tbl) <- c( "GENE_ID", "PRODUCT", "Pct Different", "Edit Dist", "Internal Stop Codons",
+				"Indel Gaps", "MutationDetails")
+
+	# put some of the other metrics into the title
+	titleString <- paste( "Top BAM Protein Differences <br> Sample: &nbsp; ", sampleID1, "<br>",
+				"Comparitor Genome: &nbsp; ", sampleID2, "<br>",
+				"N_Proteins that Exactly Match: &nbsp; ", differences$N_ExactMatch, "<br>",
+				"N_Proteins with Mis-Matches: &nbsp; ", differences$N_Different, "<br>",
+				"Average A.A. Edits per Protein: &nbsp; ", differences$AvgEditDist)
+
+
+	cat( "\nWriting BAM Protein Difference result files to: ", out.path)
+	write.table( tbl, textFile, sep="\t", quote=F, row.names=F)
+
+	# tweak the gene names to see the mutation text too
+	htmlTbl <- tbl
+	firstMutation <- sub( "; .+", "", tbl$MutationDetails)
+	firstMutation <- sub( "*", "stop", firstMutation, fixed=T)
+	firstMutation <- sub( "-", "minus", firstMutation, fixed=T)
+	htmlTbl$GENE_ID <- paste( tbl$GENE_ID, firstMutation, sep=".")
+	table2html( htmlTbl, htmlFile, title=titleString, linkPaths="SNP_Plots")
+
+	# now make SNP plots for the first mutation in each gene
+	# get the set of IDs to plot, we may have been given 'others'...
+	sidSet <- sampleID1
+	if ( ! is.null( otherIDs)) sidSet <- unique( c( sidSet, otherIDs))
+
+	# visit each entry and make one plot
+	checkX11()
+	gmap <- getCurrentGeneMap()
+	where <- match( tbl$GENE_ID, gmap$GENE_ID)
+	visitOrder <- order( where)
+	cat( "\n")
+	for ( i in 1:nrow(tbl)){
+		ii <- visitOrder[i]
+		thisGene <- tbl$GENE_ID[ii]
+		# grab the AA position of the first mutation
+		firstMutation <- sub( "; .+", "", tbl$MutationDetails[ii])
+		aaPosition <- as.integer( gsub( "[\\*\\-]", "", gsub( "[A-Z]", "", firstMutation)))
+		#cat( "\nDebug: ", i, thisGene, firstMutation, "|", aaPosition)
+		if ( is.na( aaPosition)) {
+			cat( "\nError:  unable to parse integer location from mutation string: ", firstMutation, "  Skip..")
+			next
+		}
+		# turn this into into genomic location
+		genomeAns <- convertAApositionToGenomicDNAposition( thisGene, aaPosition)
+		thisSeqID <- genomeAns$SEQ_ID
+		thisPos <- genomeAns$SEQ_POSITION + 1
+		# OK, plot that SNP site
+		plotFile <- paste( thisGene, firstMutation, "png", sep=".")
+		# trap stop codons
+		plotFile <- sub( "*", "stop", plotFile, fixed=T)
+		plotFile <- sub( "-", "minus", plotFile, fixed=T)
+		pipe.PlotSNP( sidSet, seqID=thisSeqID, pos=thisPos, geneID=thisGene,
+				results.path=results.path, optionsFile=optionsFile,
+				plotFormat="png", plotFileName=plotFile, plot.path=png.path, ...)
+		cat( "\r", i, thisGene, firstMutation)
+	}
 }
 
 
@@ -571,7 +676,7 @@
 		genesToPlot <- out2$GENE_ID[ 1:nShow]
 		cat( "\nMaking BAM protein comparison plots..\n")
 		for ( g in genesToPlot) {
-			plotBAMproteinDifference( g, tbl=tbl, show.labels=T)
+			plotBAMproteinDifferenceOneGene( g, tbl=tbl, show.labels=T)
 			plotfile <- file.path( globalLinkPath, paste( g, "png", sep="."))
 			dev.print( png, plotfile, width=1200)
 			cat( "\r", g)
@@ -583,7 +688,7 @@
 }
 
 
-`plotBAMproteinDifference` <- function( geneID, tbl, show.labels=T) {
+`plotBAMproteinDifferenceOneGene` <- function( geneID, tbl, show.labels=T) {
 
 	# given the large table of BAM protein difference details
 	if ( names(tbl)[1] == "difference.details") {

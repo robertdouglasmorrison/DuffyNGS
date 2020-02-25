@@ -172,11 +172,16 @@
 	# allow a special mode when we are doing "use genomic for missing" mode
 	# if given a minimum read depth, then any spots too shallow get called as reference
 	# i.e.  not enough read depth to trust the base calls
+	tooLowCount <- tooLowPct <- vector()
 	if (noReadCalls == "genomic" && ! is.null(minReadCalls)) {
 		minReadCalls <- as.numeric( minReadCalls)
 		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
-		tooLow <- WHICH( depth < minReadCalls)
-		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
+		tooLowCount <- WHICH( depth < minReadCalls)
+		if ( length(tooLowCount)) {
+			forceFlips <- c( minReadCalls, 0,0,0,0,0, 0)
+			snpTopBase[ tooLowCount] <- GENOME_BASE
+			for (kk in tooLowCount) flips[ kk, ] <- forceFlips
+		}
 	}
 
 	# if given a minimum percent SNP, then any spots too 'mixed' get called reference
@@ -186,8 +191,12 @@
 		big <- apply( flips, MARGIN=1, max, na.rm=T)
 		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
 		pct <- big / depth
-		tooLow <- WHICH( pct < minPercentSNP)
-		if ( length(tooLow)) snpTopBase[ tooLow] <- GENOME_BASE
+		tooLowPct <- WHICH( pct < minPercentSNP)
+		if ( length(tooLowPct)) {
+			forceFlips <- c( if (is.numeric(minReadCalls)) minReadCalls else 1, 0,0,0,0,0, 0)
+			snpTopBase[ tooLowPct] <- GENOME_BASE
+			for (kk in tooLowPct) flips[ kk, ] <- forceFlips
+		}
 	}
 
 	# the Indels are tougher, we need to get the actual bases for both the reference and the indels and figure if
@@ -195,7 +204,16 @@
 	indelDetails <- MPU.getIndelDetails( flips, curMPU)
 	if ( indelDetails$nIndels > 0) {
 		isIndel <- indelDetails$who
-		snpTopBase[isIndel] <- indelDetails$bases
+
+		# Note:  some of these Indels may land at places we just overruled to be the genome,
+		# 	for having too few or too low a percentage of read coverage
+		# catch those, so we only call 'indel' where we did not call 'genomic anyway'
+		flaggedForGenome <- sort( union( tooLowCount, tooLowPct))
+		useIndel <- 1:length(isIndel)
+		if ( length( flaggedForGenome)) {
+			useIndel <- which( ! (isIndel %in% flaggedForGenome))
+		}
+		snpTopBase[isIndel[useIndel]] <- indelDetails$bases[useIndel]
 	}
 	indelText <- indelDetails$indelText
 	names( indelText) <- xLocs
