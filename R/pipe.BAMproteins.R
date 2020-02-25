@@ -552,7 +552,7 @@
 	if ( ! is.null( folder)) {
 		out.path <- file.path( results.path, "ConsensusProteins", paste( "BAM.Protein.Compare", folder, sep="_"))
 		if ( ! file.exists( out.path)) dir.create( out.path, recursive=T)
-		cat( "\nWriting BAP protein results files to: ", out.path)
+		cat( "\nWriting BAM protein results files to: ", out.path)
 		f1 <- file.path( out.path, paste( folder, "DifferenceDetails.txt", sep="."))
 		write.table( tbl, f1, sep="\t", quote=F, row.names=F)
 		f2 <- file.path( out.path, paste( folder, "ModelResults.txt", sep="."))

@@ -108,7 +108,8 @@
 
 	# add the reference genome
 	# we may have passed in the vector of bases explicitly
-	explicitVector <- ( length(genomicVector) == subset(getCurrentSeqMap(), SEQ_ID == seqID)$LENGTH[1])
+	explicitVector <- ( !isGeneric && ! is.null(genomicVector) && (seqID %in% seqMap$SEQ_ID) && 
+				(length(genomicVector) == subset(seqMap, SEQ_ID == seqID)$LENGTH[1]))
 	if ( explicitVector) {
 		curGenomeDNA <- genomicVector
 	} else {
@@ -511,6 +512,7 @@
 
 	# now re-concatenate just those chunks
 	if (verbose) cat( "  concatenating chunks: ", nrow(ans))
+	if ( ! nrow(ans)) return( callsTable)
 	outDF <- data.frame()
 	for ( i in 1:nrow(ans)) {
 		from <- ans$DNA_Start[i]

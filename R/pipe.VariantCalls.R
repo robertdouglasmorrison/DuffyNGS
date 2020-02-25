@@ -3,7 +3,7 @@
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, 
-				snpCallMode=c("multiallelic","consensus"), min.depth=1, max.depth=10000, 
+				snpCallMode=c("consensus", "multiallelic"), min.depth=1, max.depth=10000, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
 

@@ -64,7 +64,7 @@
 		# pre-test the Python installation and Bio packages
 		cat( "\n\nTesting python install & 'Bio' package..")
 		testCmd <- paste( python, ' 2>&1  -c "from Bio import SeqIO"')
-		ans <- system( testCmd, intern=TRUE)
+		ans <- catch.system( testCmd, intern=TRUE)
 		if ( length(ans)) {
 			cat( "\nPython Test Failed..   Traceback:\n")
 			cat( ans, sep="\n")
@@ -84,7 +84,7 @@
 		}
 		if (verbose) cat( "\nHLA typing command line:\n", cmdline)
 
-		system( cmdline)
+		catch.system( cmdline)
 	}
 
 	# there are several files of text results...  grab them and combine...

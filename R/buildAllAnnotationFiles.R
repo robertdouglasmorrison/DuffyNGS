@@ -126,7 +126,7 @@
 		# move a copy of the map file...
 		cmd <- paste( "cp ", ans$MapFile, file.path( bowtie2IndexPath, riboMapFile))
 		cat( "\nMoving copy of Ribo Map...\n", cmd, "\n")
-		system( cmd)
+		catch.system( cmd)
 
 	    } else {
 		cat( "\n\nNo Genes flagged for clearing in the rRNA Map...  No RiboClearing files made.\n")
