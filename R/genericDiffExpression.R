@@ -249,10 +249,11 @@
 	}
 
 	PvalueSet[ PvalueSet > 1] <- 1
+	PIvalueSet <- piValue( FoldSet, PvalueSet)
 
-	out <- data.frame( geneSet, gProdSet, PvalueSet, FoldSet, rpkmSetA, rpkmSetB, 
+	out <- data.frame( geneSet, gProdSet, PvalueSet, FoldSet, PIvalueSet, rpkmSetA, rpkmSetB, 
 				stringsAsFactors=FALSE)
-	colnames( out) <- c("GENE_ID", "PRODUCT", "PVALUE_M", "LOG2FOLD_M", "RPKM_1_M", "RPKM_2_M")
+	colnames( out) <- c("GENE_ID", "PRODUCT", "PVALUE_M", "LOG2FOLD_M", "PIVALUE_M", "RPKM_1_M", "RPKM_2_M")
 
 	# now sort based on Pvalue and fold..
 	ord <- diffExpressRankOrder( out$LOG2FOLD_M, out$PVALUE_M, wt.folds, wt.pvalues)

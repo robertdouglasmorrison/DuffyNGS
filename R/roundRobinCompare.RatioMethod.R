@@ -282,20 +282,22 @@
 
 			# after the final rankings, then clip the terrible P-values
 			pout <- ifelse( pout > 1, 1, pout)
+			piout <- piValue( fout, pout)
 
 			# round to sensible digits of resolution
 			fout <- round( fout, digits=4)
 			rout <- round( rout, digits=2)
+			piout <- round( piout, digits=3)
 			rpkm1 <- round( rpkm1, digits=2)
 			rpkm2 <- round( rpkm2, digits=2)
 
-			out <- data.frame( gout, gProd, fout, pout, rout, rpkm1, rpkm2, poutUp, poutDown, 
+			out <- data.frame( gout, gProd, fout, pout, rout, piout, rpkm1, rpkm2, poutUp, poutDown, 
 					stringsAsFactors=FALSE)
-			colnames( out) <- c( "GENE_ID", "PRODUCT", "LOG2FOLD", "PVALUE", "RANK", 
+			colnames( out) <- c( "GENE_ID", "PRODUCT", "LOG2FOLD", "PVALUE", "RANK", "PIVALUE",
 					"VALUE_1", "VALUE_2", "P_UP", "P_DOWN")
 			out <- out[ ord, ]
 			rownames( out) <- 1:nrow(out)
-			nColShow <- 7
+			nColShow <- 8
 
 			# write it out
 			outfile <- paste( grpName, RR_prefix, "RR.Ratio.txt", sep=".")
@@ -372,10 +374,11 @@
 				out1$LOG2FOLD <- formatC( out1$LOG2FOLD, format="f", digits=3, flag="+")
 				out1$PVALUE <- formatC( out1$PVALUE, format="e", digits=2)
 				out1$RANK <- formatC( out1$RANK, format="f", digits=2)
+				out1$PIVALUE <- formatC( out1$PIVALUE, format="f", digits=3, flag="+")
 				out1$VALUE_1 <- formatC( out1$VALUE_1, format="f", digits=2)
 				out1$VALUE_2 <- formatC( out1$VALUE_2, format="f", digits=2)
-				colnames(out1)[3:5 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank")
-				colnames(out1)[6:7 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
+				colnames(out1)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
+				colnames(out1)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
 				# write it
 				geneTableToHTMLandPlots( geneDF=out1[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, 
 					title=title1, 
@@ -395,10 +398,11 @@
 				out2$LOG2FOLD <- formatC( out2$LOG2FOLD, format="f", digits=3, flag="+")
 				out2$PVALUE <- formatC( out2$PVALUE, format="e", digits=2)
 				out2$RANK <- formatC( out2$RANK, format="f", digits=2)
+				out2$PIVALUE <- formatC( out2$PIVALUE, format="f", digits=3, flag="+")
 				out2$VALUE_1 <- formatC( out2$VALUE_1, format="f", digits=2)
 				out2$VALUE_2 <- formatC( out2$VALUE_2, format="f", digits=2)
-				colnames(out2)[3:5 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank")
-				colnames(out2)[6:7 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
+				colnames(out2)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
+				colnames(out2)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
 				# write it
 				geneTableToHTMLandPlots( geneDF=out2[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, 
 					title=title2, 
