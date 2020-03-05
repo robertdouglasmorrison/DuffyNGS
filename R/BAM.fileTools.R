@@ -167,7 +167,9 @@
 	if ( !verbose) cmdline <- paste( cmdline, "  2> /dev/null")
 
 	if (verbose) cat( "\nGenerating Pileups for ", region, " of:  ", basename(files), "\n")
-	catch.system( cmdline)
+	# this step can return empty results, which may look like an error but it's not...
+	#catch.system( cmdline)
+	system( cmdline)
 	# force the reference bases to be characters
 	ans <- try( read.delim( tmpFile, header=FALSE, comment.char="", quote="", as.is=T, 
 				colClasses=c("V3"="character")), silent=TRUE)

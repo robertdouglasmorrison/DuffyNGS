@@ -70,13 +70,17 @@
 	combo_PvalueSet[ combo_PvalueSet > 1] <- 1
 	PvalueSet[ PvalueSet > 1] <- 1
 
+	# do PI Values too
+	PIvalueSet <- piValue( rpkmFoldSet, PvalueSet)
+	combo_PIvalueSet <- piValue( combo_rpkmFoldSet, combo_PvalueSet)
+
 	out <- data.frame( geneSet, gProdSet, combo_PvalueSet, combo_rpkmFoldSet, combo_rpkmCntSetA, 
-			combo_rpkmCntSetB, combo_rawCntSetA, combo_rawCntSetB, 
+			combo_rpkmCntSetB, combo_rawCntSetA, combo_rawCntSetB, combo_PIvalueSet,
 			PvalueSet, rpkmFoldSet, rpkmCntSetA, rpkmCntSetB, rawCntSetA, rawCntSetB, 
-			nBaseSet, stringsAsFactors=FALSE)
+			PIvalueSet, nBaseSet, stringsAsFactors=FALSE)
 	colnames( out) <- c("GENE_ID", "PRODUCT", "PVALUE_M", "LOG2FOLD_M", "RPKM_1_M", "RPKM_2_M", 
-				"READS_1_M", "READS_2_M", "PVALUE_U", "LOG2FOLD_U", "RPKM_1_U", 
-				"RPKM_2_U", "READS_1_U", "READS_2_U", "N_EXON_BASES")
+				"READS_1_M", "READS_2_M", "PIVALUE_M", "PVALUE_U", "LOG2FOLD_U", "RPKM_1_U", 
+				"RPKM_2_U", "READS_1_U", "READS_2_U", "PIVALUE_U", "N_EXON_BASES")
 
 	# now sort based on Pvalue and fold..
 	ord <- diffExpressRankOrder( out$LOG2FOLD_M, out$PVALUE_M, wt.folds, wt.pvalues)

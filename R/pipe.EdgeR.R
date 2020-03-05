@@ -186,12 +186,13 @@
 			out1$LOG2FOLD <- formatC( out1$LOG2FOLD, format="f", digits=3, flag="+")
 			out1$PVALUE <- formatC( out1$PVALUE, format="e", digits=2)
 			out1$FDR <- formatC( out1$FDR, format="e", digits=2)
-			for ( k in (6+extraCols):nColShow) {
+			out1$PIVALUE <- formatC( out1$PIVALUE, format="f", digits=3, flag="+")
+			for ( k in (7+extraCols):nColShow) {
 				out1[[k]] <- formatC( out1[[k]], format="f", digits=2, big.mark=",")
 			}
-			colnames(out1)[c(3:5 + extraCols)] <- c( "Log2 Fold", "P Value", "FDR")
-			colnames(out1)[(6+extraCols):nColShow] <- gsub( "_", " ", colnames(out1)[(6+extraCols):nColShow])
-			colnames(out1)[(6+extraCols):nColShow] <- gsub( "\\.", " ", colnames(out1)[(6+extraCols):nColShow])
+			colnames(out1)[c(3:6 + extraCols)] <- c( "Log2 Fold", "P Value", "FDR", "PI Value")
+			colnames(out1)[(7+extraCols):nColShow] <- gsub( "_", " ", colnames(out1)[(7+extraCols):nColShow])
+			colnames(out1)[(7+extraCols):nColShow] <- gsub( "\\.", " ", colnames(out1)[(7+extraCols):nColShow])
 			# write it
 			geneTableToHTMLandPlots( geneDF=out1[ , 1:nColShow], RP_samples, RP_colors, N=Nshow, 
 				title=title1, 
@@ -210,12 +211,13 @@
 			out2$LOG2FOLD <- formatC( out2$LOG2FOLD, format="f", digits=3, flag="+")
 			out2$PVALUE <- formatC( out2$PVALUE, format="e", digits=2)
 			out2$FDR <- formatC( out2$FDR, format="e", digits=2)
+			out2$PIVALUE <- formatC( out2$PIVALUE, format="f", digits=3, flag="+")
 			for ( k in (6+extraCols):nColShow) {
 				out2[[k]] <- formatC( out2[[k]], format="f", digits=2, big.mark=",")
 			}
-			colnames(out2)[c(3:5 + extraCols)] <- c( "Log2 Fold", "P Value", "FDR")
-			colnames(out2)[(6+extraCols):nColShow] <- gsub( "_", " ", colnames(out2)[(6+extraCols):nColShow])
-			colnames(out2)[(6+extraCols):nColShow] <- gsub( "\\.", " ", colnames(out2)[(6+extraCols):nColShow])
+			colnames(out2)[c(3:6 + extraCols)] <- c( "Log2 Fold", "P Value", "FDR", "PI Value")
+			colnames(out2)[(7+extraCols):nColShow] <- gsub( "_", " ", colnames(out2)[(7+extraCols):nColShow])
+			colnames(out2)[(7+extraCols):nColShow] <- gsub( "\\.", " ", colnames(out2)[(7+extraCols):nColShow])
 			# write it
 			geneTableToHTMLandPlots( geneDF=out2[ , 1:nColShow], RP_samples, RP_colors, N=Nshow, 
 				title=title2, 
