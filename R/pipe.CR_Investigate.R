@@ -38,7 +38,7 @@
 		blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="nt"),
 		doCR=TRUE, doBlast=TRUE, maxReads=500000, maxTime=1000, maxCycles=10, 
 		ratePerCycle=NULL, maxCR=4000, pause=0, 
-		nIterations=1000, nBest=10, results.path=NULL, 
+		nIterations=1000, nBest=10, results.path=NULL, makePlots=TRUE,
 		trim5=NULL, trim3=NULL, verbose=TRUE) {
 
 	if (verbose) {
@@ -91,7 +91,7 @@
 	if ( doCR || !file.exists(crFile)) {
 		bestCR <- autoRunCR( nBest=nBest, nIterations=nIterations, maxTime=maxTime, 
 					maxCycles=maxCycles, ratePerCycle=ratePerCycle, 
-					maxCR=maxCR, pause=pause,
+					maxCR=maxCR, pause=pause, makePlots=makePlots,
 					contextFile=crFile, pngPath=crPngPath,
 					label=sampleID)
 		CRT_best <<- bestCR
@@ -135,11 +135,13 @@
 		table2html( tbl, htmlFile, title=htmlTitle, linkColumnNames="CR_ID", linkPaths=htmlPngPath)
 
 		crToPlot <- as.integer( sub( "^cr_", "", tbl$CR_ID))
-		for( i in crToPlot) {
+		if (makePlots) {
+		    for( i in crToPlot) {
 			pngFile <- file.path( crPngPath, paste( "cr_",i,".png",sep=""))
 			png( pngFile, width=1000, height=700, bg="white")
 			plotOneCRT( i, label=sampleID)
 			dev.off()
+		    }
 		}
 
 		# when we did the blast, also make a small summary image

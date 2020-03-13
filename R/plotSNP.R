@@ -29,28 +29,36 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	}
 
 	# get the gene annotation for this region
-	#cat( "\nDebug: ", seqID, geneID, position, "|", dim(gmap), "\n")
+	geneLocQualifier <- ""
 	if ( is.null(gmap)) {
-		gmap <- subset( getCurrentGeneMap(), SEQ_ID == seqID & position >= POSITION & position <= END)
+		#gmap <- subset( getCurrentGeneMap(), SEQ_ID == seqID & position >= POSITION & position <= END)
+		gmap <- subset( getCurrentGeneMap(), SEQ_ID == seqID)
 	}
 	if ( ! is.null( geneID)) {
-		gmap2 <- subset( gmap, GENE_ID == geneID)
-		if ( ! nrow(gmap2)) {
-			gmap2 <- subset( gmap, shortGeneName(gmap$GENE_ID,keep=1) == shortGeneName(geneID,keep=1))
+		if ( geneID %in% gmap$GENE_ID) {
+			gmap <- subset( gmap, GENE_ID == geneID)
 		}
-		gmap <- gmap2
+		if ( nrow(gmap) > 1) {
+			gmap <- subset( gmap, shortGeneName(gmap$GENE_ID,keep=1) == shortGeneName(geneID,keep=1))
+		}
 	}
 	if ( nrow( gmap) < 1) {
 		#cat( "\nNo gene found at:  ", seqID, position, geneID, "  Skipping plot...")
 		#return()
 		# find whatever row is closest
-		fullGeneMap <- getCurrentGeneMap()
+		fullGeneMap <- subset( getCurrentGeneMap(), SEQ_ID == seqID)
 		dStarts <- abs( position - fullGeneMap$POSITION)
 		dStops <- abs( position - fullGeneMap$END)
 		bestStart <- which.min( dStarts)
 		bestStop <- which.min( dStops)
 		gmap <- fullGeneMap[ bestStart, ]
-		if ( dStops[bestStop] < dStarts[bestStart]) gmap <- fullGeneMap[ bestStop, ]
+		if ( dStops[bestStop] < dStarts[bestStart]) {
+			gmap <- fullGeneMap[ bestStop, ]
+			geneLocQualifier <- "Intergenic after "
+		} else {
+			gmap <- fullGeneMap[ bestStart, ]
+			geneLocQualifier <- "Intergenic before "
+		}
 	}
 	if ( nrow( gmap) > 1) {
 		bestOne <- which.min( gmap$N_EXON_BASES)
@@ -61,6 +69,12 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	geneStrand <- gmap$STRAND[1]
 	gProd <- gmap$PRODUCT[1]
 	cmap <- subset( getCurrentCdsMap(), GENE_ID %in% gmap$GENE_ID)
+
+	cat( "\nDebug:  GeneMap: \n")
+	print( gmap)
+	cat( "\nDebug:  CdsMap: \n")
+	print( cmap)
+
 
 	# get the bases to plot, and load that portion of the PILEUPS
 	loadKnownSNPtable(seqID, verbose=verbose)
@@ -178,19 +192,19 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 
 	mainText <- paste( "SNP Evidence:          Sample = ", sampleID, 
 			paste( "\nChrom=", seqID, "       Loc=", position, "        Strand= '", 
-			geneStrand, "'" ), "\nGeneID=", geneName, "       ", gProd) 
+			geneStrand, "'" ), "\nGeneID=", paste(geneLocQualifier,geneName), "       ", gProd) 
 	yLab <- "Raw Reads per Base"
 	if (mode == "multi" || xWide > 300) {
-		mainText <- paste( "Sample:  ", sampleID, "      GeneID:  ", geneName, "\n", gProd)
+		mainText <- paste( "Sample:  ", sampleID, "      GeneID:  ", paste(geneLocQualifier,geneName), "\n", gProd)
 	}
 
 	if ( xFig < 7) {
 		mainCex <- sqrt( 7/xFig)
-		mainText <- paste( "Sample = ", sampleID, "      GeneID:  ", geneName, "\n", gProd) 
+		mainText <- paste( "Sample = ", sampleID, "      GeneID:  ", paste(geneLocQualifier,geneName), "\n", gProd) 
 	}
 	if ( xFig < 5.5) {
 		mainCex <- 1.5
-		mainText <- paste( label, "     ", geneName)
+		mainText <- paste( label, "     ", paste(geneLocQualifier,geneName))
 		par( "mai"=c( 0.40,0.36,0.44,0.10))
 		yLab <- NA
 
