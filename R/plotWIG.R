@@ -214,8 +214,10 @@
 	maxBase <- smap$LENGTH
 	leftBase <- position
 	rightBase <- end
+	if ( is.null( leftBase)) leftBase <- minBase
 	if ( leftBase < minBase) leftBase <- minBase
 	if ( is.null( rightBase)) rightBase <- maxBase
+	if ( rightBase > maxBase) rightBase <- maxBase
 
 	# get the actual data
 	wigdata <- WIG_getWigglesOneSeq( WIG, seqid)
@@ -635,8 +637,10 @@
 	maxBase <- smap$LENGTH
 	leftBase <- position
 	rightBase <- end
+	if ( is.null( leftBase)) leftBase <- minBase
 	if ( leftBase < minBase) leftBase <- minBase
 	if ( is.null( rightBase)) rightBase <- maxBase
+	if ( rightBase > maxBase) rightBase <- maxBase
 
 	# use the gene if given...allow partial matches
 	gmap <- subset.data.frame( geneMap, SEQ_ID == seqid & POSITION < rightBase & END < leftBase)

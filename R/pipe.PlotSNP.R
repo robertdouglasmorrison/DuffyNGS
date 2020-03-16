@@ -57,6 +57,12 @@
 	}
 
 	# pre-get the gene map and geneID if we can
+	gmap <- subset.data.frame( geneMap, SEQ_ID == seqID)
+	if ( ! nrow( gmap)) {
+		cat( "Error:  No SEQ_ID in current species has the name: ", seqID)
+		return()
+	}
+
 	if ( ! doMultiPosition) {
 		if ( is.null( geneID)) {
 			gmap <- subset.data.frame( geneMap, SEQ_ID == seqID & position >= POSITION & position <= END)

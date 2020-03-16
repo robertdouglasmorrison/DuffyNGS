@@ -14,7 +14,7 @@ MISMATCH_COST <- (-12)
 
 
 autoRunCR <- function( nBest=5, maxCR=4000, nIterations=1000, maxTime=1000, maxCycles=10, 
-			ratePerCycle=NULL, pause=0, 
+			ratePerCycle=NULL, pause=0, makePlots=TRUE,
 			contextFile="CRTcontext.rda", pngPath=".", label="") {
 
 	if ( ! exists( "USR_nTotal")) stop( "No USR data is loaded...")
@@ -51,7 +51,7 @@ autoRunCR <- function( nBest=5, maxCR=4000, nIterations=1000, maxTime=1000, maxC
 		CRT_best <<- whoToPlot
 		saveCRTcontext( contextFile, verbose=FALSE)
 
-		CRplotter( seconds=pause, plotOrder="", doPlot=TRUE, whoToPlot=whoToPlot, 
+		CRplotter( seconds=pause, plotOrder="", doPlot=makePlots, whoToPlot=whoToPlot, 
 				asPNG=T, pngPath=pngPath, label=label)
 
 		# make it a bit easier, and repeat
