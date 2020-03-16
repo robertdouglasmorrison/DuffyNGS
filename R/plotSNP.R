@@ -33,6 +33,10 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	if ( is.null(gmap)) {
 		#gmap <- subset( getCurrentGeneMap(), SEQ_ID == seqID & position >= POSITION & position <= END)
 		gmap <- subset( getCurrentGeneMap(), SEQ_ID == seqID)
+		if ( ! nrow(gmap)) {
+			cat( "\nError:  No SEQ_ID in current species has the name: ", seqID)
+			return()
+		}
 	}
 	if ( ! is.null( geneID)) {
 		if ( geneID %in% gmap$GENE_ID) {
@@ -69,12 +73,6 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	geneStrand <- gmap$STRAND[1]
 	gProd <- gmap$PRODUCT[1]
 	cmap <- subset( getCurrentCdsMap(), GENE_ID %in% gmap$GENE_ID)
-
-	cat( "\nDebug:  GeneMap: \n")
-	print( gmap)
-	cat( "\nDebug:  CdsMap: \n")
-	print( cmap)
-
 
 	# get the bases to plot, and load that portion of the PILEUPS
 	loadKnownSNPtable(seqID, verbose=verbose)
