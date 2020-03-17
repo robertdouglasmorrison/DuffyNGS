@@ -302,9 +302,10 @@
 
 		# turn the splice details into a file for each species
 		tbl <- ans$spliceDetailSummary
-		speciesSet <- sort( unique.default( tbl$SPECIES_ID))
-		speciesIDcolumn <- match( "SPECIES_ID", colnames(tbl), nomatch=0)
-		for ( i in 1:length( speciesSet)) {
+		if ( !is.null(tbl) && !is.na(tbl) && nrow( tbl)) {
+		    speciesSet <- sort( unique.default( tbl$SPECIES_ID))
+		    speciesIDcolumn <- match( "SPECIES_ID", colnames(tbl), nomatch=0)
+		    for ( i in 1:length( speciesSet)) {
 			thisSpecies <- speciesSet[i]
 			if ( is.na( thisSpecies) || thisSpecies == "") next
 			thisPrefix <- getCurrentTargetFilePrefix()[ match(thisSpecies,getCurrentTargetSpecies())]
@@ -322,6 +323,7 @@
 			outfile <- file.path( results.path, "splicing", outfile)
 			write.table( sml, outfile, sep="\t", quote=FALSE, row.names=FALSE)
 			cat( "\nWrote Splice Summary file: ", basename(outfile), "\tN_SpliceJunctions: ", nrow(sml))
+		    }
 		}
 	}
 
