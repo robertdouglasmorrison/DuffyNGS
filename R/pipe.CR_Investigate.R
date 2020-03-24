@@ -6,7 +6,7 @@
 				blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="nt"),
 				doCR=TRUE, doBlast=TRUE, maxReads=500000, maxTime=1000, maxCycles=10, 
 				ratePerCycle=1, maxCR=4000, pause=0,
-				nIterations=1000, nBest=10, results.path=NULL, verbose=TRUE) {
+				nIterations=1000, nBest=10, results.path=NULL, makePlots=TRUE, verbose=TRUE) {
 
 	commandLine <- paste( "checkX11( width=8, height=6, xpos=30, ypos=30, bg='white'); ",
 				" pipe.CR_Investigate( sampleID=\"", 
@@ -22,6 +22,7 @@
 				", nIterations=", as.integer(nIterations), ", nBest=", as.integer(nBest),
 				", results.path=", if (is.null(results.path)) "NULL" else 
 				paste( "\"", results.path, "\"", sep=""),
+				", makePlots=", makePlots,
 				", verbose=", verbose,
 				" )", sep="")
 

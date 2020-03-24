@@ -5,7 +5,7 @@
 `pipe.QuickQC` <- function( sampleID, annotationFile="Annotation.txt",
 		optionsFile="Options.txt", results.path="QuickQC", banner="QuickQC", 
 		chunkSize=1000000, maxReads=5000000, pause=0, verbose=T, nUSRkeep=1000000,
-		mode=c("all", "alignOnly", "pieOnly")) {
+		plotCRs=T, mode=c("all", "alignOnly", "pieOnly")) {
 
 	sink( file=paste( sampleID, "QuickQC.log.txt", sep="."), split=TRUE)
 	on.exit( sink())
@@ -273,7 +273,7 @@
 	    dispatch.CR_Investigate( sample, annotationFile, optionsFile, mode="QuickQC", 
 		blastIndex=blastIndex, doCR=TRUE, doBlast=TRUE, pause=pause,
 		maxReads=500000, maxTime=300, maxCycles=8, nIterations=500, nBest=12, 
-		ratePerCycle=1, results.path=results.path, verbose=TRUE) 
+		ratePerCycle=1, results.path=results.path, makePlots=plotCRs, verbose=TRUE) 
 	    Sys.sleep(2)
 
 	}  # end of 'mode==all'
