@@ -89,7 +89,7 @@
 
 	wt.fold <- 1; #as.numeric( getOptionValue( optT, "DE.weightFoldChange", notfound="1"))
 	wt.pval <- 1; #as.numeric( getOptionValue( optT, "DE.weightPvalue", notfound="1"))
-	wt.rank <- 1; #as.numeric( getOptionValue( optT, "DE.weightRank", notfound="1"))
+	wt.rank <- 2; #as.numeric( getOptionValue( optT, "DE.weightRank", notfound="1"))
 
 	metaPath <- file.path( results.path, "MetaResults", paste( prefix, folderName, sep="."))
 	if ( ! file.exists( metaPath)) dir.create( metaPath, recursive=TRUE)

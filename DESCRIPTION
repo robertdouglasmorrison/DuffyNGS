@@ -6,6 +6,6 @@ Date: 2019-11-20
 Author: Bob Morrison <robert.morrison@nih.org>
 Maintainer: Bob Morrison <robert.morrison@nih.org>
 Description: A package of functions used to analyze mixed organism Next Gen Sequencing data, typically RNA-seq
-Depends: R (>= 2.4.0), DuffyTools
+Depends: R (>= 3.5.0), DuffyTools
 Imports: DuffyTools
 License: GPL (>= 2)
