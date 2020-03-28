@@ -8,7 +8,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=!interactive(), label="", 
-				doDE=TRUE, PLOT.FUN=NULL, ...)
+				doDE=TRUE, PLOT.FUN=NULL, adjust.lowReadCounts=TRUE, ...)
 {
 
 	if (verbose) {
@@ -112,8 +112,8 @@
 				geneColumn="GENE_ID", intensityColumn=intensityColumn,
 				keepIntergenics=keepIntergenics, 
 				average.FUN=sqrtmean,
-				missingGenes="fill", wt.folds=wt.folds, wt.pvalues=wt.pvalues,
-				wt.dists=1)
+				missingGenes="fill", wt.folds=wt.folds, wt.pvalues=wt.pvalues, wt.dists=1,
+				adjust.lowReadCounts=adjust.lowReadCounts)
 
 		outfile <- paste( targetgroup, RP_prefix, "EdgeR.Ratio.txt", sep=".")
 		if ( ! is.null( altGeneMap)) {
