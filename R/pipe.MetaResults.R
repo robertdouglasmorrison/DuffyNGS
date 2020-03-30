@@ -197,11 +197,11 @@
 		otherGrps <- setdiff( myGrps, grp)
 		if ( length(otherGrps) > 1) otherGrps <- paste( "{", paste(sort(otherGrps),collapse=" + "), "}", sep="")
 		title <- paste( "MetaResults: &nbsp;  Genes most", direction, "regulated in group: &nbsp;  ", grp,
-				" &nbsp; vs &nbsp; ", otherGrps)
+				" &nbsp; vs &nbsp; ", otherGrps, "<br> Comparison Folder: &nbsp; ", folderName)
 		if ( ! is.null( altGeneMapLabel)) {
 			title <- paste( "MetaResults: &nbsp;  ", altGeneMapLabel, 
 					"  most", direction, "regulated in group: &nbsp;  ", grp,
-					" &nbsp; vs &nbsp; ", otherGrps)
+					" &nbsp; vs &nbsp; ", otherGrps, "<br> Comparison Folder: &nbsp; ", folderName)
 			# for plots of alt gene maps, we need to fudge a few items...
 			out <- addAltGeneIdentifierColumn( out)
 			fullGname <- out$GENE_ID
