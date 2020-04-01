@@ -7,7 +7,8 @@
 				groupColumn="Group", colorColumn="Color", method=c("Matrix", "RatioFiles"),
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL, Ngenes=100, 
 				geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
-				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, PLOT.FUN=NULL, ...)
+				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, PLOT.FUN=NULL, 
+				forceMulticore=FALSE, ...)
 {
 
 	if (verbose) {
@@ -44,7 +45,7 @@
 				altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel, 
 				geneColumnHTML=geneColumnHTML, keepIntergenics=keepIntergenics, 
 				wt.fold=wt.fold, wt.pvalue=wt.pvalue, minRPKM=minRPKM,
-				verbose=verbose, doDE=doDE, PLOT.FUN=PLOT.FUN, ...)
+				verbose=verbose, doDE=doDE, PLOT.FUN=PLOT.FUN, forceMulticore=forceMulticore, ...)
 
 	} else {
 

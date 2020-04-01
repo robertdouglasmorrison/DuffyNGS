@@ -9,7 +9,7 @@
 		results.path=NULL, folderName="", groupColumn="Group", colorColumn="Color",
 		altGeneMap=NULL, altGeneMapLabel=NULL, geneColumnHTML="GENE_ID", 
 		average.FUN=sqrtmean, Ngenes=100, useLog=FALSE, 
-		wt.fold=1, wt.pvalue=2, minRPKM=1,
+		wt.fold=1, wt.pvalue=2, minRPKM=1, forceMulticore=FALSE,
 		verbose=!interactive(), doDE=TRUE, PLOT.FUN=NULL, ...) {
 
 	# set up for this species...  Target setup done up in the calling routine!
@@ -621,7 +621,9 @@
 	# accumulate what genes will get drawn
 	allGenesToPlot <- vector()
 
-	for ( ig in 1:N_RR_groups) {
+
+	# make this a local function that we could call in parallel
+	processOneRoundRobinGroup <- function(ig) {
 
 		# get the name and member samples for this group, and the set of 'not this group' samples
 		thisGroup <- unique_RR_groups[ig]
@@ -642,10 +644,23 @@
 
 		# we have all we need for this group, summarize and write it
 		genesOneGroup <- roundRobinResults( rrList, thisGroup, Ngenes=Ngenes)
-		allGenesToPlot <- c( allGenesToPlot, genesOneGroup)
 
 		# clean up to save space
 		rm( rrList)
+
+		# return the genes worth plotting
+		return( genesOneGroup)
+	}
+	
+	# either do all the groups in a for loop, or parallel
+	if ( forceMulticore) {
+		mcAns <- multicore.lapply( 1:N_RR_groups, processOneRoundRobinGroup)
+		allGenesToPlot <- unlist( mcAns)
+	} else {
+		for ( ig in 1:N_RR_groups) {
+			genesOneGroup <- processOneRoundRobinGroup( ig)
+			allGenesToPlot <- c( allGenesToPlot, genesOneGroup)
+		}
 	}
 
 	# all groups have been done...  now any last items and make those plots

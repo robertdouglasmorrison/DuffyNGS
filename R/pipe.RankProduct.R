@@ -9,7 +9,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=!interactive(), 
-				nSimulations=100, label="", doDE=TRUE, PLOT.FUN=NULL, ...)
+				nSimulations=100, label="", doDE=TRUE, PLOT.FUN=NULL, forceMulticore=FALSE, ...)
 {
 
 	if (verbose) {
@@ -117,6 +117,8 @@
 
 	# ready to do the Rank Product...
 	genesToPlot <- vector()
+	htmlPath <- RP_path
+
 	if (doDE) {
 
 	    cat( "\n\nLoading Transcriptomes..")
@@ -124,14 +126,17 @@
 			intensityColumn=intensityColumn, missingGenes="fill", keepIntergenics=keepIntergenics)
 	    cat( "  Done.\n")
 
-	    for ( targetgroup in sort( unique( RP_groups))) {
+
+	    # use a local function so we can call in parallel if needed
+	    processOneRankProductGroup <- function( targetgroup) {
 
 		cat( "\n\nDoing Rank Product on:  ", targetgroup)
+		myGenesToPlot <- vector()
+
 		out <- rankProductDiffExpress( transFileSet, fids=transFIDs, RP_groups, targetgroup, 
 				m=m, geneColumn="GENE_ID", intensityColumn=intensityColumn,
 				offset=minRPKM, keepIntergenics=keepIntergenics, 
-				poolSet=poolSet,
-				average.FUN=sqrtmean, nSimulations=nSimulations, 
+				poolSet=poolSet, average.FUN=sqrtmean, nSimulations=nSimulations, 
 				missingGenes="fill")
 
 		outfile <- paste( targetgroup, RP_prefix, "RP.Ratio.txt", sep=".")
@@ -161,7 +166,6 @@
 		# HTML too...
 		htmlFile1 <- sub( "Ratio.txt$", "UP.html", basename(outfile))
 		htmlFile2 <- sub( "Ratio.txt$", "DOWN.html", basename(outfile))
-		htmlPath <- RP_path
 
 		# simplify the names?
 		fullGname <- out$GENE_ID
@@ -186,14 +190,6 @@
 			extraCols <- extraCols + 1
 			fullGname <- out$GENE_ID
 			HTML_geneColumn <- "GENE_ID"
-			#if ( regexpr( "vargene", tolower(RP_altGeneMapLabel)) > 0) {
-			#	out <- cbind( "DOMAIN_ID"=fullGname, out)
-			#	out$GENE_ID <- sub( "::.*", "", fullGname)
-			#	extraCols <- extraCols + 1
-			#	fullGname <- out$GENE_ID
-			#	HTML_geneColumn <- "GENE_ID"
-			#	if ( "ORIG_ID" %in% colnames(out)) out$ORIG_ID <- gene2OrigID( out$GENE_ID)
-			#}
 		}
 
 		out1 <- out[ out$LOG2FOLD > 0, ]
@@ -221,7 +217,7 @@
 				title=title1, 
 				htmlFile=htmlFile1, html.path=htmlPath, results.path=resultsPath, 
 				makePlots=FALSE)
-			genesToPlot <- base::union( genesToPlot, unique.default( fullGname[1:Nshow]))
+			myGenesToPlot <- base::union( myGenesToPlot, unique.default( fullGname[1:Nshow]))
 		}
 
 		# for the DOWN table, we now have separate explicit DOWN columns
@@ -260,12 +256,29 @@
 				title=title2, 
 				htmlFile=htmlFile2, html.path=htmlPath, results.path=resultsPath, 
 				makePlots=FALSE)
-			genesToPlot <- base::union( genesToPlot, unique.default( rev(fullGname)[1:Nshow]))
+			myGenesToPlot <- base::union( myGenesToPlot, unique.default( rev(fullGname)[1:Nshow]))
 		}
+
+		# all done.  Send back the genes worth plotting
+		return( myGenesToPlot)
 	    } 
+
+	
+	    # either do all the groups in a for loop, or parallel
+	    allGroups <- sort( unique( RP_groups))
+	    if ( forceMulticore) {
+		mcAns <- multicore.lapply( allGroups, processOneRankProductGroup)
+		genesToPlot <- unlist( mcAns)
+	    } else {
+		for ( targetgroup in allGroups) {
+			genesOneGroup <- processOneRankProductGroup( targetgroup)
+			genesToPlot <- c( genesToPlot, genesOneGroup)
+		}
+	    }
+	    genesToPlot <- unique.default( genesToPlot)
+
 	} else {
 		cat( "\nSkipping DE...  Gathering genes for plots..")
-		htmlPath <- RP_path
 		for (targetgroup in sort( unique( RP_groups))) {
 			outfile <- paste( targetgroup, RP_prefix, "RP.Ratio.txt", sep=".")
 			if ( ! is.null( altGeneMap)) {
