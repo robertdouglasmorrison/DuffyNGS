@@ -5,7 +5,10 @@
 				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, 
 				snpCallMode=c("consensus", "multiallelic"), min.depth=1, max.depth=10000, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
-				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", verbose=TRUE) {
+				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", 
+				# args passed to 'Summary' step
+				exonOnly=FALSE, snpOnly=FALSE, 
+				verbose=TRUE) {
 
 	# the SNP calling probability threshold is tuned for genomic DNA of uniform depth, and diploid organism.
 	# Use much higher cutoff for RNA-seq with hihgly variant read depth
@@ -85,7 +88,8 @@
 		# if all the chromosomes were done, go ahead and summarize too
 		if ( length( sampleIDset) == 1 && is.null( seqIDset)) {
 			pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
-					optionsFile=optionsFile, results.path=results.path)
+					optionsFile=optionsFile, results.path=results.path,
+					exonOnly=exonOnly, snpsOnly=snpOnly)
 		}
 	}
 	if ( length( allIDs) < 1) return( NULL)

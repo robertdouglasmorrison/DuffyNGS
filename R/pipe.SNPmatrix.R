@@ -3,10 +3,16 @@
 
 
 # wrapper function to do all the steps we need
-pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
-					optionsFile="Options.txt", results.path=NULL,
-					speciesID=getCurrentSpecies(), missingOnly=TRUE, 
-					prob.variant=0.95, min.depth=1, max.depth=10000,
+pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", optionsFile="Options.txt", 
+					results.path=NULL, speciesID=getCurrentSpecies(), missingOnly=TRUE, 
+					# args for the Variant Caller
+					prob.variant=0.95, snpCallMode=c("consensus","multiallelic"), min.depth=1, 
+					max.depth=10000, exonOnly=FALSE, snpOnly=FALSE,
+					# args for the SNP Merge step
+					min.qual=5, min.score=40, dropIndels=snpOnly,
+					# args for Base Depth step
+					SNPtablePath="~/SNPs/", keepIntergenics=TRUE,
+					# args for the base matrix creation
 					na.rm="half", min.freq=1.0, min.diff=5, min.reads=1) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
@@ -23,9 +29,11 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
 	if ( ! missingOnly) need <- 1:length(snpFiles)
 	if ( length(need)) {
 		cat( "\nStep 1:  Finding Variant SNP sites for", length(need), "samples..")
-		for (s in sampleIDset[need]) pipe.VariantCalls(s, optionsFile=optionsFile, 
-							prob.variant=prob.variant, min.depth=min.depth, max.depth=max.depth, 
-							results.path=results.path, speciesID=speciesID)
+		snpCallMode <- match.arg( snpCallMode)
+		for (s in sampleIDset[need]) pipe.VariantCalls( s, optionsFile=optionsFile, results.path=results.path, 
+							speciesID=speciesID, prob.variant=prob.variant, 
+							snpCallMode=snpCallMode, min.depth=min.depth, max.depth=max.depth,
+							exonOnly=exonOnly, snpOnly=snpOnly)
 	} else {
 		cat( "\nStep 1:  Using existing 'VariantCall' summary files..")
 	}
@@ -37,8 +45,9 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
 	vcfFile <- file.path( variants.path, vcfFile)
 	if ( ! file.exists( vcfFile)) {
 		cat( "\n\nStep 2:  Merging all SNPs sites..")
-		vcfSet <- pipe.VariantMerge( sampleIDset, outfile=vcfFile, optionsFile=optionsFile,
-						results.path=results.path)
+		vcfSet <- pipe.VariantMerge( sampleIDset, outfile=vcfFile, optionsFile=optionsFile, results.path=results.path,
+						speciesID=speciesID, min.qual=min.qual, min.depth=min.depth, min.score=min.score,
+						dropIndels=dropIndels)
 	} else {
 		cat( "\nStep 2:  Using existing 'xxxx.AllVCFs.txt' SNP file..")
 		vcfSet <- read.delim( vcfFile, as.is=T)
@@ -53,8 +62,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
 	if ( ! missingOnly) need <- 1:length(baseDepthFiles)
 	if ( length(need)) {
 		cat( "\n\nStep 3:  Measure Base Depth at all SNP sites..   Slow...")
-		multicore.lapply( sampleIDset[need], pipe.SNP.BaseDepth, otherSNPs=vcfSet, 
-				optionsFile=optionsFile, results.path=results.path)
+		multicore.lapply( sampleIDset[need], pipe.SNP.BaseDepth, otherSNPs=vcfSet, indelsToo=(!dropIndels),
+				optionsFile=optionsFile, results.path=results.path, keepIntergenics=keepIntergenics)
 	} else {
 		cat( "\nStep 3:  Using existing 'BaseDepth' files..")
 	}
@@ -62,10 +71,9 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples",
 	# part 4:  combine into the giant table
 	# current species 'could' get altered by each step, in mixed target mode
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
-	cat( "\n\nStep 4:  Turn Base Depths into Frequency Matrix of all samples..")
+	cat( "\n\nStep 4:  Turn all Base Depths into one Frequency Matrix of all samples..")
 	freqM <- pipe.SNP.FreqMatrix( sampleIDset, optionsFile=optionsFile, results.path=results.path, 
-					na.rm=na.rm, min.freq=min.freq, 
-					min.diff=min.diff, min.reads=min.reads)
+					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads)
 
 	# write out the results
 	outfile <- paste( outfileKeyword, prefix, "BaseFreqMatrix.txt", sep=".")
