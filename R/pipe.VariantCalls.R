@@ -89,7 +89,7 @@
 		if ( length( sampleIDset) == 1 && is.null( seqIDset)) {
 			pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
 					optionsFile=optionsFile, results.path=results.path,
-					exonOnly=exonOnly, snpsOnly=snpOnly)
+					exonOnly=exonOnly, snpOnly=snpOnly)
 		}
 	}
 	if ( length( allIDs) < 1) return( NULL)
@@ -134,10 +134,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			emap <- subset.data.frame( exonMap, SEQ_ID == sid)
 			tbl <- exonVariantsOnly( tbl, exonMap=emap)
 		}
-		
 		if (snpOnly) {
 			tbl <- snpVariantsOnly( tbl, mode="single")
 		}
+		if ( ! nrow(tbl)) next
 
 		depth <- VCF.TotalDepth( tbl$INFO)
 		score <- VCF.Score( tbl$GENOTYPE_CALL)
@@ -148,11 +148,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		tbl$PCT_REF <- pctRef
 		drops <- which( score < min.score | depth < min.depth)
 		if ( length( drops) > 0) tbl <- tbl [ -drops, ]
+		if ( ! nrow(tbl)) next
 
 		# let's augment with the AA SNP if at all possible
-		if ( nrow(tbl)) {
-			tbl <- DNAvariantsToAAvariants( tbl, seqID=sid, genomeFastaFile=genomeFastaFile)
-		}
+		tbl <- DNAvariantsToAAvariants( tbl, seqID=sid, genomeFastaFile=genomeFastaFile)
 
 		out <- rbind( out, tbl)
 		cat( "\r", sid, nrow(tbl))
@@ -252,7 +251,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	# given the SNPs to one chromosome, use the genomic sequence and current maps to
 	# find which are no-synonymous
 	chromoDNA <- getFastaSeqFromFilePath( genomeFastaFile, seqID, verbose=F)
-	chromoDNA <- strsplit( chromoDNA, split="")[[1]]
+	chromoDNA <- base::strsplit( chromoDNA, split="")[[1]]
 
 	# get the set of coding genes that we need to assay
 	genes <- sort( unique( tbl$GENE_ID))
@@ -838,9 +837,9 @@ VCF.Score <- function( PLterms) {
 
 	# now the genotype field is GT:PL:DP, so we need the middle one
 	#scoreStr <- sub( ":.+", "", PLterms)
-	myPLterms <- strsplit( PLterms, split=":", fixed=T)
+	myPLterms <- base::strsplit( PLterms, split=":", fixed=T)
 	scoreStr <- sapply( myPLterms, function(x) x[2])
-	scoreTerms <- strsplit( scoreStr, split=",", fixed=T)
+	scoreTerms <- base::strsplit( scoreStr, split=",", fixed=T)
 	scores <- sapply( scoreTerms, function(x) {
 		max( as.integer(x[1]), na.rm=T)
 	})
@@ -880,7 +879,7 @@ VCF.PctReference <- function( info) {
 	pctRef <- rep.int( NA, length(info))
 
 	dp4Str <- sub( "(^.*)(DP4=)([0-9]+,[0-9]+,[0-9]+,[0-9]+)(;.*$)", "\\3", info)
-	dp4 <- strsplit( dp4Str, split=",")
+	dp4 <- base::strsplit( dp4Str, split=",")
 	# these should be exactly 4 integers
 	dp4Len <- sapply( dp4, length)
 	good <- which( dp4Len == 4)
@@ -1206,7 +1205,7 @@ VCF.PctReference <- function( info) {
 		colnames(dm) <- sub( "_Depth$", "", colnames(dm))
 		# set up the location info
 		fmKey <- rownames(fm)
-		fmTerms <- strsplit( fmKey, split="::")
+		fmTerms <- base::strsplit( fmKey, split="::")
 		fmSID <- sapply( fmTerms, `[`, 1)
 		fmGID <- sapply( fmTerms, `[`, 2)
 		fmPOS <- sapply( fmTerms, `[`, 3)
