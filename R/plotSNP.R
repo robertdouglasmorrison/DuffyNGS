@@ -3,7 +3,7 @@
 
 plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, geneID=NULL, gmap=NULL,
 			tailWidth=50, cex.text=1.0, cex.legend=1.0, mode=c("single","multi"), 
-			label=sampleID, forceYmax=NULL, linewidth.factor=1, SNPwidth.factor=1.0,
+			label=sampleID, forceYmax=NULL, minYmax=NULL, linewidth.factor=1, SNPwidth.factor=1.0,
 			max.depth=10000, show.legends=c( "all", "gene", "none"), verbose=TRUE, ...) {
 
 	mode <- match.arg( mode)
@@ -178,6 +178,7 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	if ( yAnnoScale > 0.60) yAnnoScale <- 0.60
 	yLim[2] <- yLim[2] * 1.15
 	if ( !is.null(forceYmax)) yLim[2] <- forceYmax
+	if ( !is.null(minYmax) && yLim[2] < minYmax) yLim[2] <- minYmax
 	yLim[1] <-  (-(yLim[2] * yAnnoScale))
 	extraYscale <- sqrt( 0.25 / yAnnoScale)
 	if ( extraYscale > 0.85) extraYscale <- 0.85
