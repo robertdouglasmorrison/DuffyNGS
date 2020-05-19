@@ -1,6 +1,8 @@
 # pipe.BAMproteins.R -- get the consensus proteins directly from the BAM file results
 
 
+# convert a BAM file into a FASTA of all proteins
+
 `pipe.BAMproteins` <- function( sampleID, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				noReadCalls=NULL, SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, 
@@ -131,6 +133,8 @@
 	}
 }
 
+
+# summarize BAM protein differences between 2 samples
 
 `pipe.BAMprotein.Difference` <- function( sampleID1, sampleID2=NULL, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, dropGenes=NULL,
@@ -794,7 +798,7 @@
 }
 
 
-`alignBAMproteins` <- function( sampleIDset, groupSet, geneID, annotationFile="Annotation.txt",
+`gatherBAMproteins` <- function( sampleIDset, geneID, groupSet=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				verbose=F) {
 
@@ -805,11 +809,13 @@
 	if (speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 
 	geneID <- alias2Gene( geneID[1])
+	shortID <- shortGeneName( geneID, keep=1)
 
 	seqs <- descs <- vector()
 
 	# find this one gene in the FASTA file sets
 	# first the reference genome
+	if (verbose) cat( "\nGathering..\n")
 	refFile <- paste( speciesID, "ReferenceProteins.fasta", sep=".")
 	if ( file.exists( refFile)) {
 		fa <- loadFasta( refFile, short=T, verbose=F)
@@ -817,6 +823,7 @@
 		if (wh) {
 			descs <- c( descs, paste( "Reference", speciesID, sep="_"))
 			seqs <- c( seqs, fa$seq[wh])
+			if (verbose) cat( "\rReference", length(seqs))
 		}
 	}
 	# then in each sample 
@@ -827,19 +834,32 @@
 			fa <- loadFasta( f, short=T, verbose=F)
 			wh <- match( geneID, fa$desc, nomatch=0)
 			if (wh) {
-				descs <- c( descs, paste( sid, groupSet[i], sep="_"))
+				descs <- c( descs, if ( is.null(groupSet)) sid else paste( sid, groupSet[i], sep="_"))
 				seqs <- c( seqs, fa$seq[wh])
+				if (verbose) cat( "\r", sid, length(seqs))
 			}
 		}
 	}
 
+	# package up the results
+	if ( ! length(seqs)) {
+		cat( "\nFound zero proteins for gene: ", geneID)
+		return( NULL)
+	} else {
+		if (verbose) cat( "\nFound", length(seqs), "proteins for gene: ", geneID)
+	}
+	descs <- paste( descs, shortID, sep="_")
+	faOut <- as.Fasta( descs, seqs)
+	faFile <- paste( "One.BAM.Protein", geneID, "AA.fasta", sep=".")
+	writeFasta( faOut, faFile, line.width=100)
 	if ( length(descs) > 1) {
-		fout <- paste( "One.BAM.Protein", geneID, "AA.fasta", sep=".")
-		writeFasta( as.Fasta( descs, seqs), fout, line.width=100)
+		if (verbose) cat( "\nAligning..")
 		alnFile <- paste( "One.BAM.Protein", geneID, "AA.aln", sep=".")
-		aln <- mafft( fout, alnFile, mode='local', mafftArgs=" --anysymbol ", verbose=verbose)
+		aln <- mafft( faFile, alnFile, mode='local', mafftArgs=" --anysymbol ", verbose=verbose)
 		writeALN( aln, alnFile, line.width=100)
 	}
-	return( descs)
+
+	# done.
+	return( faOut)
 }
 
