@@ -188,6 +188,8 @@
 	# i.e.  not enough consensus to trust the base calls
 	if (noReadCalls == "genomic" && ! is.null(minPercentSNP)) {
 		minPercentSNP <- as.numeric( minPercentSNP)
+		# we expect a number in zero to one...
+		if ( minPercentSNP > 1.0) minPercentSNP <- minPercentSNP / 100
 		big <- apply( flips, MARGIN=1, max, na.rm=T)
 		depth <- apply( flips, MARGIN=1, sum, na.rm=T)
 		pct <- big / depth
