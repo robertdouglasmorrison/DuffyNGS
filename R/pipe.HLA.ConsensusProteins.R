@@ -85,38 +85,3 @@
 	out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outName, "EditDist"=outDist, stringsAsFactors=F)
 	return(out)
 }
-
-
-`top2proteins` <- function( f, min.heterozygousPct=5) {
-
-	tbl <- read.delim( f, as.is=T)
-
-	# the most likely one protein is already called
-	bestProtein <- tbl$ConsensusAA
-
-	# to know the second protein, look to the table of details
-	pctDetails <- tbl$Percentages
-	pctTerms <- strsplit( pctDetails, split="; ", fixed=T)
-	nTerms <- sapply( pctTerms, length)
-	has2plus <- which( nTerms > 1)
-
-	# start with the best, and then substitute where the 2nd call is deep enough
-	secondProtein <- bestProtein
-	for ( j in has2plus) {
-		thisTerm <- pctTerms[[j]][2]
-		thisAA <- sub( ":.+", "", thisTerm)
-		thisPct <- as.numeric(sub( ".+:", "", thisTerm))
-		if ( ! is.na( thisPct) && thisPct >= min.heterozygousPct) {
-			secondProtein[j] <- thisAA
-		}
-	}
-
-	# there is a chance of gaps being in the final set, drop them
-	dropGaps <- which( bestProtein == "-")
-	if ( length(dropGaps)) bestProtein <- bestProtein[ -dropGaps]
-	dropGaps <- which( secondProtein == "-")
-	if ( length(dropGaps)) secondProtein <- secondProtein[ -dropGaps]
-
-	out <- c(paste(bestProtein,collapse=""), paste(secondProtein,collapse=""))
-	return(out)
-}
