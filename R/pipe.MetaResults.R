@@ -101,6 +101,9 @@
 	for ( grp in myGrps) {
 
 		cat( "\n\nDoing MetaResults on:    ", grp)
+
+		outUP <- outDOWN <- data.frame()
+
 		for (direction in c( "UP", "DOWN")) {
 
 		out <- metaResults( targetGroup=grp, results.path=results.path, speciesID=speciesID,
@@ -146,6 +149,14 @@
 		}
 		fileout <- file.path( metaPath, fileout)
 		write.table( outDF, fileout, sep="\t", quote=F, row.names=F)
+
+		# save the 2 parts for writing one joined answer
+		if ( direction == "UP") {
+			outUP <- subset( outDF, LOG2FOLD >= 0)
+		} else {
+			outDOWN <- subset( outDF, LOG2FOLD < 0)
+			outDOWN <- outDOWN[ rev( 1:nrow(outDOWN)), ]
+		}
 		rm( outDF)
 
 		if (addCellTypes) {
@@ -224,7 +235,18 @@
 		htmlout <- sub( ".txt$", ".html", fileout)
 		metaResultsToHTML( out, htmlout, title, maxRows=N, linkColumnName="GENE_ID", linkPaths=pngPath)
 		rm( out)
-	}}  # for direction and group
+	    }  # for direction
+
+	    # write out the "UP+DOWN' result too
+	    fileout <- paste( grp, prefix, "Meta", "JOINED", "txt", sep=".")
+	    if ( ! is.null( altGeneMapLabel)) {
+	    	fileout <- paste( grp, prefix, altGeneMapLabel, "Meta", "JOINED", "txt", sep=".")
+	    }
+	    fileout <- file.path( metaPath, fileout)
+	    outDF <- rbind( outUP, outDOWN)
+	    write.table( outDF, fileout, sep="\t", quote=F, row.names=F)
+	    rm( outDF)
+	}  # for the groups
 
 	# copy all the gene plots to this new results location
 	if ( copyPlots) {
