@@ -62,7 +62,7 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 			catch.system( cmdLine,  input=stdin)
 		
 			# extract the answer
-			ansOut <- extractBlastXMLdetails( xmlOutFile, crIDs=crIDs)
+			ansOut <- extractBlastXMLdetails( xmlOutFile, IDs=crIDs, IDprefix="cr_")
 			if ( length( ansOut) < 1) {
 				cat( "\n\nNo Hits Found!!   used Evalue cutoff of: ", useEvalue, "\n")
 				# remove any old results, and run it again!
@@ -75,7 +75,7 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 		}
 	} else {
 		cat( "\nUsing previously calculated Blast answer..")
-		ansOut <- extractBlastXMLdetails( xmlOutFile, crIDs=crIDs)
+		ansOut <- extractBlastXMLdetails( xmlOutFile, IDs=crIDs, IDprefix="cr_")
 	}
 
 	return(ansOut)
@@ -108,7 +108,7 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 }
 
 
-extractBlastXMLdetails <- function( filein, crIDs) {
+extractBlastXMLdetails <- function( filein, IDs, IDprefix="", IDsuffix="") {
 
 	# we want to extract the details that show the 'best hits'...
 	out <- vector( mode="list")
@@ -128,9 +128,9 @@ extractBlastXMLdetails <- function( filein, crIDs) {
 	# some CRs may not return anything, but try to make the answer more complete
 	idsOut <- sapply( out, function(x) x$id)
 	finalOut <- vector( mode="list")
-	for ( j in 1:length(crIDs)) {
-		i <- crIDs[j]
-		thisID <- paste( "cr_",i,sep="")
+	for ( j in 1:length(IDs)) {
+		i <- IDs[j]
+		thisID <- paste( IDprefix, i, IDsuffix, sep="")
 		where <- match( thisID, idsOut, nomatch=0)
 		if ( where > 0) {
 			finalOut[[j]] <- out[[where]]

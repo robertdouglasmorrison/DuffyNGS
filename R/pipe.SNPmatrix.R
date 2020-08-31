@@ -1,7 +1,6 @@
 # pipe.SNPmatrix.R
 
 
-
 # wrapper function to do all the steps we need
 pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", optionsFile="Options.txt", 
 					results.path=NULL, speciesID=getCurrentSpecies(), missingOnly=TRUE, 
@@ -73,7 +72,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	cat( "\n\nStep 4:  Turn all Base Depths into one Frequency Matrix of all samples..")
 	freqM <- pipe.SNP.FreqMatrix( sampleIDset, optionsFile=optionsFile, results.path=results.path, 
-					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads)
+					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads,
+					exonOnly=exonOnly)
 
 	# write out the results
 	outfile <- paste( outfileKeyword, prefix, "BaseFreqMatrix.txt", sep=".")
@@ -340,9 +340,10 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 }
 
 
-`pipe.SNP.FreqMatrix` <- function( sampleIDset, optionsFile="Options.txt", results.path=NULL, 
+`pipe.SNP.FreqMatrix` <- function( sampleIDset, optionsFile="Options.txt", 
+				speciesID=getCurrentSpecies(), results.path=NULL, 
 				na.rm=c('all','any','half','none'), min.freq=1.0, min.diff=NULL, min.reads=NULL,
-				indelsToo=TRUE, depthToo=TRUE) {
+				indelsToo=TRUE, depthToo=TRUE, exonOnly=FALSE) {
 
 	BASES <- c("A","C","G","T")
 	N_BASES <- 4
@@ -354,6 +355,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	curSpecies <- getCurrentSpecies()
 	prefix <- getCurrentSpeciesFilePrefix()
 	if ( is.null( results.path)) {
@@ -466,7 +468,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	}
 
 	# drop any empty rows
-	if ( na.rm != "none") {
+	if ( nrow(out) && na.rm != "none") {
 		nNA <- apply( out[ ,1:nFiles], 1, function(x) sum( is.na(x)))
 		if ( na.rm == "all") drops <- which( nNA == nFiles)
 		if ( na.rm == "any") drops <- which( nNA > 0)
@@ -478,7 +480,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	}
 
 	# drop any zero rows, or any rows with the 'too small' a frequency value
-	if ( ! is.null( min.freq)) {
+	if ( nrow(out) && ! is.null( min.freq)) {
 		rmaxs <- apply( out[ ,1:nFiles], 1, max, na.rm=T)
 		drops <- which( rmaxs < min.freq)
 		if ( length(drops)) {
@@ -488,7 +490,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	}
 
 	# drop any minimal difference rows
-	if ( ! is.null( min.diff)) {
+	if ( nrow(out) && ! is.null( min.diff)) {
 		rdiffs <- apply( out[ ,1:nFiles], 1, function(x) diff( range(x)))
 		drops <- which( rdiffs < min.diff)
 		if ( length(drops)) {
@@ -497,6 +499,29 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 					min.diff, "   N: ", length(drops))
 		}
 	}
+	
+	# drop any SNPs that land outside Exons?
+	if ( nrow(out) && exonOnly) {
+		# exon search is one chromosome at a time, so do it in chuncks
+		cat( "\nAbout to remove non-exon SNPs..")
+		nameTerms <- strsplit( rownames(out), split="::")
+		seqVec <- sapply( nameTerms, FUN=`[`, 1)
+		posVec <- as.numeric( sapply( nameTerms, FUN=`[`, 3))
+		ans <- tapply( 1:nrow(out), factor(seqVec), function(x) {
+						smlDF <- out[ x, , drop=F]
+						smlSeq <- seqVec[x]
+						smlPos <- posVec[x]
+						return( exonSNPsOnly( smlDF, seqID=smlSeq, pos=smlPos))
+					})
+		newOut <- data.frame()
+		for ( i in 1:length(ans)) {
+			smlAns <- ans[[i]]
+			newOut <- rbind( newOut, smlAns)
+		}
+		cat( "  Done.  N_Dropped =", nrow(out) - nrow(newOut))
+		out <- newOut
+	}
+	
 	cat( "\nFinal Table of SNP site frequencies:   N_Samples: ", nFiles, "  N_Rows: ", nrow(out), "\n")
 
 	# we are really done
@@ -704,8 +729,13 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	
 	# finally make this into a distance matrix
 	cat( "\nBuilding String Distance Matrix..")
-	dm <- adist( baseString)
-
+	if ( any( nchar(baseString) > 1000)) {
+		require( Biostrings)
+		dm <- as.matrix( stringDist( baseString))
+	} else {
+		dm <- adist( baseString)
+	}
+	
 	# and show it
 	plotPhyloTree( baseString, dm=dm, ...)
 
