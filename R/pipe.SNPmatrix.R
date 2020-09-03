@@ -73,7 +73,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	cat( "\n\nStep 4:  Turn all Base Depths into one Frequency Matrix of all samples..")
 	freqM <- pipe.SNP.FreqMatrix( sampleIDset, optionsFile=optionsFile, results.path=results.path, 
 					na.rm=na.rm, min.freq=min.freq, min.diff=min.diff, min.reads=min.reads,
-					exonOnly=exonOnly)
+					exonOnly=exonOnly, indelsToo=(!dropIndels))
 
 	# write out the results
 	outfile <- paste( outfileKeyword, prefix, "BaseFreqMatrix.txt", sep=".")
@@ -382,7 +382,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 		cat( " ", sampleIDset[i])
 		# read in the file of base counts
 		tbl <- read.delim( snpfiles[i], as.is=T)
-		if ( ! all( colnames(tbl) %in% BASES)) {
+		if ( ! all( BASES %in% colnames(tbl))) {
 			cat( "\nUnexpected column names in file..  Skipping: ", basename(snpfiles[i]))
 			next
 		}
