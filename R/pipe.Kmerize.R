@@ -4,9 +4,8 @@
 
 
 `pipe.Kmerize` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				kmer.size=31, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
-				buffer.size=100000, maxReads=NULL, 
-				verbose=TRUE) {
+				kmer.size=37, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
+				buffer.size=1000000, maxReads=NULL, verbose=TRUE) {
 
 	if (verbose) {
 		cat( verboseOutputDivider)
@@ -104,7 +103,7 @@
 
 
 `pipe.KmerTable` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				kmer.size=31) {
+				kmer.size=37) {
 
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	kmer.path <- file.path( results.path, "Kmers")
@@ -162,7 +161,7 @@
 }
 
 
-`kmerizeOneFastqFile` <- function( filein, kmer.size=31, buffer.size=100000, maxReads=NULL) {
+`kmerizeOneFastqFile` <- function( filein, kmer.size=37, buffer.size=1000000, maxReads=NULL) {
 
 	# get ready to read the fastq file in chuncks...
 	filein <- allowCompressedFileName( filein)
@@ -211,7 +210,7 @@
 }
 
 
-`kmerizeOneChunk` <- function( seqs, kmer.size=31) {
+`kmerizeOneChunk` <- function( seqs, kmer.size=37) {
 
 	# make Kmers of every raw read in this chunk
 	# set up to get all N-mers for all the sequences in this chunk

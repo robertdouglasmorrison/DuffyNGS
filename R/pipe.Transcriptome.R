@@ -5,7 +5,7 @@
 `pipe.Transcriptome` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=NULL, results.path=NULL, dataType=NULL,
 				altGeneMap=NULL, altGeneMapLabel=NULL, loadWIG=FALSE, verbose=TRUE,
-				mode=c("normal","QuickQC"), exonsOnly=NULL)
+				mode=c("normal","QuickQC"), exonsOnly=NULL, keepIntergenics=NULL)
 {
 
 	if (verbose) {
@@ -41,11 +41,15 @@
 
 	strandSpecific <- getAnnotationTrue( annT, origSampleID, "StrandSpecific", notfound=FALSE)
 	useBothStrands <- ! strandSpecific
-	keepIntergenics <- getAnnotationTrue( annT, origSampleID, "KeepIntergenics", notfound=TRUE)
+	if ( is.null( keepIntergenics)) {
+		keepIntergenics <- getAnnotationTrue( annT, origSampleID, "KeepIntergenics", notfound=TRUE)
+	} else {
+		cat( "\nExplicit 'KeepIntergenics' argument:  \t", sampleID, ": \t", keepIntergenics, sep="")
+	}
 	if ( is.null( exonsOnly)) {
 		exonsOnly <- getAnnotationTrue( annT, origSampleID, "ExonsOnly", notfound=FALSE)
 	} else {
-		cat( "\nExplicit argument:  \t", sampleID, ": \t", exonsOnly, sep="")
+		cat( "\nExplicit 'ExonsOnly' argument:  \t", sampleID, ": \t", exonsOnly, sep="")
 	}
 
 	# during 'altGeneMap' runs, skip over species that are not covered...
