@@ -25,7 +25,7 @@
 		# see if the files we need are already there
 		cat( "\n")
 		if( grepl( "\\.fastq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fastq", ".trimmed.fastq", inputFastqFiles)
-		if( grepl( "\\.fq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fq", ".trimmed.fastq", inputFastqFiles)
+		if( grepl( "\\.fq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fq", ".trimmed.fq", inputFastqFiles)
 		if ( all( file.exists( expectedFiles))) {
 			cat( "\nUsing existing 'cutadapt' results..")
 			filesToDo <- expectedFiles
