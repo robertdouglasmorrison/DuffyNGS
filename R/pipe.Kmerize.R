@@ -4,13 +4,14 @@
 
 
 `pipe.Kmerize` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				kmer.size=37, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
-				buffer.size=1000000, maxReads=NULL, verbose=TRUE) {
+				kmer.size=33, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
+				buffer.size=1000000, maxReads=NULL, min.count=2, verbose=TRUE) {
 
 	if (verbose) {
 		cat( verboseOutputDivider)
 		cat( "\nStarting  'Kmerize Pipeline' on Sample:     ", sampleID,
-			"\nStart Date/Time:   \t", date(), "\n")
+			"\nStart Date/Time:   \t", date(), 
+			"\nKmer Size:         \t", kmer.size, "\n")
 	}
 
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
@@ -59,23 +60,25 @@
 	startT <- proc.time()
 
 	nReadsIn <- nDistinctKmers <- nTotalKmers <- 0
-	bigKmerTable <- smlTable <- vector()
+	bigKmerTable <- vector()
 	nFiles <- length( filesToDo)
 	kmer.size <- as.integer( kmer.size)
 
 	cat( "\nN_Files to Kmerize: ", nFiles, "\n")
 	for ( i in 1:nFiles) {
-		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, maxReads=maxReads)
-		smlTable <- ans$Kmer.Table
+		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, 
+					maxReads=maxReads, min.count=min.count)
+		#smlTable <- ans$Kmer.Table
 		nReadsNow <- ans$nReadsIn
 		if ( i == 1) {
-			bigKmerTable <- smlTable
+			bigKmerTable <- ans$Kmer.Table
 		} else {
 			cat( "  merge..")
-			bigKmerTable <- mergeTables( bigKmerTable, smlTable)
+			bigKmerTable <- mergeTables( bigKmerTable, ans$Kmer.Table)
+	
+			cat( "  redo RevComp check..")
+			bigKmerTable <- kmerRevComp.1Dtable( bigKmerTable)
 		}
-		#cat( "  revCompClean..")
-		#bigKmerTable <- kmerRevCompCleanup( bigKmerTable)
 
 		cat( "  save..")
 		save( bigKmerTable, file=outfile)
@@ -91,6 +94,9 @@
 	}
 
 	# now do the cleanup...
+	rm( bigKmerTable, ans)
+	gc()
+
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
 	cat( "\nTiming Stats: \n")
@@ -103,7 +109,7 @@
 
 
 `pipe.KmerTable` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				kmer.size=37) {
+				kmer.size=33, min.count=5) {
 
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	kmer.path <- file.path( results.path, "Kmers")
@@ -133,7 +139,7 @@
 			allKmers <- union( allKmers, myKmers)
 		}
 	}
-	cat( "  re-sort..")
+	cat( "\nRe-sorting.. ")
 	ord <- base::order( allKmers)
 	allKmers <- allKmers[ord]
 	cat( "  N_Kmers = ", NK <- length(allKmers))
@@ -156,12 +162,76 @@
 		v[ wh] <- myCounts
 		kmerTbl[ , i] <- v
 	}
-	cat( "\nDone.\n")
+	cat( "\nDone loading.\n")
+	
+	cat( "\nChecking for low coverage Kmers to drop..")
+	rowMax <- apply( kmerTbl, 1, max)
+	drops <- which( rowMax < min.count)
+	if ( length(drops)) {
+		kmerTbl <- kmerTbl[ -drops, ]
+		cat( "  Removed", length(drops), "Kmers for max count <", min.count)
+	}
+	
 	return( kmerTbl)
 }
 
 
-`kmerizeOneFastqFile` <- function( filein, kmer.size=37, buffer.size=1000000, maxReads=NULL) {
+`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet) {
+
+	# just just the samples asked for
+	where <- match( sampleIDset, colnames(kmerTbl))
+	if ( any( is.na(where))) stop( "Some SampleIDs not in Kmer table")
+	kmerTbl <- kmerTbl[ , where]
+	NC <- ncol(kmerTbl)
+	NR <- nrow(kmerTbl)
+	
+	# get our group factors
+	grpFac <- factor( groupSet)
+	grpLvls <- levels( grpFac)
+	nGrps <- nlevels( grpFac)
+	if ( nGrps != 2) stop( "Expected exactly 2 Sample Groups")
+	cat( "\nBreakdown by Group:\n")
+	print( table( groupSet))
+	
+	# convert everything to normalized unit
+	cat( "\nConverting to LKPB (Log2 Kmers Per Billion)..")
+	kSums <- apply( kmerTbl, 2, sum)
+	lkpbTbl <- kmerTbl
+	for ( i in 1:NC) {
+		myCnts <- kmerTbl[ ,i]
+		myKPB <- myCnts * 1e9 / kSums[i]
+		myLKPB <- round( log2( myKPB + 1), digits=3)
+		lkpbTbl[ , i] <- myLKPB
+	}
+	
+	# we are now ready to do tests per Kmer
+	cat( "\nRunning Linear Models on ", NR, " Kmers..\n")
+	est <- pval <- vector( length=NR)
+	avg <- matrix( 0, 2, NR)
+	rownames(avg) <- paste( "Avg", grpLvls, sep="_")
+	for ( i in 1:NR) {
+		v <- lkpbTbl[ i, ]
+		ans <- lm( v ~ grpFac)
+		ans2 <- summary(ans)
+		cf <- coef(ans2)
+		est[i] <- cf[ 2,1]
+		pval[i] <- cf[ 2,4]
+		avg[ ,i] <- tapply( v, grpFac, mean)
+		if ( i %% 1000 == 0) cat( "\r", i, rownames(kmerTbl)[i], est[i], pval[i])
+	}
+	
+	out <- data.frame( "Kmer"=rownames(kmerTbl), t(avg), "Difference"=est, "P.Value"=pval,
+			stringsAsFactors=F)
+	ord <- diffExpressRankOrder( out$Difference, out$P.Value)
+	out <- out[ ord, ]
+	rownames(out) <- 1:NR
+	
+	return(out)
+}
+
+
+`kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, maxReads=NULL,
+				min.count=2) {
 
 	# get ready to read the fastq file in chuncks...
 	filein <- allowCompressedFileName( filein)
@@ -187,10 +257,10 @@
 
 		# in a FASTQ file, it takes 4 lines for each read;  1 is ID, 2nd is the seq, 4th is scores
 		# all we want is the raw reads
-		ptrs <- seq.int( 2, length(chunk), by=4)
-		seqTxt <- chunk[ ptrs]
+		seqTxt <- chunk[ seq.int( 2, length(chunk), by=4)]
 		nread <- nread + length( seqTxt)
 		cat( "  N_reads: ", prettyNum( as.integer(nread), big.mark=","))
+		rm( chunk)
 
 		smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size)
 
@@ -202,15 +272,26 @@
 		}
 		cat( "  N_Kmer:", length( bigTable))
 	}
+	rm( smlTable)
 
-	#cat( "  revCompClean..")
-	#bigTable <- kmerRevCompCleanup( bigTable)
+	# any K-mers with too few observations are not to be kept
+	tooFew <- which( bigTable < min.count)
+	if ( length( tooFew)) {
+		cat( "\n  Drop if count < ", min.count, " (N=", length(tooFew), ")", sep="")
+		bigTable <- bigTable[ -tooFew]
+		cat( "  N_Kmer:", length( bigTable))
+	}
+	
+	# also do any RevComp resolving now too
+	cat( "\nSearch for RevComp pairs to join..")
+	bigTable <- kmerRevComp.1Dtable( bigTable)
+	cat( "  N_Kmer:", length( bigTable))
 
 	return( list( "nReadsIn"=nread, "Kmer.Table"=bigTable))
 }
 
 
-`kmerizeOneChunk` <- function( seqs, kmer.size=37) {
+`kmerizeOneChunk` <- function( seqs, kmer.size=33) {
 
 	# make Kmers of every raw read in this chunk
 	# set up to get all N-mers for all the sequences in this chunk
@@ -263,16 +344,28 @@
 	return( TABLE( kmersOut))
 }
 
-`kmerRevCompCleanup` <- function( kmerTable) {
 
-	# the Kmers may be from both strands, and we only want to keep one form or each
+`kmerRevComp.1Dtable` <- function( kmerTable) {
+
+	# the Kmers may be from both strands, and we only want to keep one form of each
+	# so merge those where both are present
+	
+	# allow being given a saved file
+	isFile <- FALSE
+	if ( !is.table( kmerTable) && length(kmerTable) == 1 && is.character(kmerTable) && grepl( "\\.rda$", kmerTable)) {
+		kmerFile <- kmerTable
+		load( kmerTable)
+		kmerTable <- bigKmerTable
+		isFile <- TRUE
+	}
+	
 	kmers <- names( kmerTable)
 	cnts <- as.numeric( kmerTable)
 	N <- length(kmerTable)
+	cat( "\nN_Kmers in: ", N)
 
 	# see what the RevComp over every Kmer is, and where it lies
-	cat( "  make RevComps..")
-	rcKmer <- vapply( kmers, FUN=myReverseComplement, FUN.VALUE="ACGT", USE.NAMES=F)
+	rcKmer <- findKmerRevComp( kmers)
 	cat( "  locate..")
 	where <- match( rcKmer, kmers, nomatch=0)
 
@@ -300,9 +393,58 @@
 	drops <- which( out == 0)
 	if ( length( drops)) out <- out[ -drops]
 	Nout <- length(out)
+	cat( "\nN_Kmers out: ", Nout)
+	
 	cat( "  Pct Reduction: ", round( (N-Nout) * 100 / N), "%")
 
 	# done
-	return(out)
+	if (isFile) {
+		bigKmerTable <- out
+		cat( "  saving..")
+		save( bigKmerTable, file=kmerFile)
+		return( kmerFile)
+	} else {
+		return( out)
+	}
 }
 
+
+findKmerRevComp <- function( kmers) {
+
+	N <- length( kmers)
+	out <- rep.int( "", N)
+	
+	# allow 'fast' lookup via a file of previously done kmers
+	kmerXrefFile <- "Kmer.RevComp.Xref.rda"
+	if ( file.exists( kmerXrefFile)) {
+		cat( "  load RevComp Xref..")
+		load( kmerXrefFile)
+	} else {
+		xref <- data.frame()
+	}
+	nXref <- nrow(xref)
+
+	# see if any of these are known
+	if ( nrow(xref)) {
+		cat( "  lookup..")
+		where1 <- match( kmers, xref$Kmer, nomatch=0)
+		out[ where1 > 0] <- xref$RevComp[ where1]
+		where2 <- match( kmers, xref$RevComp, nomatch=0)
+		out[ where2 > 0] <- xref$Kmer[ where2]
+		cat( "  N_Found=", sum(where1 > 0 | where2 > 0))
+	}
+	
+	# calculate the rest
+	toCalc <- which( out == "")
+	if ( length( toCalc)) {
+		cat( "  calc RevComps.. (N=", length(toCalc), ")", sep="")
+		rcKmer <- vapply( kmers[ toCalc], FUN=myReverseComplement, FUN.VALUE="ACGT", USE.NAMES=F)
+		out[ toCalc] <- rcKmer
+	
+		# store these for the future
+		smlXref <- data.frame( "Kmer"=kmers[toCalc], "RevComp"=rcKmer, stringsAsFactors=FALSE)
+		xref <- rbind( xref, smlXref)
+		save( xref, file=kmerXrefFile)
+	}
+	return( out)
+}
