@@ -230,6 +230,55 @@
 }
 
 
+`pipe.KmerAlignToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE) {
+
+	# map some Kmers onto the reference genome
+	N <- length( kmers)
+	
+	# make a temp FASTA file
+	kmerIDs <- paste( "Kmer", 1:N, sep="_")
+	kmerFastaFile <- "Temp.Kmers.BowtieInput.fasta"
+	writeFasta( as.Fasta( kmerIDs, kmers), kmerFastaFile)
+	kmerBowtieResultFile <- "Temp.Kmers.BowtieResult.bam"
+	
+	# build a call to Bowtie2
+	optT <- readOptionsTable( optionsFile)
+	# force the look at options file to initialize bowtie.
+	bowtie2Par.defaults( optionsFile, verbose=FALSE)
+	## build the Bowtie alignment program's command line
+	progName <- getOptionValue( optT, "bowtie2Program", verbose=FALSE)
+	cmdline <- progName
+	# next is "input options" using FASTA instead of default FASTQ
+	cmdLine <- mypaste( cmdLine, "-a")
+	# next is explicit alignment policy
+	cmdLine <- mypaste( cmdLine, " --very-sensitive ")
+	if ( quiet) cmdLine <- mypaste( cmdLine, " --quiet")
+	# when not catching the unaligned, allow explicit throw-away of unaligned
+	cmdLine <- mypaste( cmdLine, " --no-unal ")
+	# next is threads
+	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=FALSE))
+	cmdLine <- mypaste( cmdLine, " --threads", nCores)
+	# the index
+	index.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=FALSE)
+	alignIndex <- getOptionValue( optT, "GenomicIndex", verbose=F)
+	myIndexFile <- file.path( index.path, alignIndex)
+	# test to see that a file is really there...
+	if ( ! file.exists(  mypaste( myIndexFile, ".1.bt2", sep=""))) {
+	    # new long indexex are possible
+	    if ( ! file.exists(  mypaste( myIndexFile, ".1.bt2l", sep=""))) {
+		stop( paste( "Bowtie2 index Path and/or File not found. \n", "Filename as given:  ", myIndexFile))
+	    }
+	}
+	cmdLine <- mypaste( cmdLine, " -x", myIndexFile)
+	# the input file
+	cmdLine <- mypaste( cmdLine, " -U", kmerFastaFile)
+	# lastly, the output destination
+	outputTerm <- paste ( " | samtools view -bS -o", kmerBowtieResultFile, " - ")
+	cmdLine <- mypaste( cmdLine, outputTerm, sep="  ")
+	callBowtie2( cmdLine, verbose=verbose)
+}
+
+
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, maxReads=NULL,
 				min.count=2) {
 
