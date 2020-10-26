@@ -147,11 +147,11 @@ WB_UNIQUE_PCT <- 2
 		# try to be a bit smarter...
 		if ( selfID %in% c( "PbANKA", "PyAABL", "Py17X", "PyYM", "PchAS")) {
 			otherID <- "Mmu_grc"
-		} else if ( selfID %in% c( "MT_H37", "BCG", "Msmeg_mc2_155", "Mabsc", "Mchel")) {
+		} else if ( selfID %in% c( "MT_H37", "BCG", "Msmeg_mc2_155", "Mabsc", "Mchel", "MT_HN878")) {
 			otherID <- "Mmu_grc"
 		} else if (selfID %in% c( "PkH", "PCO", "PcoAH", "Pcy")) {
 			otherID <- "MacMu"
-		} else if (selfID %in% c( "Pf3D7", "PvSal1")) {
+		} else if (selfID %in% c( "Pf3D7", "PvSal1", "PvP01")) {
 			otherID <- "Hs_grc"
 		} else if (selfID %in% c( "Mmu_grc")) {
 			otherID <- "Py17X"

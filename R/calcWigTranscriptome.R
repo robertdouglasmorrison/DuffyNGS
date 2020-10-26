@@ -3,7 +3,7 @@
 # turn a Wiggles object into a transcriptome.   Converting from WB to 'wiggles' data strucure...
 
 `calcWigTranscriptome` <- function( WIG, geneMap=NULL, useBothStrands=FALSE, keepIntergenics=FALSE, 
-			exonsOnly=FALSE, fileout=NA, verbose=!interactive() ) {
+			exonsOnly=FALSE, fileout=NA, minReadsPerSpecies=1000, verbose=!interactive() ) {
 
 	setCurrentSpecies( WIG$Info$Species)
 
@@ -26,7 +26,7 @@
 
 	# pre evaluate what we can
 	hasNonGenes <- ("REAL_G" %in% colnames( geneMap))
-	totalWIGreads <- WIG_getTotalReadsForRPKM( WIG)
+	totalWIGreads <- WIG_getTotalReadsForRPKM( WIG, minReadsPerSpecies=minReadsPerSpecies)
 	readLength <- WIG$Info$ReadLength
 	# catch the very rare case of no reads
 	if ( totalWIGreads$Unique < 1) totalWIGreads$Unique <- 1

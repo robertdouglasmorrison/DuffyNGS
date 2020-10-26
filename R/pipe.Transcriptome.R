@@ -5,7 +5,8 @@
 `pipe.Transcriptome` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=NULL, results.path=NULL, dataType=NULL,
 				altGeneMap=NULL, altGeneMapLabel=NULL, loadWIG=FALSE, verbose=TRUE,
-				mode=c("normal","QuickQC"), exonsOnly=NULL, keepIntergenics=NULL)
+				mode=c("normal","QuickQC"), exonsOnly=NULL, keepIntergenics=NULL,
+				minReadsPerSpecies=NULL)
 {
 
 	if (verbose) {
@@ -50,6 +51,11 @@
 		exonsOnly <- getAnnotationTrue( annT, origSampleID, "ExonsOnly", notfound=FALSE)
 	} else {
 		cat( "\nExplicit 'ExonsOnly' argument:  \t", sampleID, ": \t", exonsOnly, sep="")
+	}
+	if ( is.null( minReadsPerSpecies)) {
+		minReadsPerSpecies <- as.numeric( getOptionValue( optT, "minReadsPerSpecies", notfound="1000", verbose=T))
+	} else {
+		cat( "\nExplicit 'minReadsPerSpecies' value:  \t", minReadsPerSpecies, sep="")
 	}
 
 	# during 'altGeneMap' runs, skip over species that are not covered...
@@ -109,7 +115,7 @@
 		fileOutTrans <- file.path( pathOut, fileOutTrans)
 		trans <- calcWigTranscriptome( wiggles, useBothStrands=useBothStrands, 
 					keepIntergenics=keepIntergenics, exonsOnly=exonsOnly,
-					fileout=fileOutTrans)
+					fileout=fileOutTrans, minReadsPerSpecies=minReadsPerSpecies)
 
 	} else {
 		# alternate...
@@ -135,7 +141,8 @@
 			fileOutTrans <- file.path( pathOut, fileOutTrans)
 
 			trans <- calcWigTranscriptome( wiggles, geneMap=gmap, useBothStrands=useBothStrands, 
-					keepIntergenics=TRUE, exonsOnly=FALSE, fileout=fileOutTrans)
+					keepIntergenics=TRUE, exonsOnly=FALSE, fileout=fileOutTrans,
+					minReadsPerSpecies=minReadsPerSpecies)
 		} else {
 			cat( "\nThis species not in Alternate Gene Map... Skipping. ")
 		}

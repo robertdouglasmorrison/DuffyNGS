@@ -64,6 +64,8 @@
 	spliceMapPrefix <- getOptionValue( optT, "SpliceMapPrefix", notfound="spliceMap")
 	bowtie1IndexPath <- getOptionValue( optT, "bowtieIndex.path", notfound=outPath)
 	bowtie2IndexPath <- getOptionValue( optT, "bowtie2Index.path", notfound=outPath)
+	# make dure the folder to receive the new index exists
+	if ( ! file.exists( bowtie2IndexPath)) dir.create( bowtie2IndexPath, recursive=TRUE)
 
 	startTime <- proc.time()
 
@@ -192,6 +194,11 @@
 	    if ( ! doingComboIndex) {
 		
 		cat( "\n\nPart 4a:  Detectability files...")
+
+		# Detectability uses older Bowtie1, so make sure that stuff exists too
+		# make sure the folder to receive the new index exists
+		if ( ! file.exists( bowtie1IndexPath)) dir.create( bowtie1IndexPath, recursive=TRUE)
+
 		# verify the index we need is there
 		idxFiles <- dir( bowtie1IndexPath, pattern=paste( "^",genomicIndexFile,sep=""))
 		if ( ! length( idxFiles)) {
