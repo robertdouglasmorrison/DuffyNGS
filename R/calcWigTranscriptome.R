@@ -78,8 +78,8 @@
 	length(rpkmSet) <- length(totCntSet) <- length(sigmaSet) <- length(strandSet) <- ngenes
 
 	# we can now do the TPM metric of gene expression
-	tpmM <- tpm( totCntSetM, nBaseSet)
-	tpmU <- tpm( totCntSet, nBaseSet)
+	tpmM <- tpm( totCntSetM, nBaseSet, minReadsPerSpecies=minReadsPerSpecies)
+	tpmU <- tpm( totCntSet, nBaseSet, minReadsPerSpecies=minReadsPerSpecies)
 
 	# trim to sensible digits resolution
 	rpkmSetM <- round( rpkmSetM, digits=4)
