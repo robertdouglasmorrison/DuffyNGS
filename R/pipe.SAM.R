@@ -288,11 +288,11 @@
 
 		if ( is.null( SAM_altGeneMapLabel)) {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName,
-					"\nTranscriptomes for species:   ", speciesID)
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 			pngFile <- file.path( SAM_path, paste( SAM_prefix,"Cluster",funcName[i],"png",sep="."))
 		} else {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName, 
-					"\nTranscriptomes for species:   ", speciesID,
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 					"    using geneMap:  ", SAM_altGeneMapLabel)
 			pngFile <- file.path( SAM_path, paste( SAM_prefix, SAM_altGeneMapLabel, 
 					"Cluster", funcName[i], "png", sep="."))
@@ -309,7 +309,7 @@
 
 	    # PCA plot too...
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
-				"\nTranscriptomes for species:   ", speciesID)
+				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 		pngFile <- file.path( SAM_path, paste( SAM_prefix,"PCA.png",sep="."))
 		matrix.PCAplot( tm, main=pltText, col=SAM_colors)
 		png( filename=pngFile, width=800, height=800, bg="white")

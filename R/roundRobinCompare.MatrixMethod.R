@@ -537,11 +537,11 @@
 	    		for ( i in 1:2) {
 				if ( is.null( RR_altGeneMapLabel)) {
 					pltText <- paste( "Transcriptome Clustering:   ", folderName,
-							"\nTranscriptomes for species:   ", speciesID)
+							"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 					pngFile <- file.path( RR_path, paste( RR_prefix,"Cluster",funcName[i],"png",sep="."))
 				} else {
 					pltText <- paste( "Transcriptome Clustering:   ", folderName, 
-							"\nTranscriptomes for species:   ", speciesID,
+							"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 							"    using geneMap:  ", RR_altGeneMapLabel)
 					pngFile <- file.path( RR_path, paste( RR_prefix, RR_altGeneMapLabel, 
 							"Cluster", funcName[i], "png", sep="."))
@@ -556,15 +556,13 @@
 
 	    		# PCA plot too...
 			# knowing the colors to show can be tricky, as the number of "group average" columns can vary
-			pcaColors <- RR_colors
-			if ( ncol(tm) > length( pcaColors)) {
-				extraGroups <- colnames(tm)[ (length(pcaColors)+1):ncol(tm)]
-				wh <- match( extraGroups, annT[[ groupColumn]])
-				extraColors <- annT[[colorColumn]][wh]
-				pcaColors <- c( pcaColors, extraColors)
-			}
+			pcaColors <- rep.int( 1, ncol(tm))
+			wh <- match( colnames(tm), RR_samples, nomatch=0)
+			pcaColors[ wh > 0] <-RR_colors[wh]
+			wh <- match( colnames(tm), annT[[ groupColumn]], nomatch=0)
+			pcaColors[ wh > 0] <- annT[[colorColumn]][wh]
 			pltText <- paste( "Transcriptome PCA:   ", folderName,
-					"\nTranscriptomes for species:   ", speciesID)
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 			pngFile <- file.path( RR_path, paste( RR_prefix,"PCA.png",sep="."))
 			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			png( filename=pngFile, width=800, height=800, bg="white")

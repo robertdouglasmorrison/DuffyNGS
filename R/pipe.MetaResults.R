@@ -260,6 +260,9 @@
 			system( cmdLine)
 
 			# also grab and copy any Cluster and PCA plots
+			# note that DESeq and EdgeR use raw reads, so their transcritome plots are less 'valid'
+			if (folder %in% c( "EdgeR", "DESeq")) next
+
 			pathFrom <- file.path( results.path, folder, paste( prefix, folderName, sep="."))
 			fset <- dir( pathFrom, pattern="(Cluster|PCA).+png$", full.name=T)
 			if ( length(fset)) {

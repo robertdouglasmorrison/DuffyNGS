@@ -603,12 +603,18 @@
 	    		}
 
 	    		# PCA plot too...
+			# knowing the colors to show can be tricky, as the number of "group average" columns can vary
+			pcaColors <- rep.int( 1, ncol(tm))
+			wh <- match( colnames(tm), RR_samples, nomatch=0)
+			pcaColors[ wh > 0] <-RR_colors[wh]
+			wh <- match( colnames(tm), annT[[ groupColumn]], nomatch=0)
+			pcaColors[ wh > 0] <- annT[[colorColumn]][wh]
 			pltText <- paste( "Transcriptome PCA:   ", folderName,
-					"\nTranscriptomes for species:   ", speciesID)
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 			pngFile <- file.path( RR_path, paste( RR_prefix,"PCA.png",sep="."))
-			matrix.PCAplot( tm, main=pltText, col=c( RR_colors, unique_RR_colors))
+			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			png( filename=pngFile, width=800, height=800, bg="white")
-			matrix.PCAplot( tm, main=pltText, col=c( RR_colors, unique_RR_colors))
+			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			dev.off()
 		} else {
 			if (ncol(tm) < 3) cat( "\nNot able to make cluster plots...")

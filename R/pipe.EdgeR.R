@@ -294,11 +294,11 @@
 
 		if ( is.null( RP_altGeneMapLabel)) {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName,
-					"\nTranscriptomes for species:   ", speciesID)
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 			pngFile <- file.path( RP_path, paste( RP_prefix,"Cluster",funcName[i],"png",sep="."))
 		} else {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName, 
-					"\nTranscriptomes for species:   ", speciesID,
+					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 					"    using geneMap:  ", RP_altGeneMapLabel)
 			pngFile <- file.path( RP_path, paste( RP_prefix, RP_altGeneMapLabel, 
 					"Cluster", funcName[i], "png", sep="."))
@@ -315,7 +315,7 @@
 
 	    # PCA plot too...
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
-				"\nTranscriptomes for species:   ", speciesID)
+				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 		pngFile <- file.path( RP_path, paste( RP_prefix,"PCA.png",sep="."))
 		#matrix.PCAplot.family( tm, filename=pngFile, main=plotText, FUN=png, nPC=4, col=RR_colors)
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
