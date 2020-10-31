@@ -103,7 +103,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	# visit each MAR, and assess
 	cat( "\nAssessing MARs..\n")
 	idFac <- factor( out$name)
-	productText <- geneText <- nAlign <- vector()
+	seqText <- productText <- geneText <- nAlign <- vector()
 	nout <- 0
 	tapply( 1:nrow(out), idFac, function(x) { 
 		nout <<- nout + 1
@@ -115,6 +115,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 		}
 		geneText[nout] <<- paste( geneSet, collapse="; ")
 		productText[nout] <<- paste( unique.default(out$PRODUCT[x]), collapse="; ")
+		seqText[nout] <<- paste( unique.default(out$SEQ_ID[x]), collapse="; ")
 		return(NULL)
 	})
 	cat( "  Done.\n")
@@ -125,12 +126,14 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	geneCnt <- tapply( geneText, gTextFac, length)
 	geneTbl <- tapply( geneText, gTextFac, function(x) x[1])
 	productTbl <- tapply( productText, gTextFac, function(x) x[1])
+	seqTbl <- tapply( seqText, gTextFac, function(x) x[1])
 	alignPerTbl <- tapply( nAlign, gTextFac, function(x) round( sum(x)/length(x), digits=2))
 	genePcts <- round( geneCnt * 100 / sum(geneCnt), digits=2)
 
 	out <- data.frame( "N_Reads"=as.vector(geneCnt), "Pct_Reads"=as.vector(genePcts), 
-			"AlignsPerRead"= alignPerTbl, "GeneList"=as.vector(geneTbl), 
-			"ProductList"=as.vector(productTbl), stringsAsFactors=F)
+			"AlignsPerRead"= alignPerTbl, "SeqList"=as.vector(seqTbl),
+			"GeneList"=as.vector(geneTbl), "ProductList"=as.vector(productTbl), 
+			stringsAsFactors=F)
 	ord <- order( out$N_Reads, decreasing=T)
 	out <- out[ ord, ]
 	rownames(out) <- 1:nrow(out)
