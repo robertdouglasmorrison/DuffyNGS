@@ -63,6 +63,9 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	nreads <- 0
 	cat( "\nScanning BAM file for MAR alignments..\n")
 
+	WHICH <- base::which
+	PASTE <- base::PASTE
+
 	repeat {
 		if ( !is.null( maxAlignments) && nreads >= maxAlignments) break
 		chunk <- getNextChunk( reader, n=chunkSize)
@@ -73,7 +76,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 		pos <- thisDF$position
 		sid <- refID2seqID( refid, reader=reader, refData=refData)
 	
-		hitTarget <- which( sid == seqID & pos >= start & pos <= stop)
+		hitTarget <- WHICH( sid == seqID & pos >= start & pos <= stop)
 		if ( length(hitTarget) < 1) {
 			cat(".")
 			next
@@ -82,7 +85,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 		# we got at least one read in this region
 		myRIDs <- thisDF$name[ hitTarget]
 		# keep all the alignments that have these readIDs
-		keep <- which( thisDF$name %in% myRIDs)
+		keep <- WHICH( thisDF$name %in% myRIDs)
 		smlDF <- thisDF[ keep, ]
 		smlSID <- sid[ keep]
 		out <- rbind( out, cbind( "SEQ_ID"=smlSID, smlDF[,c(1:5,8,9)], stringsAsFactors=FALSE))
@@ -96,7 +99,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	out$PRODUCT <- gene2ProductAllSpecies(ans$GENE_ID)
 	isblank <- which( out$PRODUCT == "")
 	out$PRODUCT[isblank] <- out$GENE_ID[isblank]
-	if ( short.gene.names) out$GENEI_ID <- shortGeneName( out$GENEI_ID, keep=1)
+	if ( short.gene.names) out$GENE_ID <- shortGeneName( out$GENE_ID, keep=1)
 	out <- out[ order( out$SEQ_ID, out$position), ]
 	rownames(out) <- 1:nrow(out)
 
@@ -113,9 +116,9 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 			geneSet <- unique.default( geneSet)
 			nAlign[nout] <<- length(geneSet)
 		}
-		geneText[nout] <<- paste( geneSet, collapse="; ")
-		productText[nout] <<- paste( unique.default(out$PRODUCT[x]), collapse="; ")
-		seqText[nout] <<- paste( unique.default(out$SEQ_ID[x]), collapse="; ")
+		geneText[nout] <<- PASTE( geneSet, collapse="; ")
+		productText[nout] <<- PASTE( unique.default(out$PRODUCT[x]), collapse="; ")
+		seqText[nout] <<- PASTE( unique.default(out$SEQ_ID[x]), collapse="; ")
 		return(NULL)
 	})
 	cat( "  Done.\n")
