@@ -2,12 +2,13 @@
 
 pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, speciesID=getCurrentSpecies(),
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				results.path=NULL, maxAlignments=NULL, mode=c("genomic","riboClear")) {
+				results.path=NULL, maxAlignments=NULL, mode=c("genomic","riboClear"),
+				short.gene.names=TRUE) {
 				
 	# make sure we can see all species we aligned against
 	setCurrentTarget( optionsFile=optionsFile)
 	speciesSet <- getCurrentTargetSpecies()
-	if (speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+	setCurrentSpecies( speciesID)
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -16,7 +17,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	}
 
 	# which BAM file depends on the mode
-	mode <= match.arg( mode)
+	mode <- match.arg( mode)
 	if ( mode == "genomic") {
 		bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 	} else {
@@ -107,6 +108,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 		nout <<- nout + 1
 		nAlign[nout] <<- length(x)
 		geneSet <- out$GENE_ID[x]
+		if ( short.gene.names) geneSet <- shortGeneName( geneSet, keep=1)
 		if (pairedEnd) {
 			geneSet <- unique.default( geneSet)
 			nAlign[nout] <<- length(geneSet)
