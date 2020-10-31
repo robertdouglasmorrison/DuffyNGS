@@ -96,6 +96,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	out$PRODUCT <- gene2ProductAllSpecies(ans$GENE_ID)
 	isblank <- which( out$PRODUCT == "")
 	out$PRODUCT[isblank] <- out$GENE_ID[isblank]
+	if ( short.gene.names) out$GENEI_ID <- shortGeneName( out$GENEI_ID, keep=1)
 	out <- out[ order( out$SEQ_ID, out$position), ]
 	rownames(out) <- 1:nrow(out)
 
@@ -108,7 +109,6 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 		nout <<- nout + 1
 		nAlign[nout] <<- length(x)
 		geneSet <- out$GENE_ID[x]
-		if ( short.gene.names) geneSet <- shortGeneName( geneSet, keep=1)
 		if (pairedEnd) {
 			geneSet <- unique.default( geneSet)
 			nAlign[nout] <<- length(geneSet)
