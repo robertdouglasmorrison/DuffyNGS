@@ -64,7 +64,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	cat( "\nScanning BAM file for MAR alignments..\n")
 
 	WHICH <- base::which
-	PASTE <- base::PASTE
+	PASTE <- base::paste
 
 	repeat {
 		if ( !is.null( maxAlignments) && nreads >= maxAlignments) break
@@ -130,8 +130,8 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	geneTbl <- tapply( geneText, gTextFac, function(x) x[1])
 	productTbl <- tapply( productText, gTextFac, function(x) x[1])
 	seqTbl <- tapply( seqText, gTextFac, function(x) x[1])
-	alignPerTbl <- tapply( nAlign, gTextFac, function(x) round( sum(x)/length(x), digits=2))
-	genePcts <- round( geneCnt * 100 / sum(geneCnt), digits=2)
+	alignPerTbl <- tapply( nAlign, gTextFac, function(x) round( sum(x)/length(x), digits=1))
+	genePcts <- round( geneCnt * 100 / sum(geneCnt), digits=3)
 
 	out <- data.frame( "N_Reads"=as.vector(geneCnt), "Pct_Reads"=as.vector(genePcts), 
 			"AlignsPerRead"= alignPerTbl, "SeqList"=as.vector(seqTbl),
