@@ -1,19 +1,30 @@
 # pipe.MARsurvey.R
 
-pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
+pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, speciesID=getCurrentSpecies(),
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				results.path=NULL, maxAlignments=NULL) {
+				results.path=NULL, maxAlignments=NULL, mode=c("genomic","riboClear")) {
 				
+	# make sure we can see all species we aligned against
+	setCurrentTarget( optionsFile=optionsFile)
+	speciesSet <- getCurrentTargetSpecies()
+	if (speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
 
-	bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
+	# which BAM file depends on the mode
+	mode <= match.arg( mode)
+	if ( mode == "genomic") {
+		bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
+	} else {
+		bamfile <- file.path( results.path, "riboClear", paste( sampleID, "ribo.converted.bam", sep="."))
+	}
 	if ( ! file.exists( bamfile)) {
 		cat( "\nUnsorted BAM file not found:  ", bamfile)
-		cat( "\nMAR alignments only detectable via unsorted BAM file...")
+		cat( "\nMAR alignments only detectable from pre-sorted BAM file...")
 		return(NULL)
 	}
 
@@ -81,7 +92,7 @@ pipe.MARsurvey <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=
 	# augment these alignments with annotation facts
 	ans <- fastSP2GP( seqid=out$SEQ_ID, seqbase=out$position)
 	out$GENE_ID <- ans$GENE_ID
-	out$PRODUCT <- gene2Product(ans$GENE_ID)
+	out$PRODUCT <- gene2ProductAllSpecies(ans$GENE_ID)
 	isblank <- which( out$PRODUCT == "")
 	out$PRODUCT[isblank] <- out$GENE_ID[isblank]
 	out <- out[ order( out$SEQ_ID, out$position), ]
