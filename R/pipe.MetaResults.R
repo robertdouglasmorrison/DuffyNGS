@@ -267,7 +267,7 @@
 			fset <- dir( pathFrom, pattern="(Cluster|PCA).+png$", full.name=T)
 			if ( length(fset)) {
 				fout <- file.path( metaPath, basename(fset))
-				file.copy( fset, fout, overwrite=T, copy.date=T)
+				file.copy( fset, fout, overwrite=T)
 			}
 			if (verbose) cat( "  ", folder)
 		}
