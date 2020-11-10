@@ -21,7 +21,7 @@
 	
 	# make folders for all results...
 	if ( is.null( results.path)) {
-		resultsPath <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	}
 	cat( "\n")
 	subfolders <- c( "align", "fastq", "html", "ratios", "riboClear", "splicing", "summary", 
@@ -33,7 +33,7 @@
 
 	ndone <- 0
 	for ( folder in subfolders) {
-		thisFolder <- file.path( resultsPath, folder)
+		thisFolder <- file.path( results.path, folder)
 
 		# find all files that start with this ID
 		files <- dir( thisFolder, pattern=paste( "^", sampleID, sep=""), full.name=TRUE)
@@ -106,7 +106,7 @@
 }
 
 
-renameFileContents <- function( newfile, sampleID, newSampleID) {
+`renameFileContents` <- function( newfile, sampleID, newSampleID) {
 
 	# only a few file types can should get their content adjusted
 	doText <- FALSE
@@ -144,5 +144,73 @@ renameFileContents <- function( newfile, sampleID, newSampleID) {
 		save( wiggles, file=newfile)
 		return()
 	}
-
 }
+
+
+`pipe.ResetWIGpath` <- function( sampleID, results.path=NULL, annotationFile="Annotation.txt", 
+				optionsFile="Options.txt", verbose=TRUE) {
+
+	if (verbose) {
+		cat( verboseOutputDivider)
+		cat( "\nRenaming WIG file paths for sample:     ", sampleID)
+	}
+
+	# get folder for WIG results...
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	wigFolder <- file.path( results.path, "wig")
+
+	# find all files that start with this ID
+	nDone <- 0
+	files <- dir( wigFolder, pattern=paste( "^", sampleID, ".+.WIG.rda$", sep=""), full.name=TRUE)
+	for ( f in files) {
+		if ( file.info(f)$isdir) next
+		resetWIGpaths( f)
+		nDone <- nDone + 1
+	}
+
+	# repeat this pass, watching for directories of subfolders for this sample
+	# the subfolders are just wiggle chunks, with no info overhead.  Ignore them
+	return( nDone)
+
+	# files <- dir( wigFolder, pattern=paste( "^", sampleID, sep=""), full.name=TRUE)
+	# for ( f in files) {
+	# 	if ( ! file.info(f)$isdir) next
+	# 	subfiles <- dir( f, pattern=paste( "^", sampleID, ".+.WIG.rda$", sep=""), full.name=TRUE)
+	# 	for ( subf in subfiles) {
+	# 		resetWIGpaths( subf)
+	# 	nDone <- nDone + 1
+	# 	}
+	# }
+	# return( nDone)
+}
+
+
+`resetWIGpaths` <- function( f) {
+
+	doWIG <- FALSE
+	if (regexpr( "\\.WIG.rda$", f) > 0) doWIG <- TRUE
+	if (doWIG) {
+		who <- load( f)
+		if( who != "wiggles") return()
+		myInfo <- wiggles$Info
+		if (is.null( myInfo)) return()
+		mySubFolder <- wiggles$SubWigFolder
+		if (is.null( mySubFolder)) return()
+		cat( "\nResetting path in WIG file: ", basename(f))
+
+		myID <- basename( mySubFolder)
+		myOldPath <- sub( paste( "/wig/", myID, ".*", sep=""), "", mySubFolder)
+		myNewPath <- sub( "/wig$", "", dirname(f))
+
+		myInfo$FileName <- gsub( myOldPath, myNewPath, myInfo$FileName)
+		myNewSubFolder <- gsub( myOldPath, myNewPath, mySubFolder)
+		wiggles$Info <- myInfo
+		wiggles$SubWigFolder <- myNewSubFolder
+
+		save( wiggles, file=f)
+	}
+	return()
+}
+

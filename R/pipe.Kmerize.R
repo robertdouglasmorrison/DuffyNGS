@@ -177,7 +177,7 @@
 }
 
 
-`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet) {
+`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPB")) {
 
 	# just just the samples asked for
 	where <- match( sampleIDset, colnames(kmerTbl))
@@ -195,8 +195,13 @@
 	print( table( groupSet))
 	
 	# convert everything to normalized unit
-	cat( "\nConverting to LKPM (Log2 Kmers Per Billion)..")
-	lkpbTbl <- as.LKPB( kmerTbl)
+	normalize <- match.arg( normalize)
+	if ( normalize == "LKPB") {
+		cat( "\nConverting to LKPM (Log2 Kmers Per Billion)..")
+		normTbl <- as.LKPB( kmerTbl)
+	} else {
+		normTbl <- kmerTbl
+	}
 	
 	# we are now ready to do tests per Kmer
 	cat( "\nRunning Linear Models on ", NR, " Kmers..\n")
@@ -204,7 +209,7 @@
 	avg <- matrix( 0, 2, NR)
 	rownames(avg) <- paste( "Avg", grpLvls, sep="_")
 	for ( i in 1:NR) {
-		v <- lkpbTbl[ i, ]
+		v <- normTbl[ i, ]
 		#ans <- lm( v ~ grpFac)
 		#ans2 <- summary(ans)
 		#cf <- coef(ans2)
@@ -228,52 +233,47 @@
 }
 
 
-`pipe.KmerAlignToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE) {
+`pipe.KmerAlignToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE, verbose=!quiet) {
 
 	# map some Kmers onto the reference genome
 	N <- length( kmers)
 	
-	# make a temp FASTA file
+	# make a temp FASTA file from the Kmer sequences
 	kmerIDs <- paste( "Kmer", 1:N, sep="_")
 	kmerFastaFile <- "Temp.Kmers.BowtieInput.fasta"
 	writeFasta( as.Fasta( kmerIDs, kmers), kmerFastaFile)
-	kmerBowtieResultFile <- "Temp.Kmers.BowtieResult.bam"
+	kmerBamFile <- "Temp.Kmers.BowtieOutput.bam"
 	
 	# build a call to Bowtie2
-	optT <- readOptionsTable( optionsFile)
-	# force the look at options file to initialize bowtie.
-	bowtie2Par.defaults( optionsFile, verbose=FALSE)
-	## build the Bowtie alignment program's command line
-	progName <- getOptionValue( optT, "bowtie2Program", verbose=FALSE)
-	cmdline <- progName
-	# next is "input options" using FASTA instead of default FASTQ
-	cmdLine <- mypaste( cmdLine, "-a")
-	# next is explicit alignment policy
-	cmdLine <- mypaste( cmdLine, " --very-sensitive ")
-	if ( quiet) cmdLine <- mypaste( cmdLine, " --quiet")
-	# when not catching the unaligned, allow explicit throw-away of unaligned
-	cmdLine <- mypaste( cmdLine, " --no-unal ")
-	# next is threads
-	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=FALSE))
-	cmdLine <- mypaste( cmdLine, " --threads", nCores)
-	# the index
-	index.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=FALSE)
-	alignIndex <- getOptionValue( optT, "GenomicIndex", verbose=F)
-	myIndexFile <- file.path( index.path, alignIndex)
-	# test to see that a file is really there...
-	if ( ! file.exists(  mypaste( myIndexFile, ".1.bt2", sep=""))) {
-	    # new long indexex are possible
-	    if ( ! file.exists(  mypaste( myIndexFile, ".1.bt2l", sep=""))) {
-		stop( paste( "Bowtie2 index Path and/or File not found. \n", "Filename as given:  ", myIndexFile))
-	    }
+	ans <- kmerCallBowtie( kmerFastaFile, kmerBamFile, optionsFile=optionsFile, quiet=quiet, verbose=verbose)
+	
+	# read up the BAM file contents to extract what we need
+	ans2 <- kmerReadBam( kmerBamFile, verbose=verbose)
+	
+	# force the results to match the input order
+	wh <- match( kmers, ans2$Kmer)
+	out <- ans2[ wh, ]
+	
+	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
+	aaPos <- rep.int( NA, N)
+	aaFrag <- rep.int( "", N)
+	geneHits <- setdiff( 1:N, grep( "(ng)", out$GENE_ID, fixed=T)) 
+	if (verbose) cat( "\nMapping Kmer Gene hits to AA location and fragment seqs..\n")
+	for (j in geneHits) {
+		if ( any( is.na( c( out$SEQ_ID[j], out$POSITION[j])))) next
+		smlAns <- convertGenomicDNApositionToAAposition( out$SEQ_ID[j], out$POSITION[j])
+		aaPos[j] <- smlAns$AA_POSITION
+		if ( is.na( aaPos[j])) next
+		if ( is.na( out$STRAND[j])) next
+		readFrame <- if ( out$STRAND[j] == "+") 1:3 else if (out$STRAND[j] == "-") 4:6 else 1:6
+		aaFrag[j] <- DNAtoBestPeptide( out$Kmer[j], clip=F, readingFrame=readFrame)
+		if (verbose && j %% 100 == 0) cat( "\r", j, out$GENE_ID[j], aaPos[j], aaFrag[j])
 	}
-	cmdLine <- mypaste( cmdLine, " -x", myIndexFile)
-	# the input file
-	cmdLine <- mypaste( cmdLine, " -U", kmerFastaFile)
-	# lastly, the output destination
-	outputTerm <- paste ( " | samtools view -bS -o", kmerBowtieResultFile, " - ")
-	cmdLine <- mypaste( cmdLine, outputTerm, sep="  ")
-	callBowtie2( cmdLine, verbose=verbose)
+	
+	out$AA_POSITION <- aaPos
+	out$PROTEIN_FRAGMENT <- aaFrag
+	
+	return( out)
 }
 
 
@@ -523,4 +523,137 @@ as.LKPB <- function( kmerTbl) {
 		lkpbTbl[ , i] <- myLKPB
 	}
 	return( lkpbTbl)
+}
+
+
+kmerCallBowtie <- function( kmerFastaFile, kmerBamFile, optionsFile="Options.txt", quiet=T, verbose=F) {
+
+	
+	optT <- readOptionsTable( optionsFile)
+	# force the look at options file to initialize bowtie.
+	bowtie2Par.defaults( optionsFile, verbose=FALSE)
+	## build the Bowtie alignment program's command line
+	progName <- getOptionValue( optT, "bowtie2Program", verbose=FALSE)
+	cmdLine <- progName
+	
+	# next is "input options" using FASTA instead of default FASTQ
+	cmdLine <- paste( cmdLine, " -f")
+	# we can know if a Kmer is unique or not by asking for up to 2 alignments
+	cmdLine <- paste( cmdLine, " -k 2")
+	# next is explicit alignment policy
+	cmdLine <- paste( cmdLine, " --very-sensitive")
+	if ( quiet) cmdLine <- paste( cmdLine, " --quiet")
+	# when not catching the unaligned, allow explicit throw-away of unaligned
+	cmdLine <- paste( cmdLine, " --no-unal")
+	# next is threads
+	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=FALSE))
+	cmdLine <- paste( cmdLine, " --threads", nCores)
+	
+	# the index
+	index.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=FALSE)
+	alignIndex <- getOptionValue( optT, "GenomicIndex", verbose=F)
+	myIndexFile <- file.path( index.path, alignIndex)
+	# test to see that a file is really there...
+	if ( ! file.exists(  paste( myIndexFile, ".1.bt2", sep=""))) {
+	    # new long indexex are possible
+	    if ( ! file.exists(  paste( myIndexFile, ".1.bt2l", sep=""))) {
+		stop( paste( "Bowtie2 index Path and/or File not found. \n", "Filename as given:  ", myIndexFile))
+	    }
+	}
+	cmdLine <- paste( cmdLine, " -x", myIndexFile)
+	# the input file
+	cmdLine <- paste( cmdLine, " -U", kmerFastaFile)
+	
+	# lastly, the output destination
+	outputTerm <- paste ( " | samtools view -bS -o", kmerBamFile, " - ")
+	cmdLine <- paste( cmdLine, outputTerm, sep="  ")
+	
+	#OK, now ready to cal Bowtie
+	return( callBowtie2( cmdLine, verbose=verbose))
+}
+
+
+kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
+
+
+	# set up to read the BAM file in chunks
+	con <- bamReader( kmerBamFile)
+	refData <- getRefData( con)
+	
+	kmerOut <- sidOut <- posOut <- gidOut <- strandOut <- uniqOut <- vector()
+	nOut <- 0
+	
+	# read in the alignment file one buffer at a time
+	hasMore <- TRUE
+	nReads <- 0
+	repeat {
+		if ( ! hasMore) break
+		if (verbose) cat( "\nReadBAM..")
+		chunk <- getNextChunk( con, n=chunkSize, alignedOnly=TRUE)
+		nNow <- size(chunk)
+		if ( nNow < 1) break
+		if ( nNow < chunkSize) hasMore <- FALSE
+		nReads <- nReads + nNow
+		if (verbose) cat( "  N_Kmers: ", prettyNum( as.integer( nReads), big.mark=","))
+
+		# convert the refID to a SeqID to figure the gene locations
+		if (verbose) cat( "  geneIDs..")
+		seqIDs <- refID2seqID( refID( chunk), refData=refData)
+		positions <- position( chunk)
+		kmerSeq <- readSeq( chunk)
+		lens <- nchar( kmerSeq)
+		middles <- positions + round( lens/2)
+		ans <- fastSP2GP( seqIDs, middles)
+		geneIDs <- ans$GENE_ID
+		
+		# also get the strand hit
+		strand <- ! reverseStrand( chunk)
+		
+		# and a yes/no call about who had 2+ alignments
+		isDup <- duplicated( kmerSeq)
+		if (any( isDup)) {
+			# we only keep one copy of each
+			dupSeqs <- kmerSeq[isDup]
+			keep <- which( ! isDup)
+			kmerSeq <- kmerSeq[keep]
+			seqIDs <- seqIDs[keep]
+			middles <- middles[keep]
+			geneIDs <- geneIDs[keep]
+			strand <- strand[keep]
+			nNow <- length(keep)
+			uniq <- rep.int(TRUE,nNow)
+			notUniq <- which( kmerSeq %in% dupSeqs)
+			uniq[notUniq] <- FALSE
+		}
+		
+		# save what we need to send back
+		now <- (nOut+1) : (nOut+nNow)
+		kmerOut[now] <- kmerSeq
+		sidOut[now] <- seqIDs
+		posOut[now] <- middles
+		gidOut[now] <- geneIDs
+		strandOut[now] <- ifelse( strand, "+", "-")
+		uniqOut[now] <- uniq
+		nOut <- nOut + nNow
+
+	} # end of each buffer...
+
+	bamClose( con)
+	
+	# package up what we send back
+	out <- data.frame( "Kmer"=kmerOut, "UNIQUE"=uniqOut, "SEQ_ID"=sidOut, "POSITION"=posOut,  
+					"GENE_ID"=gidOut, "STRAND"=strandOut, stringsAsFactors=F)
+	if ( nOut) {
+		# because of the way we worked in buffers, there is a tiny chance of duplicates.  Check explicitly once more.
+		dups <- duplicated( out$Kmer)
+		if (any( dups)) {
+			isDup <- which( dups)
+			dupSeqs <- out$Kmer[ isDup]
+			out <- out[ -isDup, ]
+			where <- match( unique.default(dupSeqs), out$Kmer)
+			out$UNIQUE[ where] <- FALSE
+		}
+		rownames(out) <- 1:nrow(out)
+	}
+	return( out)
 }
