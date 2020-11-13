@@ -60,9 +60,12 @@
 	startT <- proc.time()
 
 	nReadsIn <- nDistinctKmers <- nTotalKmers <- 0
-	bigKmerTable <- vector()
 	nFiles <- length( filesToDo)
 	kmer.size <- as.integer( kmer.size)
+
+	# let's try refactoring how we do this, to minimize memory usage
+	# use one GLOBAL table, and just extend as needed
+	bigKmerTable <<- vector()
 
 	cat( "\nN_Files to Kmerize: ", nFiles, "\n")
 	for ( i in 1:nFiles) {
@@ -70,16 +73,6 @@
 					sampleID=sampleID, kmer.path=kmer.path, 
 					maxReads=maxReads, min.count=min.count)
 		nReadsNow <- ans$nReadsIn
-		if ( i == 1) {
-			bigKmerTable <- ans$Kmer.Table
-		} else {
-			cat( "  merge..")
-			bigKmerTable <- mergeTables( bigKmerTable, ans$Kmer.Table)
-	
-			cat( "  redo RevComp check..")
-			bigKmerTable <- kmerRevComp.1Dtable( bigKmerTable, sampleID=sampleID, 
-							kmer.path=kmer.path, kmer.size=kmer.size)
-		}
 
 		cat( "  save..")
 		save( bigKmerTable, file=outfile)
@@ -95,7 +88,7 @@
 	}
 
 	# now do the cleanup...
-	rm( bigKmerTable, ans)
+	rm( bigKmerTable, ans, inherits=T)
 	gc()
 
 	cat( verboseOutputDivider)
@@ -292,7 +285,7 @@
 	nread <- 0
 	hasMore <- TRUE
 	firstPass <- TRUE
-	bigTable <- vector()
+	#bigTable <- vector()
 
 	repeat {
 		if ( ! hasMore) break
@@ -311,30 +304,50 @@
 
 		smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size)
 
-		if ( ! length(bigTable)) {
-			bigTable <- smlTable
+		# do the merge in place in GLOBAL storage
+		if ( ! length(bigKmerTable)) {
+			bigKmerTable <<- smlTable
 		} else {
-			cat( "  merge..")
-			bigTable <- mergeTables( bigTable, smlTable)
+			cat( "  join..")
+			where <- match( names(smlTable), names(bigKmerTable), nomatch=0)
+			yesNo <- (where > 0)
+			hitsTo <- where[ yesNo]
+			cntsWas <- as.vector( bigKmerTable[ hitsTo])
+			cntsNew <- smlTable[ yesNo]
+			bigKmerTable[ hitsTo] <<- cntsWas + cntsNew
+			cat( "  extend..")
+			newFrom <- which( ! yesNo)
+			lenNew <- length( newFrom)
+			lenWas <- length( bigKmerTable)
+			length(bigKmerTable) <<- lenWas + lenNew
+			newTo <- (lenWas+1) : (lenWas+lenNew)
+			bigKmerTable[ newTo] <<- as.vector( smlTable[ newFrom])
+			names(bigKmerTable)[ newTo] <<- names( smlTable)[ newFrom]
 		}
-		cat( "  N_Kmer:", length( bigTable))
+		cat( "  N_Kmer:", length( bigKmerTable))
 	}
 	rm( smlTable)
 
 	# any K-mers with too few observations are not to be kept
-	tooFew <- which( bigTable < min.count)
+	tooFew <- which( bigKmerTable < min.count)
 	if ( length( tooFew)) {
 		cat( "\n  Drop if count < ", min.count, " (N=", length(tooFew), ")", sep="")
-		bigTable <- bigTable[ -tooFew]
-		cat( "  N_Kmer:", length( bigTable))
+		tmpTable <- bigKmerTable[ -tooFew]
+		rm( bigKmerTable, inherits=T)
+		gc()
+		bigKmerTable <<- tmpTable
+		rm( tmpTable, tooFew)
+		gc()
+		cat( "  N_Kmer:", length( bigKmerTable))
 	}
 	
 	# also do any RevComp resolving now too
 	cat( "\nSearch for RevComp pairs to join..")
-	bigTable <- kmerRevComp.1Dtable( bigTable, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
-	cat( "  N_Kmer:", length( bigTable))
+	kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	cat( "  N_Kmer:", length( bigKmerTable))
 
-	return( list( "nReadsIn"=nread, "Kmer.Table"=bigTable))
+	#return( list( "nReadsIn"=nread, "Kmer.Table"=bigTable))
+	return( list( "nReadsIn"=nread))
 }
 
 
@@ -392,19 +405,15 @@
 }
 
 
-`kmerRevComp.1Dtable` <- function( kmerTable, sampleID="SampleID", kmer.path=".", kmer.size=33) {
+`kmerRevComp.file` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
 
 	# the Kmers may be from both strands, and we only want to keep one form of each
 	# so merge those where both are present
 	
 	# allow being given a saved file
-	isFile <- FALSE
-	if ( !is.table( kmerTable) && length(kmerTable) == 1 && is.character(kmerTable) && grepl( "\\.rda$", kmerTable)) {
-		kmerFile <- kmerTable
-		load( kmerTable)
-		kmerTable <- bigKmerTable
-		isFile <- TRUE
-	}
+	load( kmerFile)
+	kmerTable <- bigKmerTable
+	isFile <- TRUE
 	
 	kmers <- names( kmerTable)
 	cnts <- as.numeric( kmerTable)
@@ -447,14 +456,69 @@
 	cat( "  Pct Reduction: ", round( (N-Nout) * 100 / N), "%")
 
 	# done
-	if (isFile) {
-		bigKmerTable <- out
-		cat( "  re-saving Kmers file..")
-		save( bigKmerTable, file=kmerFile)
-		return( kmerFile)
-	} else {
-		return( out)
+	bigKmerTable <- out
+	cat( "  re-saving Kmers file..")
+	save( bigKmerTable, file=kmerFile)
+	return( kmerFile)
+}
+
+
+`kmerRevComp.GlobalTable` <- function( sampleID="SampleID", kmer.path=".", kmer.size=33) {
+
+	# the Kmers may be from both strands, and we only want to keep one form of each
+	# so merge those where both are present
+	
+	# faster memory efficient to operate on one global vector
+	kmers <- names( bigKmerTable)
+	cnts <- as.vector( bigKmerTable)
+	N <- length(bigKmerTable)
+	cat( "\nN_Kmers in: ", N)
+
+	rm( bigKmerTable, inherits=T)
+	gc()
+
+	# see what the RevComp of every Kmer is
+	rcKmer <- findKmerRevComp( kmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	
+	# then see if those Rev Comps are already in the table
+	cat( "\nLocate RevComp pairs..")
+	where <- match( rcKmer, kmers, nomatch=0)
+
+	# we will make a new 1-D table that has just the first form of each Kmer
+	# we can combine those that have both forms
+	cat( "  join..")
+	out <- rep.int( 0, N)
+	hasRC <- which( where > 0)
+	if ( length(hasRC)) {
+		myLoc <- (1:N)[hasRC]
+		rcLoc <- where[hasRC]
+		firstLoc <- pmin( myLoc, rcLoc)
+		out[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
+		names(out)[firstLoc] <- kmers[firstLoc]
+		rm( myLoc, rcLoc)
 	}
+
+	# then those without their RevComp just stay as is
+	noRC <- which( where == 0)
+	if ( length(noRC)) {
+		out[noRC] <- cnts[noRC]
+		names(out)[noRC] <- kmers[noRC]
+	}
+
+	# lastly thown away the empty slots
+	drops <- which( out == 0)
+	if ( length( drops)) out <- out[ -drops]
+	Nout <- length(out)
+	cat( "\nN_Kmers out: ", Nout)
+	
+	cat( "  Pct Reduction: ", round( (N-Nout) * 100 / N), "%")
+
+	# done
+	bigKmerTable <<- out
+
+	rm( out, kmers, cnts, hasRC, noRC, drops)
+	gc() 
+	return( length( bigKmerTable))
 }
 
 
@@ -487,6 +551,8 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		where2 <- match( kmers[toTest], xref$RevComp, nomatch=0)
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
 		cat( "  N_Found=", sum(where1 > 0 | where2 > 0))
+		rm( xref, toTest, where1, where2)
+		gc()
 	    }
 	}
 	
@@ -506,6 +572,8 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		cat( "  saving updated RevComp Xref file..")
 		xref <- rbind( xref, smlXref)
 		save( xref, file=myKmerXrefFile)
+		rm( xref, rcKmer, smlXref, toCalc)
+		gc()
 	}
 	return( out)
 }
@@ -588,7 +656,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	nReads <- 0
 	repeat {
 		if ( ! hasMore) break
-		if (verbose) cat( "\nReadBAM..")
+		if (verbose) cat( "\rReadBAM..")
 		chunk <- getNextChunk( con, n=chunkSize, alignedOnly=TRUE)
 		nNow <- size(chunk)
 		if ( nNow < 1) break
@@ -637,7 +705,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		nOut <- nOut + nNow
 
 	} # end of each buffer...
-
+	if (verbose) cat("\n")
 	bamClose( con)
 	
 	# package up what we send back
