@@ -309,7 +309,7 @@
 		if ( ! length(bigKmerTable)) {
 			bigKmerTable <<- smlTable
 		} else {
-			cat( "  join..")
+			cat( "  store..")
 			where <- match( names(smlTable), names(bigKmerTable), nomatch=0)
 			yesNo <- (where > 0)
 			hitsTo <- where[ yesNo]
@@ -366,15 +366,18 @@
 
 	# high chance of having duplicates, so only do each one once
 	seqTbl <- TABLE( seqs)
-	seqCounts <- as.numeric( seqTbl)
+	seqCounts <- as.vector( seqTbl)
 	seqs <- names( seqTbl)
 	nSeq <- length( seqs)
+	seqLens <- base::nchar( seqs)
+	rm( seqTbl)
 
-	kmersOut <- vector()
+	# pre-guess a size of output, based on size of input
+	expectNout <- length(seqs) * (max(seqLens) - sizeM1)
+	kmersOut <- vector( mode="character", length=expectNout)
 	nOut <- 0
 
 	# we can save a bit of time by doing all reads of the same length at one time
-	seqLens <- base::nchar( seqs)
 	lenFac <- factor( seqLens)
 	cat( "  ReadLen=")
 	tapply( 1:nSeq, lenFac, function(x) {
@@ -389,11 +392,14 @@
 		nSubstrs <- length( fromSet)
 		for ( j in x) {
 			thisCount <- seqCounts[j]
+			hasN <- grepl( "N", seqs[j], fixed=T)
 			kmer <- SUBSTR( rep.int( seqs[j], nSubstrs), fromSet, toSet)
 			# we only want to keep valid DNA chunks, so discard any 'N's
-			isNNN <- grep( "N", kmer, fixed=T)
-			if ( length(isNNN)) kmer <- kmer[ -isNNN]
-			if ( ! length(kmer)) next
+			if (hasN) {
+				isNNN <- grep( "N", kmer, fixed=T)
+				if ( length(isNNN)) kmer <- kmer[ -isNNN]
+				if ( ! length(kmer)) next
+			}
 			# account for the multiplicity of this read
 			if ( thisCount > 1) kner <- rep.int( kmer, thisCount)
 			n <- length(kmer)
@@ -403,6 +409,9 @@
 		}
 		return(NULL)
 	})
+	# lastly trim size if we over estimated
+	if ( expectNout > nOut) length(kmersOut) <- nOut
+	gc(); gc()
 
 	return( TABLE( kmersOut))
 }
@@ -460,7 +469,7 @@
 
 	# done
 	bigKmerTable <- out
-	cat( "  re-saving Kmers file..")
+	cat( "  re-save Kmers file..")
 	save( bigKmerTable, file=kmerFile)
 	return( kmerFile)
 }
@@ -572,7 +581,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		# but reload this sample's Xref first
 		xref <- data.frame()
 		if ( file.exists( myKmerXrefFile)) load( myKmerXrefFile)
-		cat( "  saving updated RevComp Xref file..")
+		cat( "  save updated RevComp Xref file..")
 		xref <- rbind( xref, smlXref)
 		save( xref, file=myKmerXrefFile)
 		rm( xref, rcKmer, smlXref, toCalc)
