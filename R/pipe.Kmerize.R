@@ -56,7 +56,7 @@
 	# removed any previous results
 	file.delete( outfile)
 
-	gc()
+	gc(); gc()
 	startT <- proc.time()
 
 	nReadsIn <- nDistinctKmers <- nTotalKmers <- 0
@@ -89,7 +89,7 @@
 
 	# now do the cleanup...
 	rm( bigKmerTable, ans, inherits=T)
-	gc()
+	gc(); gc()
 
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
@@ -303,6 +303,7 @@
 		rm( chunk)
 
 		smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size)
+		rm( seqTxt)
 
 		# do the merge in place in GLOBAL storage
 		if ( ! length(bigKmerTable)) {
@@ -325,8 +326,10 @@
 			names(bigKmerTable)[ newTo] <<- names( smlTable)[ newFrom]
 		}
 		cat( "  N_Kmer:", length( bigKmerTable))
+		gc(); gc()
 	}
 	rm( smlTable)
+	gc(); gc()
 
 	# any K-mers with too few observations are not to be kept
 	tooFew <- which( bigKmerTable < min.count)
@@ -337,7 +340,7 @@
 		gc()
 		bigKmerTable <<- tmpTable
 		rm( tmpTable, tooFew)
-		gc()
+		gc(); gc()
 		cat( "  N_Kmer:", length( bigKmerTable))
 	}
 	
@@ -475,7 +478,7 @@
 	cat( "\nN_Kmers in: ", N)
 
 	rm( bigKmerTable, inherits=T)
-	gc()
+	gc(); gc()
 
 	# see what the RevComp of every Kmer is
 	rcKmer <- findKmerRevComp( kmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
@@ -517,7 +520,7 @@
 	bigKmerTable <<- out
 
 	rm( out, kmers, cnts, hasRC, noRC, drops)
-	gc() 
+	gc() ; gc()
 	return( length( bigKmerTable))
 }
 
@@ -552,7 +555,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
 		cat( "  N_Found=", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
-		gc()
+		gc(); gc()
 	    }
 	}
 	
@@ -573,7 +576,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		xref <- rbind( xref, smlXref)
 		save( xref, file=myKmerXrefFile)
 		rm( xref, rcKmer, smlXref, toCalc)
-		gc()
+		gc(); gc()
 	}
 	return( out)
 }
