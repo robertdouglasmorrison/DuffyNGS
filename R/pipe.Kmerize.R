@@ -103,7 +103,7 @@
 
 
 `pipe.KmerTable` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				kmer.size=33, min.count=5) {
+				kmer.size=33, min.count=5, min.samples=2) {
 
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	kmer.path <- file.path( results.path, "Kmers")
@@ -119,65 +119,87 @@
 	if ( NS < 1) return(NULL)
 
 	# we need to build up one giant vector of Kmers
-	allKmers <- vector()
-	cat( "\nFind union of all Kmers..\n")
+	# try to be memory efficient
+	expectNkmers <- NS * 10000000
+	allKmers <- vector( mode="character", length=expectNkmers)
+	nKmers <- 0
+
+	cat( "\nFind union of all Sample Kmers..\n")
 	for ( f in fileSet) {
 		cat( "  load: ", basename(f))
 		load(f)
 		myKmers <- names(bigKmerTable)
-		cat( "  N=", length(myKmers))
-		if ( ! length(allKmers)) {
-			allKmers <- myKmers
+		nNow <- length( myKmers)
+		cat( "  N:", nNow)
+		if ( ! nKmers) {
+			allKmers[1:nNow] <- myKmers
+			nKmers <- nNow
 		} else { 
-			cat( "  combine..")
-			allKmers <- union( allKmers, myKmers)
+			cat( "  lookup..")
+			where <- match( myKmers, allKmers[1:nKmers], nomatch=0)
+			# only add the new ones
+			myKmers <- myKmers[ where == 0]
+			nNow <- length( myKmers)
+			if ( nNow) {
+				cat( "  extend..")
+				now <- (nKmers+1) : (nKmers+nNow)
+				allKmers[now] <- myKmers
+				nKmers <- nKmers + nNow
+			}
+			rm( where)
 		}
+		cat( "  N_Kmer:", nKmers)
 	}
-	cat( "\nRe-sorting.. ")
-	ord <- base::order( allKmers)
-	allKmers <- allKmers[ord]
-	cat( "  N_Kmers = ", NK <- length(allKmers))
+	NK <- nKmers
+	# trim the memory allocation if we need
+	if ( expectNkmers > NK) length(allKmers) <- NK
+	rm( myKmers, bigKmerTable)
+	gc(); gc()
 
+	# now fill the table
+	cat( "\nReloading to fill table..\n")
 	kmerTbl <- matrix( 0, nrow=NK, ncol=NS)
 	colnames(kmerTbl) <- sampleIDset
 	rownames(kmerTbl) <- allKmers
 
-	cat( "\nReloading to fill table..\n")
 	for ( i in 1:NS) {
 		f <- fileSet[i]
 		cat( "  load: ", basename(f))
 		load(f)
 		myKmers <- names(bigKmerTable)
-		myCounts <- as.numeric( bigKmerTable)
+		myCounts <- as.vector( bigKmerTable)
 		cat( "  lookup..")
 		wh <- match( myKmers, allKmers)
 		v <- rep.int(0,NK)
 		cat( "  store..")
 		v[ wh] <- myCounts
 		kmerTbl[ , i] <- v
+		rm( bigKmerTable, myKmers, myCounts, wh)
+		gc()
 	}
 	cat( "\nDone loading.\n")
 	
-	cat( "\nChecking for low coverage Kmers to drop..")
-	rowMax <- apply( kmerTbl, 1, max)
-	drops <- which( rowMax < min.count)
+	cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "Kmers in at least", min.samples, "samples..")
+	nGood <- apply( kmerTbl, 1, function(x) sum( x >= min.count))
+	drops <- which( nGood < min.samples)
 	if ( length(drops)) {
+		cat( "  Removing", length(drops), "Kmers rows..")
 		kmerTbl <- kmerTbl[ -drops, ]
-		cat( "  Removed", length(drops), "Kmers for max count <", min.count)
+		cat( "  N_Kmer: ", nrow(kmerTbl))
 	}
 	
 	return( kmerTbl)
 }
 
 
-`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPB")) {
+`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), n.remove=100) {
 
 	# just just the samples asked for
 	where <- match( sampleIDset, colnames(kmerTbl))
 	if ( any( is.na(where))) stop( "Some SampleIDs not in Kmer table")
-	kmerTbl <- kmerTbl[ , where]
-	NC <- ncol(kmerTbl)
-	NR <- nrow(kmerTbl)
+	useTbl <- kmerTbl[ , where]
+	NC <- ncol(useTbl)
+	NR <- nrow(useTbl)
 	
 	# get our group factors
 	grpFac <- factor( groupSet)
@@ -187,36 +209,35 @@
 	cat( "\nBreakdown by Group:\n")
 	print( table( groupSet))
 	
+	# drop the super high count Kmers
+	if (n.remove > 0) {
+		useTbl <- remove.HighCountKmers( useTbl, n.remove=n.remove)
+		NR <- nrow(useTbl)
+	}
+
 	# convert everything to normalized unit
 	normalize <- match.arg( normalize)
-	if ( normalize == "LKPB") {
-		cat( "\nConverting to LKPM (Log2 Kmers Per Billion)..")
-		normTbl <- as.LKPB( kmerTbl)
-	} else {
-		normTbl <- kmerTbl
+	if ( normalize == "LKPTM") {
+		cat( "\nConverting to LKPTM (Log2 Kmers Per Ten Million)..")
+		useTbl <- as.LKPTM( useTbl)
 	}
 	
 	# we are now ready to do tests per Kmer
-	cat( "\nRunning Linear Models on ", NR, " Kmers..\n")
-	fold <- pval <- vector( length=NR)
+	cat( "\nRunning Linear Model on ", NR, " Kmers..\n")
+	fold <- pval <- vector( mode="numeric", length=NR)
 	avg <- matrix( 0, 2, NR)
 	rownames(avg) <- paste( "Avg", grpLvls, sep="_")
+
 	for ( i in 1:NR) {
-		v <- normTbl[ i, ]
-		#ans <- lm( v ~ grpFac)
-		#ans2 <- summary(ans)
-		#cf <- coef(ans2)
-		#est[i] <- cf[ 2,1]
-		#pval[i] <- cf[ 2,4]
-		#avg[ ,i] <- tapply( v, grpFac, mean)
+		v <- useTbl[ i, ]
 		ans <- t.test( v ~ grpFac)
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
-		if ( i %% 1000 == 0) cat( "\r", i, rownames(kmerTbl)[i], fold[i], pval[i])
+		if ( i %% 10000 == 0) cat( "\r", i, rownames(useTbl)[i], fold[i], pval[i])
 	}
 	
-	out <- data.frame( "Kmer"=rownames(kmerTbl), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+	out <- data.frame( "Kmer"=rownames(useTbl), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
 			stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
@@ -226,7 +247,11 @@
 }
 
 
-`pipe.KmerAlignToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE, verbose=!quiet) {
+`alignKmersToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE, verbose=!quiet) {
+
+	if ( is.data.frame(kmers) && ("Kmer" %in% colnames(kmers))) {
+		kmers <- kmers$Kmer
+	}
 
 	# map some Kmers onto the reference genome
 	N <- length( kmers)
@@ -246,26 +271,41 @@
 	# force the results to match the input order
 	wh <- match( kmers, ans2$Kmer)
 	out <- ans2[ wh, ]
+	return( out)
+}
+
+
+`mapKmersToProteins` <- function( kmerAlignments, verbose=TRUE) {
+
+	# takes the output from 'alignKmersToGenome', and looks up where those sites 
+	# land on proteins
+	if ( ! all( c( "SEQ_ID", "POSITION", "GENE_ID") %in% colnames( kmerAlignments))) {
+		cat( "\nWarning:  expected a data.frame with SEQ_ID, POSITION, GENE_ID columns.")
+		cat( "\nPerhaps run 'alignKmersToGenome()' first...")
+		return( NULL)
+	}
+
+	N <- nrow(kmerAlignments)
 	
 	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
 	aaPos <- rep.int( NA, N)
 	aaFrag <- rep.int( "", N)
-	geneHits <- setdiff( 1:N, grep( "(ng)", out$GENE_ID, fixed=T)) 
+	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
 	if (verbose) cat( "\nMapping Kmer Gene hits to AA location and fragment seqs..\n")
 	for (j in geneHits) {
-		if ( any( is.na( c( out$SEQ_ID[j], out$POSITION[j])))) next
-		smlAns <- convertGenomicDNApositionToAAposition( out$SEQ_ID[j], out$POSITION[j])
+		if ( any( is.na( c( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])))) next
+		smlAns <- convertGenomicDNApositionToAAposition( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])
 		aaPos[j] <- smlAns$AA_POSITION
 		if ( is.na( aaPos[j])) next
-		if ( is.na( out$STRAND[j])) next
-		readFrame <- if ( out$STRAND[j] == "+") 1:3 else if (out$STRAND[j] == "-") 4:6 else 1:6
-		aaFrag[j] <- DNAtoBestPeptide( out$Kmer[j], clip=F, readingFrame=readFrame)
-		if (verbose && j %% 100 == 0) cat( "\r", j, out$GENE_ID[j], aaPos[j], aaFrag[j])
+		if ( is.na( kmerAlignments$STRAND[j])) next
+		readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
+		aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+		if (verbose && j %% 1000 == 0) cat( "\r", j, kmerAlignments$GENE_ID[j], aaPos[j], aaFrag[j])
 	}
 	
+	out <- kmerAlignments
 	out$AA_POSITION <- aaPos
 	out$PROTEIN_FRAGMENT <- aaFrag
-	
 	return( out)
 }
 
@@ -332,9 +372,10 @@
 	gc(); gc()
 
 	# any K-mers with too few observations are not to be kept
+	cat( "\nDrop if count < ", min.count)
 	tooFew <- which( bigKmerTable < min.count)
 	if ( length( tooFew)) {
-		cat( "\n  Drop if count < ", min.count, " (N=", length(tooFew), ")", sep="")
+		cat( "  Found:", length(tooFew))
 		tmpTable <- bigKmerTable[ -tooFew]
 		rm( bigKmerTable, inherits=T)
 		gc()
@@ -347,7 +388,6 @@
 	# also do any RevComp resolving now too
 	cat( "\nSearch for RevComp pairs to join..")
 	kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
-	cat( "  N_Kmer:", length( bigKmerTable))
 
 	#return( list( "nReadsIn"=nread, "Kmer.Table"=bigTable))
 	return( list( "nReadsIn"=nread))
@@ -548,7 +588,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	allKmerXrefFiles <- dir( kmer.path, pattern="Kmer.RevComp.Xref.rda$", full=T)
 	
 	if ( length(allKmerXrefFiles)) {
-	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files..")
+	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files:")
 	    for ( f in allKmerXrefFiles) {
 		xref <- data.frame()
 		status <- tryCatch( load( f), error=function(e) { xref <<- data.frame()})
@@ -562,7 +602,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		out[ toTest[ where1 > 0]] <- xref$RevComp[ where1]
 		where2 <- match( kmers[toTest], xref$RevComp, nomatch=0)
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
-		cat( "  N_Found=", sum(where1 > 0 | where2 > 0))
+		cat( "  found=", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
 		gc(); gc()
 	    }
@@ -571,7 +611,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	# calculate the rest
 	toCalc <- which( out == "")
 	if ( length( toCalc)) {
-		cat( "  calc RevComps.. (N=", length(toCalc), ")", sep="")
+		cat( "  calc RevComps.. N=", length(toCalc), " (", round( length(toCalc)*100/N, digits=1),"%)", sep="")
 		rcKmer <- vapply( kmers[ toCalc], FUN=myReverseComplement, FUN.VALUE="ACGT", USE.NAMES=F)
 		out[ toCalc] <- rcKmer
 	
@@ -591,16 +631,46 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 }
 
 
-as.LKPB <- function( kmerTbl) {
+remove.HighCountKmers <- function( kmerTbl, n.remove=100) {
+
+	# there are some Kmers that are pure noise, like poly-A and ATAT.
+	# allow removal of the super-high count ones, to give a more mornalized distribution
+	# between all samples
+	whoHigh <- vector()
+	n.remove <- min( n.remove, round(nrow(kmerTbl)*0.01))
+
+	for ( i in 1:ncol(kmerTbl)) {
+		ord <- order( kmerTbl[,i], decreasing=T)
+		whoHigh <- c( whoHigh, ord[1:n.remove])
+	}
+	whoHigh <- sort( unique( whoHigh))
+	nDrop <- length(whoHigh)
+
+	mDrop <- kmerTbl[ whoHigh, ]
+	kmerCountDrop <- sum( mDrop)
+	kmerCountIn <- sum( kmerTbl)
+
+	cat( "\nHigh Count Removal flagged", nDrop, "Kmers")
+	cat( "\n  Being ", round( kmerCountDrop * 100 / kmerCountIn, digits=2), "% of all Kmer counts")
+	cat( "\nTop Culprits:\n")
+	n.show <- min( nDrop, 20)
+	print( head( mDrop, n.show))
+
+	out <- kmerTbl[ -whoHigh, ]
+	out
+}
+
+
+as.LKPTM <- function( kmerTbl) {
 
 	kSums <- apply( kmerTbl, 2, sum)
 	NC <- ncol(kmerTbl)
 	lkpbTbl <- kmerTbl
 	for ( i in 1:NC) {
 		myCnts <- kmerTbl[ ,i]
-		myKPB <- myCnts * 1e9 / kSums[i]
-		myLKPB <- round( log2( myKPB + 1), digits=4)
-		lkpbTbl[ , i] <- myLKPB
+		myKPB <- myCnts * 1e7 / kSums[i]
+		myLKPTM <- round( log2( myKPB + 1), digits=4)
+		lkpbTbl[ , i] <- myLKPTM
 	}
 	return( lkpbTbl)
 }
@@ -629,6 +699,9 @@ kmerCallBowtie <- function( kmerFastaFile, kmerBamFile, optionsFile="Options.txt
 	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=FALSE))
 	cmdLine <- paste( cmdLine, " --threads", nCores)
 	
+	# let's use a slightly more lax scoring threshold, to get a few more aligned sites for variant Kmers
+	cmdLine <- paste( cmdLine, " --score-min L,-0.7,-0.7 ")
+
 	# the index
 	index.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=FALSE)
 	alignIndex <- getOptionValue( optT, "GenomicIndex", verbose=F)
