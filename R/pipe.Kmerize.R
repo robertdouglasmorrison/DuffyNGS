@@ -56,7 +56,6 @@
 	# removed any previous results
 	file.delete( outfile)
 
-	gc(); gc()
 	startT <- proc.time()
 
 	nReadsIn <- nDistinctKmers <- nTotalKmers <- 0
@@ -89,7 +88,7 @@
 
 	# now do the cleanup...
 	rm( bigKmerTable, ans, inherits=T)
-	gc(); gc()
+	gc()
 
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
@@ -154,7 +153,7 @@
 	# trim the memory allocation if we need
 	if ( expectNkmers > NK) length(allKmers) <- NK
 	rm( myKmers, bigKmerTable)
-	gc(); gc()
+	gc()
 
 	# now fill the table
 	cat( "\nReloading to fill table..\n")
@@ -291,7 +290,7 @@
 	aaPos <- rep.int( NA, N)
 	aaFrag <- rep.int( "", N)
 	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
-	if (verbose) cat( "\nMapping Kmer Gene hits to AA location and fragment seqs..\n")
+	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and fragment seqs..\n")
 	for (j in geneHits) {
 		if ( any( is.na( c( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])))) next
 		smlAns <- convertGenomicDNApositionToAAposition( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])
@@ -342,7 +341,8 @@
 		cat( "  N_reads: ", prettyNum( as.integer(nread), big.mark=","))
 		rm( chunk)
 
-		smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size)
+		timeStat <- system.time( smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size))
+		cat( "  time(usr,sys)=",timeStat[3],"(",timeStat[1],",",timeStat[2],"}", sep="")
 		rm( seqTxt)
 
 		# do the merge in place in GLOBAL storage
@@ -366,10 +366,9 @@
 			names(bigKmerTable)[ newTo] <<- names( smlTable)[ newFrom]
 		}
 		cat( "  N_Kmer:", length( bigKmerTable))
-		gc(); gc()
+		gc()
 	}
 	rm( smlTable)
-	gc(); gc()
 
 	# any K-mers with too few observations are not to be kept
 	cat( "\nDrop if count < ", min.count)
@@ -378,12 +377,11 @@
 		cat( "  Found:", length(tooFew))
 		tmpTable <- bigKmerTable[ -tooFew]
 		rm( bigKmerTable, inherits=T)
-		gc()
 		bigKmerTable <<- tmpTable
 		rm( tmpTable, tooFew)
-		gc(); gc()
 		cat( "  N_Kmer:", length( bigKmerTable))
 	}
+	gc()
 	
 	# also do any RevComp resolving now too
 	cat( "\nSearch for RevComp pairs to join..")
@@ -398,19 +396,20 @@
 
 	# make Kmers of every raw read in this chunk
 	# set up to get all N-mers for all the sequences in this chunk
-	SAPPLY <- base::sapply
+	LAPPLY <- base::lapply
 	SUBSTR <- base::substr
-	TABLE <- base::table
 
 	sizeM1 <- kmer.size - 1
 
 	# high chance of having duplicates, so only do each one once
-	seqTbl <- TABLE( seqs)
+	seqTbl <- table.nosort( seqs)
 	seqCounts <- as.vector( seqTbl)
 	seqs <- names( seqTbl)
 	nSeq <- length( seqs)
+	cat( "  N_Unique:", nSeq)
 	seqLens <- base::nchar( seqs)
 	rm( seqTbl)
+	gc()
 
 	# pre-guess a size of output, based on size of input
 	expectNout <- length(seqs) * (max(seqLens) - sizeM1)
@@ -430,7 +429,8 @@
 		fromSet <- 1:veryLastStart
 		toSet <- fromSet + sizeM1
 		nSubstrs <- length( fromSet)
-		for ( j in x) {
+		#for ( j in x) {
+		LAPPLY( x, function(j) {
 			thisCount <- seqCounts[j]
 			hasN <- grepl( "N", seqs[j], fixed=T)
 			kmer <- SUBSTR( rep.int( seqs[j], nSubstrs), fromSet, toSet)
@@ -438,22 +438,28 @@
 			if (hasN) {
 				isNNN <- grep( "N", kmer, fixed=T)
 				if ( length(isNNN)) kmer <- kmer[ -isNNN]
-				if ( ! length(kmer)) next
+				if ( ! length(kmer)) return(NULL)  #next
 			}
 			# account for the multiplicity of this read
 			if ( thisCount > 1) kner <- rep.int( kmer, thisCount)
 			n <- length(kmer)
 			now <- (nOut+1) : (nOut+n)
+			if ( nOut+n > length(kmersOut)) {
+				cat( "  MemRealloc..")
+				length(kmersOut) <<- (expectNout <<- expectNout + 1000000)
+			}
 			kmersOut[now] <<- kmer
 			nOut <<- nOut + n
-		}
+			return(NULL)
+		})
 		return(NULL)
 	})
 	# lastly trim size if we over estimated
 	if ( expectNout > nOut) length(kmersOut) <- nOut
-	gc(); gc()
+	gc()
 
-	return( TABLE( kmersOut))
+	cat( "  Tablulate..")
+	return( table.nosort( kmersOut))
 }
 
 
@@ -527,10 +533,11 @@
 	cat( "\nN_Kmers in: ", N)
 
 	rm( bigKmerTable, inherits=T)
-	gc(); gc()
+	gc()
 
 	# see what the RevComp of every Kmer is
 	rcKmer <- findKmerRevComp( kmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	gc()
 	
 	# then see if those Rev Comps are already in the table
 	cat( "\nLocate RevComp pairs..")
@@ -569,7 +576,7 @@
 	bigKmerTable <<- out
 
 	rm( out, kmers, cnts, hasRC, noRC, drops)
-	gc() ; gc()
+	gc()
 	return( length( bigKmerTable))
 }
 
@@ -604,7 +611,6 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
 		cat( "  found=", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
-		gc(); gc()
 	    }
 	}
 	
@@ -625,7 +631,6 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		xref <- rbind( xref, smlXref)
 		save( xref, file=myKmerXrefFile)
 		rm( xref, rcKmer, smlXref, toCalc)
-		gc(); gc()
 	}
 	return( out)
 }
