@@ -406,7 +406,7 @@ mergeKmerChunks <- function( min.count) {
 		# remove the old elements after we merged them
 		bigKmerStrings[[j]] <<- vector()
 		bigKmerCounts[[j]] <<- vector()
-		if ( j %% 3 == 0) gc()
+		if ( j %% 5 == 0) gc()
 		
 	    }
 	    rm( strs2, cnts2, where, hitsFrom, hitsTo, missFrom)
@@ -716,7 +716,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
 		cat( "  Found:", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
-		if ( j %% 3 == 0) gc()
+		if ( j %% 5 == 0) gc()
 	    }
 	}
 	
