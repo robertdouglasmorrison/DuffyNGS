@@ -162,7 +162,7 @@ MAX_KMERS <- 250000000
 		v[ wh] <- myCounts
 		kmerTbl[ , i] <- v
 		rm( bigKmerTable, myKmers, myCounts, wh)
-		gc()
+		if ( i %% 2 == 0) gc()
 	}
 	cat( "\nDone loading.\n")
 	
@@ -398,12 +398,15 @@ mergeKmerChunks <- function( min.count) {
 			}
 			cat( " Now:", length(bigCounts))
 		}
-		if ( exists( "tooFew")) rm( tooFew)
+		if ( exists( "tooFew")) {
+			rm( tooFew)
+			gc()
+		}
 
 		# remove the old elements after we merged them
 		bigKmerStrings[[j]] <<- vector()
 		bigKmerCounts[[j]] <<- vector()
-		gc()
+		if ( j %% 3 == 0) gc()
 		
 	    }
 	    rm( strs2, cnts2, where, hitsFrom, hitsTo, missFrom)
@@ -697,7 +700,8 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	if ( length(allKmerXrefFiles)) {
 	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files:")
 	    nLook <- 0
-	    for ( f in allKmerXrefFiles) {
+	    for ( j in 1:length(allKmerXrefFiles)) {
+	    	f <- allKmerXrefFiles[j]
 		xref <- data.frame()
 		status <- tryCatch( load( f), error=function(e) { xref <<- data.frame()})
 		if ( ! nrow( xref)) next
@@ -712,7 +716,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
 		cat( "  Found:", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
-		gc()
+		if ( j %% 3 == 0) gc()
 	    }
 	}
 	
