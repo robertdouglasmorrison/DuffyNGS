@@ -63,8 +63,12 @@
 	kmer.size <- as.integer( kmer.size)
 
 	# let's try refactoring how we do this, to minimize memory usage
-	# use one GLOBAL table, and just extend as needed
-	bigKmerTable <<- vector()
+	# also switching to use Biostrings DNAString package
+	require( Biostrings)
+
+	# use one GLOBAL list of DNA strings and counts
+	bigKmerStrings <<- bigKmerCounts <<- vector( mode="list")
+	gc()
 
 	cat( "\nN_Files to Kmerize: ", nFiles, "\n")
 	for ( i in 1:nFiles) {
@@ -72,13 +76,13 @@
 					sampleID=sampleID, kmer.path=kmer.path, 
 					maxReads=maxReads, min.count=min.count)
 		nReadsNow <- ans$nReadsIn
-
-		cat( "  save..")
-		save( bigKmerTable, file=outfile)
-
 		nReadsIn <- nReadsIn + nReadsNow
-		nDistinctKmers <- length( bigKmerTable)
-		nTotalKmers <- sum( bigKmerTable)
+
+		cat( "  saving..")
+		save( bigKmerStrings, bigKmerCounts, file=outfile)
+
+		nDistinctKmers <- length( bigKmerCounts[[1]])
+		nTotalKmers <- sum( bigKmerCounts[[1]])
 		cat( "\nFile: ", i, basename(filesToDo[i]), "  N_Distinct: ", nDistinctKmers, "  N_Total: ", nTotalKmers, "\n")
 		if ( ! is.null(maxReads) && nReadsIn >= maxReads) {
 			cat( "\nReached 'maxReads' count. Stopping early..")
@@ -87,7 +91,7 @@
 	}
 
 	# now do the cleanup...
-	rm( bigKmerTable, ans, inherits=T)
+	rm( bigKmerStrings, bigKmerCounts, inherits=T)
 	gc()
 
 	cat( verboseOutputDivider)
@@ -324,7 +328,6 @@
 	nread <- 0
 	hasMore <- TRUE
 	firstPass <- TRUE
-	#bigTable <- vector()
 
 	repeat {
 		if ( ! hasMore) break
@@ -338,57 +341,80 @@
 		# all we want is the raw reads
 		seqTxt <- chunk[ seq.int( 2, length(chunk), by=4)]
 		nread <- nread + length( seqTxt)
-		cat( "  N_reads: ", prettyNum( as.integer(nread), big.mark=","))
+		cat( "  N_Reads: ", prettyNum( as.integer(nread), big.mark=","))
 		rm( chunk)
 
-		timeStat <- system.time( smlTable <- kmerizeOneChunk( seqTxt, kmer.size=kmer.size))
-		cat( "  time(usr,sys)=",timeStat[3],"(",timeStat[1],",",timeStat[2],"}", sep="")
+		timeStat <- system.time( kmerizeOneChunk.as.DNAString( seqTxt, kmer.size=kmer.size))
+		cat( "  Time(usr,sys)=",timeStat[3],"(",timeStat[1],",",timeStat[2],")", sep="")
 		rm( seqTxt)
 
-		# do the merge in place in GLOBAL storage
-		if ( ! length(bigKmerTable)) {
-			bigKmerTable <<- smlTable
-		} else {
-			cat( "  store..")
-			where <- match( names(smlTable), names(bigKmerTable), nomatch=0)
-			yesNo <- (where > 0)
-			hitsTo <- where[ yesNo]
-			cntsWas <- as.vector( bigKmerTable[ hitsTo])
-			cntsNew <- smlTable[ yesNo]
-			bigKmerTable[ hitsTo] <<- cntsWas + cntsNew
-			cat( "  extend..")
-			newFrom <- which( ! yesNo)
-			lenNew <- length( newFrom)
-			lenWas <- length( bigKmerTable)
-			length(bigKmerTable) <<- lenWas + lenNew
-			newTo <- (lenWas+1) : (lenWas+lenNew)
-			bigKmerTable[ newTo] <<- as.vector( smlTable[ newFrom])
-			names(bigKmerTable)[ newTo] <<- names( smlTable)[ newFrom]
-		}
-		cat( "  N_Kmer:", length( bigKmerTable))
+		# each call just extends the global lists, nothing to do for now
 		gc()
 	}
-	rm( smlTable)
+
+	# with the file done, merge all the chunk results
 
 	# any K-mers with too few observations are not to be kept
-	cat( "\nDrop if count < ", min.count)
-	tooFew <- which( bigKmerTable < min.count)
-	if ( length( tooFew)) {
-		cat( "  Found:", length(tooFew))
-		tmpTable <- bigKmerTable[ -tooFew]
-		rm( bigKmerTable, inherits=T)
-		bigKmerTable <<- tmpTable
-		rm( tmpTable, tooFew)
-		cat( "  N_Kmer:", length( bigKmerTable))
-	}
-	gc()
-	
+	mergeKmerChunks( min.count)
+
 	# also do any RevComp resolving now too
 	cat( "\nSearch for RevComp pairs to join..")
 	kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
 
-	#return( list( "nReadsIn"=nread, "Kmer.Table"=bigTable))
 	return( list( "nReadsIn"=nread))
+}
+
+
+mergeKmerChunks <- function( min.count) {
+
+	# the FASTA file is now a big list of DNAStrings and Counts, in global storage
+	# step one is merge.   Within each chunk we are unique, 
+	# but find where we have dups in later chunks.  And Join and Extend as needed...
+	bigStrings <- bigKmerStrings[[1]]
+	bigCounts <- bigKmerCounts[[1]]
+
+	if ( (N <- length(bigKmerStrings)) > 1) {
+	    cat( "\nMerge Chunks: ")
+	    for ( j in 2:N) {
+		strs2 <- bigKmerStrings[[j]]
+		cnts2 <- bigKmerCounts[[j]]
+		cat( "  Chunk",j)
+		where <- match( strs2, bigStrings, nomatch=0)
+		hitsFrom <- which( where > 0)
+		hitsTo <- where[ hitsFrom]
+		if ( length( hitsFrom)) {
+			cat( " Hit:",length(hitsFrom))
+			bigCounts[hitsTo] <- bigCounts[hitsTo] + cnts2[hitsFrom]
+		}
+		missFrom <- which( where == 0)
+		if ( length( missFrom)) {
+			cat( " New:",length(missFrom))
+			bigStrings <- c( bigStrings, strs2[missFrom])
+			bigCounts <- c( bigCounts, cnts2[missFrom])
+		}
+	    }
+	    rm( strs2, cnts2, where, hitsFrom, hitsTo, missFrom)
+	    length(bigKmerStrings) <<- length(bigKmerCounts) <<- 1
+	    gc()
+	}
+
+	cat( "\nDrop if count < ", min.count)
+	tooFew <- which( bigCounts < min.count)
+	if ( length( tooFew)) {
+		cat( "  Found:", length(tooFew))
+		bigStrings <- bigStrings[ -tooFew]
+		bigCounts <- bigCounts[ -tooFew]
+		cat( "  N_Kmer:", length( bigCounts))
+	}
+
+	# stuff these merged results back now
+	bigKmerStrings[[1]] <<- bigStrings
+	bigKmerCounts[[1]] <<- bigCounts
+
+	rm( bigStrings, bigCounts)
+	gc()
+
+	return(NULL)
 }
 
 
@@ -463,6 +489,66 @@
 }
 
 
+`kmerizeOneChunk.as.DNAString` <- function( seqs, kmer.size=33) {
+
+	# make Kmers of every raw read in this chunk
+	# set up to get all N-mers for all the sequences in this chunk
+	require(Biostrings)
+
+	sizeM1 <- kmer.size - 1
+
+	# high chance of having duplicates, so only do each one once
+	#seqTbl <- DNAStringSet( seqs)
+	nSeq <- length( seqs)
+	seqLens <- base::nchar( seqs)
+
+	# ignore any with N for building the Kmers
+	hasN <- grep( "N", seqs, fixed=T)
+	kmerSets <- vector( mode="list", length=nSeq)
+	nOut <- 0
+
+	# we can save a bit of time by doing all reads of the same length at one time
+	lenFac <- factor( seqLens)
+	cat( "  Kmerize..")
+	tapply( 1:nSeq, lenFac, function(x) {
+			
+		# given all the pointers to seqs of the same length
+		lenNow <- seqLens[ x[1]]
+		veryLastStart <- lenNow - sizeM1
+		if ( veryLastStart < 1) return(NULL)
+		fromSet <- 1:veryLastStart
+		toSet <- fromSet + sizeM1
+		nSubstrs <- length( fromSet)
+
+		x <- setdiff( x, hasN)
+		base::lapply( x, function(j) {
+			kmers <- subseq( rep.int( seqs[j], nSubstrs), fromSet, toSet)
+			#if ( j %in% hasN) kmers <- kmers[ -grep("N",kmers)]
+			nOut <<- nOut + 1
+			kmerSets[[nOut]] <<- kmers
+			return(NULL)
+		})
+		return(NULL)
+	})
+	rm( seqLens, hasN, lenFac)
+
+	# turn from list back to DNAtTringSet
+	cat( " tabulate..")
+	length(kmerSets) <- nOut
+	kmersOut <- do.call( c, kmerSets)
+	rm( kmerSets)
+	cntsV <- table.nosort( kmersOut)
+	rm( kmersOut)
+
+	cat( " store..")
+	nNow <- length(bigKmerStrings) + 1
+	bigKmerCounts[[nNow]] <<- as.vector(cntsV)
+	bigKmerStrings[[nNow]] <<- DNAStringSet( names(cntsV))
+	cat( "  N_Kmer:", length(cntsV))
+	return( NULL)
+}
+
+
 `kmerRevComp.file` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
 
 	# the Kmers may be from both strands, and we only want to keep one form of each
@@ -527,57 +613,59 @@
 	# so merge those where both are present
 	
 	# faster memory efficient to operate on one global vector
-	kmers <- names( bigKmerTable)
-	cnts <- as.vector( bigKmerTable)
-	N <- length(bigKmerTable)
+	# stored as a list of DNASTrings and Counts
+	kmers <- bigKmerStrings[[1]]
+	cnts <- bigKmerCounts[[1]]
+	N <- length(kmers)
 	cat( "\nN_Kmers in: ", N)
 
-	rm( bigKmerTable, inherits=T)
-	gc()
-
 	# see what the RevComp of every Kmer is
-	rcKmer <- findKmerRevComp( kmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	rcKmer <- DNAStringSet( findKmerRevComp( as.character(kmers), sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size))
 	gc()
 	
 	# then see if those Rev Comps are already in the table
 	cat( "\nLocate RevComp pairs..")
 	where <- match( rcKmer, kmers, nomatch=0)
+	rm( rcKmer)
 
 	# we will make a new 1-D table that has just the first form of each Kmer
 	# we can combine those that have both forms
 	cat( "  join..")
-	out <- rep.int( 0, N)
+	cntOut <- rep.int( 0, N)
 	hasRC <- which( where > 0)
 	if ( length(hasRC)) {
 		myLoc <- (1:N)[hasRC]
 		rcLoc <- where[hasRC]
 		firstLoc <- pmin( myLoc, rcLoc)
-		out[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
-		names(out)[firstLoc] <- kmers[firstLoc]
-		rm( myLoc, rcLoc)
+		cntOut[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
+		rm( myLoc, rcLoc, firstLoc)
 	}
 
 	# then those without their RevComp just stay as is
 	noRC <- which( where == 0)
 	if ( length(noRC)) {
-		out[noRC] <- cnts[noRC]
-		names(out)[noRC] <- kmers[noRC]
+		cntOut[noRC] <- cnts[noRC]
 	}
 
 	# lastly thown away the empty slots
-	drops <- which( out == 0)
-	if ( length( drops)) out <- out[ -drops]
-	Nout <- length(out)
+	drops <- which( cntOut == 0)
+	if ( length( drops)) {
+		cntOut <- cntOut[ -drops]
+		kmerOut <- kmers[ -drops]
+	} else {
+		kmerOut <- kmers
+	}
+	Nout <- length(cntOut)
 	cat( "\nN_Kmers out: ", Nout)
-	
 	cat( "  Pct Reduction: ", round( (N-Nout) * 100 / N), "%")
 
-	# done
-	bigKmerTable <<- out
+	# done, stash these back in global storage
+	bigKmerStrings[[1]] <<- kmerOut
+	bigKmerCounts[[1]] <<- cntOut
 
-	rm( out, kmers, cnts, hasRC, noRC, drops)
+	rm( cntOut, kmerOut, cnts, hasRC, noRC, drops)
 	gc()
-	return( length( bigKmerTable))
+	return( Nout)
 }
 
 
@@ -596,6 +684,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	
 	if ( length(allKmerXrefFiles)) {
 	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files:")
+	    nLook <- 0
 	    for ( f in allKmerXrefFiles) {
 		xref <- data.frame()
 		status <- tryCatch( load( f), error=function(e) { xref <<- data.frame()})
@@ -604,13 +693,14 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 		# we got some from one Xref file, see if we get any hits
 		# but only check on the ones we still need on this pass around
 		toTest <- which( out == "")
-		cat( "  lookup..")
+		cat( "  Lookup:", nLook <- nLook+1)
 		where1 <- match( kmers[toTest], xref$Kmer, nomatch=0)
 		out[ toTest[ where1 > 0]] <- xref$RevComp[ where1]
 		where2 <- match( kmers[toTest], xref$RevComp, nomatch=0)
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
-		cat( "  found=", sum(where1 > 0 | where2 > 0))
+		cat( "  Found:", sum(where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
+		gc()
 	    }
 	}
 	
