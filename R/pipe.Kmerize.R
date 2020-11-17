@@ -78,8 +78,7 @@
 		nReadsNow <- ans$nReadsIn
 		nReadsIn <- nReadsIn + nReadsNow
 
-		cat( "  saving..")
-		save( bigKmerStrings, bigKmerCounts, file=outfile)
+		saveKmers( outfile)
 
 		nDistinctKmers <- length( bigKmerCounts[[1]])
 		nTotalKmers <- sum( bigKmerCounts[[1]])
@@ -905,3 +904,17 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	}
 	return( out)
 }
+
+
+saveKmers <- function(outfile) {
+
+	# push the global results to disk
+	# turn the DNAString data to character
+	cat( "  saving..")
+	bigKmerStrings <- as.character( bigKmerStrings[[1]])
+	bigKmerCounts <- as.vector( bigKmerCounts[[1]])
+	save( bigKmerStrings, bigKmerCounts, file=outfile)
+	rm( bigKmerStrings, bigKmerCounts)
+	gc()
+}
+
