@@ -2,6 +2,12 @@
 
 # turn raw FASTQ reads into a 1-D table of Kmer counts
 
+# using Biostrings 'DNAStrings' to improve speed/capacity.  THere is is strict limit on
+# XVector hash table size, that we can never exceed
+MAX_KMERS <- 250000000
+
+
+# turn raw FASTQ into Kmers for one sample
 
 `pipe.Kmerize` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				kmer.size=33, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
@@ -14,40 +20,20 @@
 			"\nKmer Size:         \t", kmer.size, "\n")
 	}
 
-	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-
 	# file(s) to process comes from annotation and options...
+	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	rawFastq <- getRawFastqFileNames( sampleID, annotationFile, optionsFile, verbose=FALSE)
 	inputFastqFiles <- rawFastq$files
 	asMatePairs <- rawFastq$asMatePairs
 
-	# if we are doing the CutAdapt pass, check for those files, and call it if we need.
+	# if we are doing the Cutadapt pass, check for those files, and call it if we need.
 	if (doCutadapt) {
-		# see if the files we need are already there
-		cat( "\n")
-		if( grepl( "\\.fastq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fastq", ".trimmed.fastq", inputFastqFiles)
-		if( grepl( "\\.fq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fq", ".trimmed.fq", inputFastqFiles)
-		if ( all( file.exists( expectedFiles))) {
-			cat( "\nUsing existing 'cutadapt' results..")
-			filesToDo <- expectedFiles
-		} else {
-			# is the data paired end or not
-			if (asMatePairs || (!is.null(forceMatePairs) && forceMatePairs)) {
-				if (verbose) cat( "\nRunning 'CutAdapt' on mate pair files..")
-				filesToDo <- cutadapt( file1=inputFastqFiles[1], file2=inputFastqFiles[2], 
-                        				cutadaptProgram=cutadaptProgram, min.length=kmer.size)
-			} else {
-				filesToDo <- vector()
-				for ( i in 1:length(inputFastqFiles)) {
-					if (verbose) cat( "\nRunning 'CutAdapt' on single file: ", basename(inputFastqFiles[i]))
-					filesToDo[i] <- cutadapt( file1=inputFastqFiles[i], file2=NULL, cutadaptProgram=cutadaptProgram, 
-								min.length=kmer.size)
-				}
-			}
-		}
+		filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=asMatePairs, forceMatePairs=forceMatePairs,
+						cutadaptProgram=cutadaptProgram, kmer.size=kmer.size, verbose=verbose)
 	} else { 
 		filesToDo <- inputFastqFiles
 	}
+	nFiles <- length( filesToDo)
 
 	# set up to write out the results as they grow
 	kmer.path <- file.path( results.path, "Kmers")
@@ -57,13 +43,10 @@
 	file.delete( outfile)
 
 	startT <- proc.time()
-
 	nReadsIn <- nDistinctKmers <- nTotalKmers <- 0
-	nFiles <- length( filesToDo)
 	kmer.size <- as.integer( kmer.size)
 
-	# let's try refactoring how we do this, to minimize memory usage
-	# also switching to use Biostrings DNAString package
+	# let's try refactoring how we do this, to minimize memory usage, by switching to use Biostrings DNAString package
 	require( Biostrings)
 
 	# use one GLOBAL list of DNA strings and counts
@@ -72,14 +55,14 @@
 
 	cat( "\nN_Files to Kmerize: ", nFiles, "\n")
 	for ( i in 1:nFiles) {
+		# do one file, and save what we got
 		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, 
-					sampleID=sampleID, kmer.path=kmer.path, 
-					maxReads=maxReads, min.count=min.count)
+					sampleID=sampleID, kmer.path=kmer.path, maxReads=maxReads, min.count=min.count)
 		nReadsNow <- ans$nReadsIn
 		nReadsIn <- nReadsIn + nReadsNow
-
 		saveKmers( outfile)
 
+		# report those matrics
 		nDistinctKmers <- length( bigKmerCounts[[1]])
 		nTotalKmers <- sum( bigKmerCounts[[1]])
 		cat( "\nFile: ", i, basename(filesToDo[i]), "  N_Distinct: ", nDistinctKmers, "  N_Total: ", nTotalKmers, "\n")
@@ -103,6 +86,8 @@
 	return( out)
 }
 
+
+# Join all Kmers from many samples into a matrix of counts
 
 `pipe.KmerTable` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				kmer.size=33, min.count=5, min.samples=2) {
@@ -194,6 +179,8 @@
 }
 
 
+# do differential Kmer analysis by sample groups
+
 `pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), n.remove=100) {
 
 	# just just the samples asked for
@@ -249,6 +236,8 @@
 }
 
 
+# align Kmers to the genome
+
 `alignKmersToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE, verbose=!quiet) {
 
 	if ( is.data.frame(kmers) && ("Kmer" %in% colnames(kmers))) {
@@ -276,6 +265,8 @@
 	return( out)
 }
 
+
+# further map aligned Kmers to protein location & sequence
 
 `mapKmersToProteins` <- function( kmerAlignments, verbose=TRUE) {
 
@@ -312,6 +303,8 @@
 }
 
 
+# Kmerize a single FASTQ file
+
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
 				sampleID="SampleID", kmer.path=".", maxReads=NULL, min.count=2) {
 
@@ -343,11 +336,11 @@
 		cat( "  N_Reads: ", prettyNum( as.integer(nread), big.mark=","))
 		rm( chunk)
 
-		timeStat <- system.time( kmerizeOneChunk.as.DNAString( seqTxt, kmer.size=kmer.size))
+		timeStat <- round( system.time( kmerizeOneChunk.as.DNAString( seqTxt, kmer.size=kmer.size)), digits=1)
 		cat( "  Time(usr,sys)=",timeStat[3],"(",timeStat[1],",",timeStat[2],")", sep="")
 		rm( seqTxt)
 
-		# each call just extends the global lists, nothing to do for now
+		# each call just extends the global lists, just clean up memory
 		gc()
 	}
 
@@ -391,13 +384,30 @@ mergeKmerChunks <- function( min.count) {
 			bigStrings <- c( bigStrings, strs2[missFrom])
 			bigCounts <- c( bigCounts, cnts2[missFrom])
 		}
+		
+		# any time we exceed the maximum number of Kmers, trim away low counts to prevent crashing XVector hash size
+		min.count.now <- 1
+		while ( length(bigCounts) > MAX_KMERS) {
+			min.count.now <- min.count.now + 1
+			tooFew <- which( bigCounts < min.count.now)
+			if ( length( tooFew)) {
+				cat( "\n  Exceeded MAX_KMERS: dropping low count Kmers < ", min.counts.now)
+				bigStrings <- bigStrings[ -tooFew]
+				bigCounts <- bigCounts[ -tooFew]
+			}
+		}
+		# remove the old elements after we merged them
+		bigKmerStrings[[j]] <<- vector()
+		bigKmerCounts[[j]] <<- vector()
+		gc()
+		
 	    }
 	    rm( strs2, cnts2, where, hitsFrom, hitsTo, missFrom)
 	    length(bigKmerStrings) <<- length(bigKmerCounts) <<- 1
 	    gc()
 	}
 
-	cat( "\nDrop if count < ", min.count)
+	cat( "\nDrop low Kmer counts < ", min.count)
 	tooFew <- which( bigCounts < min.count)
 	if ( length( tooFew)) {
 		cat( "  Found:", length(tooFew))
@@ -412,7 +422,6 @@ mergeKmerChunks <- function( min.count) {
 
 	rm( bigStrings, bigCounts)
 	gc()
-
 	return(NULL)
 }
 
@@ -492,17 +501,14 @@ mergeKmerChunks <- function( min.count) {
 
 	# make Kmers of every raw read in this chunk
 	# set up to get all N-mers for all the sequences in this chunk
-	require(Biostrings)
-
 	sizeM1 <- kmer.size - 1
-
-	# high chance of having duplicates, so only do each one once
-	#seqTbl <- DNAStringSet( seqs)
 	nSeq <- length( seqs)
 	seqLens <- base::nchar( seqs)
 
 	# ignore any with N for building the Kmers
 	hasN <- grep( "N", seqs, fixed=T)
+	
+	# initial where we will store the growing output
 	kmerSets <- vector( mode="list", length=nSeq)
 	nOut <- 0
 
@@ -520,6 +526,7 @@ mergeKmerChunks <- function( min.count) {
 		nSubstrs <- length( fromSet)
 
 		x <- setdiff( x, hasN)
+		
 		base::lapply( x, function(j) {
 			kmers <- subseq( rep.int( seqs[j], nSubstrs), fromSet, toSet)
 			#if ( j %in% hasN) kmers <- kmers[ -grep("N",kmers)]
@@ -531,11 +538,13 @@ mergeKmerChunks <- function( min.count) {
 	})
 	rm( seqLens, hasN, lenFac)
 
-	# turn from list back to DNAtTringSet
+	# turn from list back to one giant DNAStringSet
 	cat( " tabulate..")
 	length(kmerSets) <- nOut
 	kmersOut <- do.call( c, kmerSets)
 	rm( kmerSets)
+	
+	# then do the counting
 	cntsV <- table.nosort( kmersOut)
 	rm( kmersOut)
 
@@ -916,5 +925,35 @@ saveKmers <- function(outfile) {
 	save( bigKmerStrings, bigKmerCounts, file=outfile)
 	rm( bigKmerStrings, bigKmerCounts)
 	gc()
+}
+
+
+`checkOrCallCutadapt` <- function( inputFastqFiles, kmer.size=33, cutadaptProgram=Sys.which("cutadapt"), 
+				asMatePairs=FALSE, forceMatePairs=NULL, verbose=TRUE) {
+		
+	# see if the files we need are already there
+	if (verbose) cat( "\n")
+	expectedFiles <- inputFastqFiles
+	if( grepl( "\\.fastq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fastq", ".trimmed.fastq", inputFastqFiles)
+	if( grepl( "\\.fq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fq", ".trimmed.fq", inputFastqFiles)
+	if ( all( file.exists( expectedFiles))) {
+		cat( "\nUsing existing 'cutadapt' results..")
+		filesToDo <- expectedFiles
+	} else {
+		# is the data paired end or not
+		if (asMatePairs || (!is.null(forceMatePairs) && forceMatePairs)) {
+			if (verbose) cat( "\nRunning 'CutAdapt' on mate pair files..")
+			filesToDo <- cutadapt( file1=inputFastqFiles[1], file2=inputFastqFiles[2], 
+                        			cutadaptProgram=cutadaptProgram, min.length=kmer.size)
+		} else {
+			filesToDo <- vector()
+			for ( i in 1:length(inputFastqFiles)) {
+				if (verbose) cat( "\nRunning 'CutAdapt' on single file: ", basename(inputFastqFiles[i]))
+				filesToDo[i] <- cutadapt( file1=inputFastqFiles[i], file2=NULL, cutadaptProgram=cutadaptProgram, 
+							min.length=kmer.size)
+			}
+		}
+	}
+	return( filesToDo)
 }
 
