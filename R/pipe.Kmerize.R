@@ -384,6 +384,7 @@ mergeKmerChunks <- function( min.count) {
 			bigStrings <- c( bigStrings, strs2[missFrom])
 			bigCounts <- c( bigCounts, cnts2[missFrom])
 		}
+		cat( " Now:", length(bigCounts))
 		
 		# any time we exceed the maximum number of Kmers, trim away low counts to prevent crashing XVector hash size
 		min.count.now <- 1
@@ -391,11 +392,14 @@ mergeKmerChunks <- function( min.count) {
 			min.count.now <- min.count.now + 1
 			tooFew <- which( bigCounts < min.count.now)
 			if ( length( tooFew)) {
-				cat( "\n  Exceeded MAX_KMERS: dropping low count Kmers < ", min.counts.now)
+				cat( "\n  Exceeded MAX_KMERS: drop low count Kmers < ", min.count.now)
 				bigStrings <- bigStrings[ -tooFew]
 				bigCounts <- bigCounts[ -tooFew]
 			}
+			cat( " Now:", length(bigCounts))
 		}
+		if ( exists( "tooFew")) rm( tooFew)
+
 		# remove the old elements after we merged them
 		bigKmerStrings[[j]] <<- vector()
 		bigKmerCounts[[j]] <<- vector()
