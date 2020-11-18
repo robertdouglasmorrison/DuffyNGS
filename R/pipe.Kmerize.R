@@ -115,9 +115,6 @@ MAX_KMERS <- 250000000
 	allCounts <- integer(0)
 	nKmers <- 0
 
-	# let's also try to track which Kmers got dropped
-	droppedKmers <- DNAStringSet()
-
 	cat( "\nFind union of all Sample Kmers..\n")
 	for ( i in 1:NS) {
 		f <- fileSet[i]
@@ -126,24 +123,24 @@ MAX_KMERS <- 250000000
 		myCounts <- bigKmerCounts[[1]]
 		nNow <- length( myKmers)
 		cat( "  N_In:", nNow)
+
+		# during the scan phase, only Kmers that meet the minimum count
+		# would get kept later, so no need to keep them at this point
+		cat( "  scanDrops..")
+		lowCnts <- which( myCounts < min.count)
+		if ( length( lowCnts)) {
+			cat( "  drop:", length(lowCnts))
+			myKmers <- myKmers[ -lowCnts]
+			myCounts <- myCounts[ -lowCnts]
+		}
+		if ( ! length( myKmers)) next
+
+		# if the very first batch, just stow them
 		if ( nKmers == 0) {
 			allKmers <- myKmers
 			allCounts <- myCounts
 			nKmers <- nNow
 			next
-		}
-
-		# if we have dropped some already, perhaps drop those again to save time & memory
-		if ( length(droppedKmers)) {
-			cat( "  scanDrops..")
-			inDrops <- which( myKmers %in% droppedKmers)
-			lowCnts <- which( myCounts < min.count)
-			preDrops <- intersect( inDrops, lowCnts)
-			if ( length( preDrops)) {
-				cat( "  drop:", length(preDrops))
-				myKmers <- myKmers[ -preDrops]
-				myCounts <- myCounts[ -preDrops]
-			}
 		}
 
 		cat( "  lookup..")
@@ -163,8 +160,7 @@ MAX_KMERS <- 250000000
 		cat( "  N_Kmer:", nKmers)
 
 		# watch for too many Kmers, so we don't break XStrings
-		# each sample is 2+ counts, so we can do a first test at 3
-		min.count.now <- 2
+		min.count.now <- min.count 
 		while ( nKmers > MAX_KMERS) {
 			min.count.now <- min.count.now + 1
 			tooFew <- which( allCounts < min.count.now)
@@ -172,10 +168,6 @@ MAX_KMERS <- 250000000
 				cat( "\n  Exceeded MAX_KMERS: drop low count Kmers < ", min.count.now)
 				# if not enough flagged, just go around again right now
 				if ( (nKmers - length(tooFew)) > MAX_KMERS) next
-				# save up the ones we discard
-				if ( length(droppedKmers) < MAX_KMERS) {
-					droppedKmers <- c( droppedKmers, allKmers[tooFew])
-				}
 				allKmers <- allKmers[ -tooFew]
 				allCounts <- allCounts[ -tooFew]
 			}
