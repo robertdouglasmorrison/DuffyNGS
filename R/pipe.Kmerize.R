@@ -75,7 +75,7 @@ MAX_KMERS <- 250000000
 	}
 
 	# now do the cleanup...
-	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, bigKmerCounts, envir=.GlobalEnv)
+	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
 	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
 
@@ -191,7 +191,9 @@ MAX_KMERS <- 250000000
 		if ( i %% 5 == 0) gc()
 	}
 	NK <- nKmers
-	if ( exists("bigKmerStrings")) rm( bigKmerCounts, bigKmerStrings, inherits=T)
+	# do some cleanup...
+	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
+	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
 
 	# now fill the table
@@ -212,7 +214,10 @@ MAX_KMERS <- 250000000
 		cat( "  store..")
 		v[ wh] <- myCounts[ wh > 0]
 		kmerTbl[ , i] <- v
-		rm( bigKmerStrings, bigKmerCounts, myKmers, myCounts, wh, inherits=T)
+		# do some cleanup...
+		rm( myKmers, myCounts, wh)
+		if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
+		if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 		if ( i %% 5 == 0) gc()
 	}
 	cat( "\nDone loading.\n")
@@ -226,6 +231,8 @@ MAX_KMERS <- 250000000
 		allKmers <- allKmers[ -drops]
 		cat( "  N_Kmer: ", nrow(kmerTbl))
 	}
+	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
+	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
 	
 	# lastly, put the kmers as names on the rows
