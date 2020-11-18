@@ -199,6 +199,7 @@ MAX_KMERS <- 250000000
 		allKmers <- allKmers[ -drops]
 		cat( "  N_Kmer: ", nrow(kmerTbl))
 	}
+	gc()
 	
 	# lastly, put the kmers as names on the rows
 	rownames(kmerTbl) <- as.character( allKmers)
