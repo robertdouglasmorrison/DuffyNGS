@@ -65,7 +65,8 @@ MAX_KMERS <- 250000000
 		# report those matrics
 		nDistinctKmers <- length( bigKmerCounts[[1]])
 		nTotalKmers <- sum( bigKmerCounts[[1]])
-		cat( "\nFile: ", i, basename(filesToDo[i]), "  N_Distinct: ", nDistinctKmers, "  N_Total: ", nTotalKmers, "\n")
+		cat( "\nSample: ", sampleID, "  File: ", i, basename(filesToDo[i]), "  N_Distinct: ", nDistinctKmers, 
+				"  N_Total: ", nTotalKmers, "\n")
 		if ( ! is.null(maxReads) && nReadsIn >= maxReads) {
 			cat( "\nReached 'maxReads' count. Stopping early..")
 			break
@@ -73,7 +74,7 @@ MAX_KMERS <- 250000000
 	}
 
 	# now do the cleanup...
-	rm( bigKmerStrings, bigKmerCounts, inherits=T)
+	if ( exists("bigKmerStrings")) rm( bigKmerStrings, bigKmerCounts, inherits=T)
 	gc()
 
 	cat( verboseOutputDivider)
@@ -106,63 +107,86 @@ MAX_KMERS <- 250000000
 	if ( NS < 1) return(NULL)
 
 	# we need to build up one giant vector of Kmers
-	# try to be memory efficient
-	expectNkmers <- NS * 10000000
-	allKmers <- vector( mode="character", length=expectNkmers)
+	# try to be memory efficient, using DNAStrings instead of characters
+	allKmers <- DNAStringSet()
+	allCounts <- integer(0)
 	nKmers <- 0
 
 	cat( "\nFind union of all Sample Kmers..\n")
-	for ( f in fileSet) {
-		cat( "  load: ", basename(f))
-		load(f)
-		myKmers <- names(bigKmerTable)
+	for ( i in 1:NS) {
+		f <- fileSet[i]
+		loadSavedKmers(f)
+		myKmers <- bigKmerStrings[[1]]
+		myCounts <- bigKmerCounts[[1]]
 		nNow <- length( myKmers)
-		cat( "  N:", nNow)
-		if ( ! nKmers) {
-			allKmers[1:nNow] <- myKmers
+		cat( "  N_In:", nNow)
+		if ( nKmers == 0) {
+			allKmers <- myKmers
+			allCounts <- myCounts
 			nKmers <- nNow
-		} else { 
-			cat( "  lookup..")
-			where <- match( myKmers, allKmers[1:nKmers], nomatch=0)
-			# only add the new ones
-			myKmers <- myKmers[ where == 0]
-			nNow <- length( myKmers)
-			if ( nNow) {
-				cat( "  extend..")
-				now <- (nKmers+1) : (nKmers+nNow)
-				allKmers[now] <- myKmers
-				nKmers <- nKmers + nNow
-			}
-			rm( where)
+			next
+		}
+		cat( "  lookup..")
+		where <- match( myKmers, allKmers, nomatch=0)
+		# those we do find get counts increased
+		allCounts[where] <- allCounts[where] + myCounts[where > 0]
+		# only add the new ones
+		myKmers <- myKmers[ where == 0]
+		myCounts <- myCounts[ where == 0]
+		nNow <- length( myKmers)
+		if ( nNow) {
+			cat( "  N_New:", nNow)
+			allKmers <- c( allKmers, myKmers)
+			allCounts <- c( allCounts, myCounts)
+			nKmers <- nKmers + nNow
 		}
 		cat( "  N_Kmer:", nKmers)
+
+		# watch to too many
+		min.count.now <- 1
+		while ( nKmers > MAX_KMERS) {
+			min.count.now <- min.count.now + 1
+			tooFew <- which( allCounts < min.count.now)
+			if ( length( tooFew)) {
+				cat( "\n  Exceeded MAX_KMERS: drop low count Kmers < ", min.count.now)
+				allKmers <- allKmers[ -tooFew]
+				allCounts <- allCounts[ -tooFew]
+			}
+			cat( " Now:", length(allCounts))
+			nKmers <- length(allCounts)
+		}
+		if ( exists( "tooFew")) {
+			rm( tooFew)
+			gc()
+		}
+
+		rm( myKmers, myCounts, where)
+		if ( i %% 5 == 0) gc()
 	}
 	NK <- nKmers
-	# trim the memory allocation if we need
-	if ( expectNkmers > NK) length(allKmers) <- NK
-	rm( myKmers, bigKmerTable)
+	if ( exists("bigKmerStrings")) rm( bigKmerCounts, bigKmerStrings, inherits=T)
 	gc()
 
 	# now fill the table
 	cat( "\nReloading to fill table..\n")
 	kmerTbl <- matrix( 0, nrow=NK, ncol=NS)
 	colnames(kmerTbl) <- sampleIDset
-	rownames(kmerTbl) <- allKmers
+	rownames(kmerTbl) <- 1:NK
 
 	for ( i in 1:NS) {
 		f <- fileSet[i]
-		cat( "  load: ", basename(f))
-		load(f)
-		myKmers <- names(bigKmerTable)
-		myCounts <- as.vector( bigKmerTable)
+		loadSavedKmers(f)
+		myKmers <- bigKmerStrings[[1]]
+		myCounts <- bigKmerCounts[[1]]
 		cat( "  lookup..")
-		wh <- match( myKmers, allKmers)
+		wh <- match( myKmers, allKmers, nomatch=0)
+		# these may have been removed due to MAX_KMERS
 		v <- rep.int(0,NK)
 		cat( "  store..")
-		v[ wh] <- myCounts
+		v[ wh] <- myCounts[ wh > 0]
 		kmerTbl[ , i] <- v
-		rm( bigKmerTable, myKmers, myCounts, wh)
-		if ( i %% 2 == 0) gc()
+		rm( bigKmerStrings, bigKmerCounts, myKmers, myCounts, wh, inherits=T)
+		if ( i %% 5 == 0) gc()
 	}
 	cat( "\nDone loading.\n")
 	
@@ -172,9 +196,13 @@ MAX_KMERS <- 250000000
 	if ( length(drops)) {
 		cat( "  Removing", length(drops), "Kmers rows..")
 		kmerTbl <- kmerTbl[ -drops, ]
+		allKmers <- allKmers[ -drops]
 		cat( "  N_Kmer: ", nrow(kmerTbl))
 	}
 	
+	# lastly, put the kmers as names on the rows
+	rownames(kmerTbl) <- as.character( allKmers)
+
 	return( kmerTbl)
 }
 
@@ -644,6 +672,13 @@ mergeKmerChunks <- function( min.count) {
 	rm( rcKmer)
 
 	# we will make a new 1-D table that has just the first form of each Kmer
+	# the Kmers are not ordered anymore, but this test of which to keep needs/assumes ordering
+	# so generate it now
+	ord <- order( kmers)
+	rankOrder <- seq_len(N)
+	rankOrder[ ord] <- rankOrder
+	rm( ord)
+
 	# we can combine those that have both forms
 	cat( "  join..")
 	cntOut <- rep.int( 0, N)
@@ -651,16 +686,21 @@ mergeKmerChunks <- function( min.count) {
 	if ( length(hasRC)) {
 		myLoc <- (1:N)[hasRC]
 		rcLoc <- where[hasRC]
-		firstLoc <- pmin( myLoc, rcLoc)
+		myRank <- rankOrder[ myLoc]
+		rcRank <- rankOrder[ rcLoc]
+		#firstLoc <- pmin( myLoc, rcLoc)
+		firstLoc <- ifelse( myRank < rcRank, myLoc, rcLoc)
 		cntOut[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
-		rm( myLoc, rcLoc, firstLoc)
+		rm( myLoc, rcLoc, firstLoc, myRank, rcRank)
 	}
+	rm( rankOrder)
 
 	# then those without their RevComp just stay as is
 	noRC <- which( where == 0)
 	if ( length(noRC)) {
 		cntOut[noRC] <- cnts[noRC]
 	}
+	rm(where)
 
 	# lastly thown away the empty slots
 	drops <- which( cntOut == 0)
@@ -923,7 +963,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
-saveKmers <- function(outfile) {
+`saveKmers` <- function(outfile) {
 
 	# push the global results to disk
 	# turn the DNAString data to character
@@ -931,8 +971,31 @@ saveKmers <- function(outfile) {
 	bigKmerStrings <- as.character( bigKmerStrings[[1]])
 	bigKmerCounts <- as.vector( bigKmerCounts[[1]])
 	save( bigKmerStrings, bigKmerCounts, file=outfile)
-	rm( bigKmerStrings, bigKmerCounts)
+	if ( exists("bigKmerStrings")) rm( bigKmerStrings, bigKmerCounts)
 	gc()
+}
+
+
+`loadSavedKmers` <- function(file) {
+
+	# load the one global results variables from disk
+	# turn the character data back to DNAString 
+	cat( "  loading:", basename(file))
+	load( file)
+
+	# our convention is to use lists, of DNAStrings and Counts
+	tmpCounts <- as.integer( bigKmerCounts)
+	bigKmerCounts <<- list( tmpCounts)
+	#bigKmerCounts[[1]] <- tmpCounts
+
+	tmpStrings <- DNAStringSet( bigKmerStrings)
+	bigKmerStrings <<- list( tmpStrings)
+	#bigKmerStrings[[1]] <<- tmpStrings
+
+	# remove the local copies
+	rm( bigKmerStrings, bigKmerCounts, tmpCounts, tmpStrings)
+	gc()
+	return( length( bigKmerCounts[[1]]))
 }
 
 
