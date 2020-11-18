@@ -19,6 +19,7 @@ MAX_KMERS <- 250000000
 			"\nStart Date/Time:   \t", date(), 
 			"\nKmer Size:         \t", kmer.size, "\n")
 	}
+	require(Biostrings)
 
 	# file(s) to process comes from annotation and options...
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
@@ -74,7 +75,8 @@ MAX_KMERS <- 250000000
 	}
 
 	# now do the cleanup...
-	if ( exists("bigKmerStrings")) rm( bigKmerStrings, bigKmerCounts, inherits=T)
+	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, bigKmerCounts, envir=.GlobalEnv)
+	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
 
 	cat( verboseOutputDivider)
@@ -95,6 +97,7 @@ MAX_KMERS <- 250000000
 
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	kmer.path <- file.path( results.path, "Kmers")
+	require(Biostrings)
 
 	fileSet <- file.path( kmer.path, paste( sampleIDset, "Kmer", kmer.size, "Table.rda", sep="."))
 	found <- file.exists( fileSet)
@@ -112,6 +115,9 @@ MAX_KMERS <- 250000000
 	allCounts <- integer(0)
 	nKmers <- 0
 
+	# let's also try to track which Kmers got dropped
+	droppedKmers <- DNAStringSet()
+
 	cat( "\nFind union of all Sample Kmers..\n")
 	for ( i in 1:NS) {
 		f <- fileSet[i]
@@ -126,6 +132,20 @@ MAX_KMERS <- 250000000
 			nKmers <- nNow
 			next
 		}
+
+		# if we have dropped some already, perhaps drop those again to save time & memory
+		if ( length(droppedKmers)) {
+			cat( "  scanDrops..")
+			inDrops <- which( myKmers %in% droppedKmers)
+			lowCnts <- which( myCounts < min.count)
+			preDrops <- intersect( inDrops, lowCnts)
+			if ( length( preDrops)) {
+				cat( "  drop:", length(preDrops))
+				myKmers <- myKmers[ -preDrops]
+				myCounts <- myCounts[ -preDrops]
+			}
+		}
+
 		cat( "  lookup..")
 		where <- match( myKmers, allKmers, nomatch=0)
 		# those we do find get counts increased
@@ -142,13 +162,20 @@ MAX_KMERS <- 250000000
 		}
 		cat( "  N_Kmer:", nKmers)
 
-		# watch to too many
-		min.count.now <- 1
+		# watch for too many Kmers, so we don't break XStrings
+		# each sample is 2+ counts, so we can do a first test at 3
+		min.count.now <- 2
 		while ( nKmers > MAX_KMERS) {
 			min.count.now <- min.count.now + 1
 			tooFew <- which( allCounts < min.count.now)
 			if ( length( tooFew)) {
 				cat( "\n  Exceeded MAX_KMERS: drop low count Kmers < ", min.count.now)
+				# if not enough flagged, just go around again right now
+				if ( (nKmers - length(tooFew)) > MAX_KMERS) next
+				# save up the ones we discard
+				if ( length(droppedKmers) < MAX_KMERS) {
+					droppedKmers <- c( droppedKmers, allKmers[tooFew])
+				}
 				allKmers <- allKmers[ -tooFew]
 				allCounts <- allCounts[ -tooFew]
 			}
@@ -342,6 +369,7 @@ MAX_KMERS <- 250000000
 	if ( ! file.exists( filein)) stop( paste("Can't find input file: ", filein))
 	conIn <- openCompressedFile( filein, open="r")
 	on.exit( close( conIn))
+	require(Biostrings)
 
 	# 4 lines per read
 	chunkSize <- buffer.size
@@ -655,6 +683,7 @@ mergeKmerChunks <- function( min.count) {
 
 	# the Kmers may be from both strands, and we only want to keep one form of each
 	# so merge those where both are present
+	require(Biostrings)
 	
 	# faster memory efficient to operate on one global vector
 	# stored as a list of DNASTrings and Counts
@@ -730,6 +759,7 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	# set up to allow 'faster' lookup of previously calculated Rev Comps
 	N <- length( kmers)
 	out <- rep.int( "", N)
+	require(Biostrings)
 	
 	# allow 'fast' lookup via a file of previously done kmers
 	# we are switching to separate files for every sample, to try to minimize file
@@ -964,14 +994,22 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
-`saveKmers` <- function(outfile) {
+`saveKmers` <- function(outfile, mode="first.time") {
 
 	# push the global results to disk
 	# turn the DNAString data to character
+	require(Biostrings)
 	cat( "  saving..")
-	bigKmerStrings <- as.character( bigKmerStrings[[1]])
 	bigKmerCounts <- as.vector( bigKmerCounts[[1]])
+
+	# the first time we make Kmers from larger DNAStrings, there seems to be excess memory use.
+	# so convert them to character and then back to DNAStrings
+	if (mode == "first.time") {
+		bigKmerStrings <- as.character( bigKmerStrings[[1]])
+		bigKmerStrings <- DNAStringSet( bigKmerStrings)
+	}
 	save( bigKmerStrings, bigKmerCounts, file=outfile)
+
 	if ( exists("bigKmerStrings")) rm( bigKmerStrings, bigKmerCounts)
 	gc()
 }
@@ -981,17 +1019,21 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 
 	# load the one global results variables from disk
 	# turn the character data back to DNAString 
+	require(Biostrings)
 	cat( "  loading:", basename(file))
 	load( file)
 
 	# our convention is to use lists, of DNAStrings and Counts
 	tmpCounts <- as.integer( bigKmerCounts)
 	bigKmerCounts <<- list( tmpCounts)
-	#bigKmerCounts[[1]] <- tmpCounts
 
-	tmpStrings <- DNAStringSet( bigKmerStrings)
+	# the Kmers may already be S4 clases, or they may be just character strings
+	if ( is.character( bigKmerStrings)) {
+		tmpStrings <- DNAStringSet( bigKmerStrings)
+	} else {
+		tmpStrings <- bigKmerStrings
+	}
 	bigKmerStrings <<- list( tmpStrings)
-	#bigKmerStrings[[1]] <<- tmpStrings
 
 	# remove the local copies
 	rm( bigKmerStrings, bigKmerCounts, tmpCounts, tmpStrings)
