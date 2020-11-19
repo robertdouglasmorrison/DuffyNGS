@@ -241,7 +241,11 @@ MAX_KMERS <- 250000000
 	# just just the samples asked for
 	where <- match( sampleIDset, colnames(kmerTbl))
 	if ( any( is.na(where))) stop( "Some SampleIDs not in Kmer table")
-	useTbl <- kmerTbl[ , where]
+	if ( length(where) != ncol(kmerTbl) || !all( where == (1:ncol(kmerTbl)))) {
+		useTbl <- kmerTbl[ , where]
+	} else {
+		useTbl <- kmerTbl
+	}
 	NC <- ncol(useTbl)
 	NR <- nrow(useTbl)
 	
@@ -298,6 +302,7 @@ MAX_KMERS <- 250000000
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
 		if ( i %% 10000 == 0) cat( "\r", i, rownames(useTbl)[i], fold[i], pval[i])
 	}
+	cat( "\nDone.\n")
 	
 	out <- data.frame( "Kmer"=rownames(useTbl), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
 			row.names=seq_len(NR), stringsAsFactors=F)
@@ -353,7 +358,10 @@ MAX_KMERS <- 250000000
 
 	N <- nrow(kmerAlignments)
 	
-	genome.file <- getOptionValue( optionsFile, "genomicFastaFile")
+	genome.file <- getOptionValue( optionsFile, "genomicFastaFile", verbose=verbose)
+	# pre-fetch one chromosome for speed and better diagnostics
+        gdna <- getFastaSeqFromFilePath( filePath=genome.file, seqID=getCurrentSeqMap()$SEQ_ID[1],
+					verbose=verbose)
 
 	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
 	aaPos <- rep.int( NA, N)
@@ -365,7 +373,8 @@ MAX_KMERS <- 250000000
 	ord <- order( kmerAlignments$GENE_ID[ geneHits])
 	curGene <- ""
 
-	for (j in geneHits[ord]) {
+	for (i in seq_along( geneHits)) {
+		j <- geneHits[ord[i]]
 		if ( any( is.na( c( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])))) next
 		smlAns <- convertGenomicDNApositionToAAposition( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])
 		aaPos[j] <- smlAns$AA_POSITION
@@ -382,8 +391,9 @@ MAX_KMERS <- 250000000
 			readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
 			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
 		}
-		if (verbose && j %% 1000 == 0) cat( "\r", j, kmerAlignments$GENE_ID[j], aaPos[j], aaFrag[j])
+		if (verbose && i %% 1000 == 0) cat( "\r", i, kmerAlignments$GENE_ID[j], aaPos[j], aaFrag[j])
 	}
+	cat( "\nDone.\n")
 	
 	out <- kmerAlignments
 	out$AA_POSITION <- aaPos
@@ -966,7 +976,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		if ( nNow < 1) break
 		if ( nNow < chunkSize) hasMore <- FALSE
 		nReads <- nReads + nNow
-		if (verbose) cat( "  N_Kmers: ", prettyNum( as.integer( nReads), big.mark=","))
+		if (verbose) cat( "  N_Alignments: ", prettyNum( as.integer( nReads), big.mark=","))
 
 		# convert the refID to a SeqID to figure the gene locations
 		if (verbose) cat( "  geneIDs..")
@@ -1009,7 +1019,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		nOut <- nOut + nNow
 
 	} # end of each buffer...
-	if (verbose) cat("\n")
+	if (verbose) cat("\nDone.\n")
 	bamClose( con)
 	
 	# package up what we send back
