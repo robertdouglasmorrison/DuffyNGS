@@ -323,7 +323,8 @@ MAX_KMERS <- 250000000
 
 # further map aligned Kmers to protein location & sequence
 
-`mapKmersToProteins` <- function( kmerAlignments, verbose=TRUE) {
+`mapKmersToProteins` <- function( kmerAlignments, optionsFile="Options.txt", verbose=TRUE) {
+
 
 	# takes the output from 'alignKmersToGenome', and looks up where those sites 
 	# land on proteins
@@ -335,19 +336,35 @@ MAX_KMERS <- 250000000
 
 	N <- nrow(kmerAlignments)
 	
+	genome.file <- getOptionValue( optionsFile, "genomicFastaFile")
+
 	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
 	aaPos <- rep.int( NA, N)
 	aaFrag <- rep.int( "", N)
 	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
 	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and fragment seqs..\n")
-	for (j in geneHits) {
+
+	# visit them in gene order to make it faster
+	ord <- order( kmerAlignments$GENE_ID[ geneHits])
+	curGene <- ""
+
+	for (j in geneHits[ord]) {
 		if ( any( is.na( c( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])))) next
 		smlAns <- convertGenomicDNApositionToAAposition( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])
 		aaPos[j] <- smlAns$AA_POSITION
 		if ( is.na( aaPos[j])) next
 		if ( is.na( kmerAlignments$STRAND[j])) next
-		readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
-		aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+		if ( (thisGene <- kmerAlignments$GENE_ID[j]) != curGene) {
+			refProtein <- gene2Fasta( thisGene, genome.file, mode="aa")$seq[1]
+			curGene <- thisGene
+		}
+		if ( !is.na(refProtein)) {
+			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=1:6, 
+							tieBreakMode="reference", reference=refProtein)
+		} else {
+			readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
+			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+		}
 		if (verbose && j %% 1000 == 0) cat( "\r", j, kmerAlignments$GENE_ID[j], aaPos[j], aaFrag[j])
 	}
 	
