@@ -367,7 +367,7 @@ MAX_KMERS <- 250000000
 	aaPos <- rep.int( NA, N)
 	aaFrag <- rep.int( "", N)
 	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
-	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and fragment seqs..\n")
+	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and protein fragment sequence..\n")
 
 	# visit them in gene order to make it faster
 	ord <- order( kmerAlignments$GENE_ID[ geneHits])
