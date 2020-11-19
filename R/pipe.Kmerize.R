@@ -180,7 +180,7 @@ MAX_KMERS <- 250000000
 		}
 
 		rm( myKmers, myCounts, where)
-		if ( i %% 5 == 0) gc()
+		if ( i %% 4 == 0) gc()
 	}
 	NK <- nKmers
 	# do some cleanup...
@@ -210,7 +210,7 @@ MAX_KMERS <- 250000000
 		rm( myKmers, myCounts, wh)
 		if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
 		if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
-		if ( i %% 5 == 0) gc()
+		if ( i %% 4 == 0) gc()
 	}
 	cat( "\nDone loading.\n")
 	
@@ -229,14 +229,14 @@ MAX_KMERS <- 250000000
 	
 	# lastly, put the kmers as names on the rows
 	rownames(kmerTbl) <- as.character( allKmers)
-
 	return( kmerTbl)
 }
 
 
 # do differential Kmer analysis by sample groups
 
-`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), n.remove=100) {
+`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), 
+				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100) {
 
 	# just just the samples asked for
 	where <- match( sampleIDset, colnames(kmerTbl))
@@ -250,9 +250,26 @@ MAX_KMERS <- 250000000
 	grpLvls <- levels( grpFac)
 	nGrps <- nlevels( grpFac)
 	if ( nGrps != 2) stop( "Expected exactly 2 Sample Groups")
+	grp1 <- which( as.numeric(grpFac) == 1)
+	grp2 <- which( as.numeric(grpFac) == 2)
 	cat( "\nBreakdown by Group:\n")
 	print( table( groupSet))
 	
+	# allow a further trimming of Kmers for low detection, after it was already done during table creation
+	if ( ! ( is.null(min.count) && is.null(min.samples))) {
+		if ( is.null(min.count) || is.null(min.samples)) stop( "Error: must give both 'min.count' and 'min.samples' values")
+		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "Kmers in at least", min.samples, "samples..")
+		nGood <- apply( useTbl, 1, function(x) sum( x >= min.count))
+		drops <- which( nGood < min.samples)
+		if ( length(drops)) {
+			cat( "  Removing", length(drops), "Kmers rows..")
+			useTbl <- useTbl[ -drops, ]
+			NR <- nrow(useTbl)
+			cat( "  N_Kmer: ", NR)
+		}
+		rm( nGood)
+	}
+
 	# drop the super high count Kmers
 	if (n.remove > 0) {
 		useTbl <- remove.HighCountKmers( useTbl, n.remove=n.remove)
@@ -262,9 +279,10 @@ MAX_KMERS <- 250000000
 	# convert everything to normalized unit
 	normalize <- match.arg( normalize)
 	if ( normalize == "LKPTM") {
-		cat( "\nConverting to LKPTM (Log2 Kmers Per Ten Million)..")
+		cat( "\nNormalizing to LKPTM (Log2 Kmers Per Ten Million)..")
 		useTbl <- as.LKPTM( useTbl)
 	}
+	gc()
 	
 	# we are now ready to do tests per Kmer
 	cat( "\nRunning Linear Model on ", NR, " Kmers..\n")
@@ -274,7 +292,7 @@ MAX_KMERS <- 250000000
 
 	for ( i in 1:NR) {
 		v <- useTbl[ i, ]
-		ans <- t.test( v ~ grpFac)
+		ans <- t.test( v[grp1], v[grp2])
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
@@ -282,11 +300,10 @@ MAX_KMERS <- 250000000
 	}
 	
 	out <- data.frame( "Kmer"=rownames(useTbl), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
-			stringsAsFactors=F)
+			row.names=seq_len(NR), stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
 	rownames(out) <- 1:NR
-	
 	return(out)
 }
 
@@ -843,6 +860,7 @@ remove.HighCountKmers <- function( kmerTbl, n.remove=100) {
 	}
 	whoHigh <- sort( unique( whoHigh))
 	nDrop <- length(whoHigh)
+	if ( ! nDrop) return( kmerTbl)
 
 	mDrop <- kmerTbl[ whoHigh, ]
 	kmerCountDrop <- sum( mDrop)
@@ -852,7 +870,10 @@ remove.HighCountKmers <- function( kmerTbl, n.remove=100) {
 	cat( "\n  Being ", round( kmerCountDrop * 100 / kmerCountIn, digits=2), "% of all Kmer counts")
 	cat( "\nTop Culprits:\n")
 	n.show <- min( nDrop, 20)
-	print( head( mDrop, n.show))
+	n.col.show <- min( ncol(mDrop), 10)
+	# sort to show the biggest values
+	ord <- order( apply( mDrop, 1, sum), decreasing=T)
+	print( head( mDrop[ ord, 1:n.col.show], n.show))
 
 	out <- kmerTbl[ -whoHigh, ]
 	out
