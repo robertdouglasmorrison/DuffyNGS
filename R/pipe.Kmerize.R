@@ -371,12 +371,26 @@ MAX_KMERS <- 250000000
 
 	# visit them in gene order to make it faster
 	ord <- order( kmerAlignments$GENE_ID[ geneHits])
-	curGene <- ""
+	curGene <- curSeqID <- ""
+	curGmap <- curCDSmap <- NULL
+
+	require(Biostrings)
+	data(BLOSUM62)
 
 	for (i in seq_along( geneHits)) {
 		j <- geneHits[ord[i]]
-		if ( any( is.na( c( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])))) next
-		smlAns <- convertGenomicDNApositionToAAposition( kmerAlignments$SEQ_ID[j], kmerAlignments$POSITION[j])
+		mySeqID <- kmerAlignments$SEQ_ID[j]
+		if ( any( is.na( c( mySeqID, kmerAlignments$POSITION[j])))) next
+
+		# pre fetch some maps
+		if ( mySeqID != curSeqID) {
+			curGmap <- subset( getCurrentGeneMap(), SEQ_ID == mySeqID)
+			curCDSmap <- subset( getCurrentCdsMap(), SEQ_ID == mySeqID)
+			curSeqID <- mySeqID
+		}
+
+		smlAns <- convertGenomicDNApositionToAAposition( mySeqID, kmerAlignments$POSITION[j],
+								genemap=curGmap, cdsmap=curCDSmap)
 		aaPos[j] <- smlAns$AA_POSITION
 		if ( is.na( aaPos[j])) next
 		if ( is.na( kmerAlignments$STRAND[j])) next
@@ -386,7 +400,8 @@ MAX_KMERS <- 250000000
 		}
 		if ( !is.na(refProtein)) {
 			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=1:6, 
-							tieBreakMode="reference", reference=refProtein)
+							tieBreakMode="reference", reference=refProtein,
+							substitutionMatrix=BLOSUM62)
 		} else {
 			readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
 			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
