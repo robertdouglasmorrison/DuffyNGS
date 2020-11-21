@@ -5,7 +5,8 @@
 						max.depth=60, txt.cex=0.25, forceSetup=FALSE, maxNoHits.setup=1000000,
 						mode=c("normal","realigned"), plotOnly=FALSE, max.drawnPerSite=3,
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
-						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE) {
+						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE,
+						startFromReference=FALSE, clipAtStop=TRUE) {
 
 	require(Biostrings)
 
@@ -29,7 +30,7 @@
 				exon=exon, maxNoHits=maxNoHits.setup, forceSetup=forceSetup,
 				trim5.aligns=trim5.aligns, trim3.aligns=trim3.aligns, 
 				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits,
-				useCutadapt=useCutadapt)
+				useCutadapt=useCutadapt, startFromReference=startFromReference, clipAtStop=clipAtStop)
 	if ( nAA < 1) {
 		cat( "\nSetting up for CPP gave an empty protein sequence..")
 		return(NULL)
@@ -83,7 +84,8 @@
 `pipe.ConsensusProteinSetup` <- function( sampleID, geneID, geneName=geneID, maxNoHits=1000000, 
 					optionsFile="Options.txt", results.path=NULL, exon=NULL, 
 					trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
-					forceSetup=FALSE, useCutadapt=FALSE, ...) {
+					forceSetup=FALSE, useCutadapt=FALSE, startFromReference=FALSE, 
+					clipAtStop=TRUE, ...) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
@@ -131,7 +133,7 @@
 			geneReadsFile <- geneReadsTrimmedFile
 		}
 		nPeptides <- fastqToPeptides( geneReadsFile, genePeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
-				trim5=trim5.aligns, trim3=trim3.aligns)
+				trim5=trim5.aligns, trim3=trim3.aligns, clipAtStop=FALSE)
 		if (nPeptides < 1) {
 			cat( "\nGene alignments gave zero peptides..")
 			return( 0)
@@ -143,7 +145,8 @@
 		cat( "\nBase Trimming:     5' =", trim5.nohits, "    3' =", trim3.nohits)
 		multicore.setup(10)
 		fastqToPeptides( nohitReadsFile, nohitPeptidesFile, chunk=100000, maxPeptides=maxNoHits,
-				lowComplexityFilter=TRUE, trim5=trim5.nohits, trim3=trim3.nohits, ...)
+				lowComplexityFilter=TRUE, trim5=trim5.nohits, trim3=trim3.nohits, 
+				clipAtStop=clipAtStop, ...)
 		madeAnyFiles <- TRUE
 	}
 	if ( forceSetup || ! file.exists( auditFile)) {
@@ -201,6 +204,37 @@
 		fa <- loadFasta( consensusAAfile, verbose=F)
 		nAA <- nchar( fa$seq)
 	}
+
+	# allow starting from the expected reference sequence instead of the pileups we actually see
+	if ( startFromReference && (forceSetup || madeAnyFiles)) {
+		cat( "\nForcing use of Reference Protein as Starting Target..")
+		refAns <- gene2Fasta( geneID, getOptionValue( optionsFile, "genomicFastaFile", verbose=F), mode="cdna")
+		ref.cdna <- refAns$seq[1]
+		ref.aa <- DNAtoAA( ref.cdna, clip=F, read=1)
+		myDesc <- paste( sampleID, geneName, exonSuffix, sep="_")
+		writeFasta( as.Fasta( myDesc, ref.aa), consensusAAfile, line.width=100)
+		writeFasta( as.Fasta( myDesc, ref.cdna), consensusDNAfile, line.width=100)
+		# also make a 'fake' base calls table
+		Ncdna <- nchar(ref.cdna)
+		fakeCallsM <- matrix( 0, nrow=Ncdna, ncol=7)
+		colnames(fakeCallsM) <- c( "Ref", "A", "C", "G", "T", "N", "Indel")
+		fakeCallsM[ ,1] <- 1
+		fakeAaM <- matrix( "", nrow=Ncdna, ncol=4)
+		colnames(fakeAaM) <- c( "AA", "Frame1", "Frame2", "Frame3")
+		aaStrs <- DNAtoAA( ref.cdna, clip=F, read=1:3)
+		aaVecs <- strsplit( aaStrs, split="")
+		fakeAaM[ seq(2,Ncdna,by=3), 1] <- aaVecs[[1]]
+		fakeAaM[ seq(2,Ncdna,by=3), 2] <- aaVecs[[1]]
+		nChar <- length(aaVecs[[2]])
+		fakeAaM[ seq(3,Ncdna,by=3)[1:nChar], 3] <- aaVecs[[2]][1:nChar]
+		nChar <- length(aaVecs[[3]])
+		fakeAaM[ seq(4,Ncdna,by=3)[1:nChar], 4] <- aaVecs[[3]][1:nChar]
+		callsTable <- data.frame( "POSITION"=1:Ncdna, fakeCallsM, "DNA"=strsplit(ref.cdna, split="")[[1]],
+				fakeAaM, "IndelDetails"="", stringsAsFactors=F)
+		write.table( callsTable, consensusBASEfile, sep="\t", quote=F, row.names=FALSE)
+		nAA <- nchar( ref.aa)
+	}
+
 	if (madeAnyFiles) cat( "\nConsensus Prep done for sample: ", sampleID, "\tGene: ", geneID, "\n")
 	return( nAA)
 }
@@ -551,7 +585,7 @@
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
 	bam2fastq( bamfile=bamFile, outfile=fastqFile, verbose=F)
 	# since the raw DNA reads wt got aligned are already cutAdapt'ed, no need to do it again...
-	fastqToPeptides( filein=fastqFile, fileout=tempPeptidesFile)
+	fastqToPeptides( filein=fastqFile, fileout=tempPeptidesFile, clipAtStop=FALSE)
 	# merge these new peptides into the existing set, instead of overwriting...
 	mergePeptideFiles( tempPeptidesFile, genePeptidesFile, outfile=genePeptidesFile, 
 			mergeCountsMode="File2")

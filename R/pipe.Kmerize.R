@@ -214,7 +214,7 @@ MAX_KMERS <- 250000000
 	}
 	cat( "\nDone loading.\n")
 	
-	cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "Kmers in at least", min.samples, "samples..")
+	cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
 	nGood <- apply( kmerTbl, 1, function(x) sum( x >= min.count))
 	drops <- which( nGood < min.samples)
 	if ( length(drops)) {
@@ -262,7 +262,7 @@ MAX_KMERS <- 250000000
 	# allow a further trimming of Kmers for low detection, after it was already done during table creation
 	if ( ! ( is.null(min.count) && is.null(min.samples))) {
 		if ( is.null(min.count) || is.null(min.samples)) stop( "Error: must give both 'min.count' and 'min.samples' values")
-		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "Kmers in at least", min.samples, "samples..")
+		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
 		nGood <- apply( useTbl, 1, function(x) sum( x >= min.count))
 		drops <- which( nGood < min.samples)
 		if ( length(drops)) {
@@ -292,7 +292,9 @@ MAX_KMERS <- 250000000
 	cat( "\nRunning Linear Model on ", NR, " Kmers..\n")
 	fold <- pval <- vector( mode="numeric", length=NR)
 	avg <- matrix( 0, 2, NR)
-	rownames(avg) <- paste( "Avg", grpLvls, sep="_")
+	rownames(avg) <- paste( "Avg", grpLvls, "LKPTM", sep="_")
+	cnt <- matrix( 0, 2, NR)
+	rownames(cnt) <- paste( "N", grpLvls, "Samples", sep="_")
 
 	for ( i in 1:NR) {
 		v <- useTbl[ i, ]
@@ -300,11 +302,13 @@ MAX_KMERS <- 250000000
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
+		cnt[1,i] <- sum( v[grp1] > 0)
+		cnt[2,i] <- sum( v[grp2] > 0)
 		if ( i %% 10000 == 0) cat( "\r", i, rownames(useTbl)[i], fold[i], pval[i])
 	}
 	cat( "\nDone.\n")
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
 			row.names=seq_len(NR), stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
@@ -366,53 +370,81 @@ MAX_KMERS <- 250000000
 	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
 	aaPos <- rep.int( NA, N)
 	aaFrag <- rep.int( "", N)
+	#refFrag <- rep.int( "", N)
 	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
 	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and protein fragment sequence..\n")
 
 	# visit them in gene order to make it faster
-	ord <- order( kmerAlignments$GENE_ID[ geneHits])
-	curGene <- curSeqID <- ""
-	curGmap <- curCDSmap <- NULL
-
+	geneFac <- factor( kmerAlignments$GENE_ID[ geneHits])
 	require(Biostrings)
 	data(BLOSUM62)
 
-	for (i in seq_along( geneHits)) {
-		j <- geneHits[ord[i]]
-		mySeqID <- kmerAlignments$SEQ_ID[j]
-		if ( any( is.na( c( mySeqID, kmerAlignments$POSITION[j])))) next
+	nDone <- 0
+	tapply( geneHits, geneFac, function(x) {
+		
+		# given all the rows that belong to one gene
+		i <- x[1]
+		mySeqID <- kmerAlignments$SEQ_ID[i]
+		myGeneID <- kmerAlignments$GENE_ID[i]
+		if ( is.na(mySeqID) || is.na(myGeneID)) return()
+		nDone <<- nDone + length(x)
+
+		myPos <- kmerAlignments$POSITION[x]
+		if ( any( is.na(myPos))) {
+			x <- x[ ! is.na(myPos)]
+			myPos <- kmerAlignments$POSITION[x]
+		}
 
 		# pre fetch some maps
-		if ( mySeqID != curSeqID) {
-			curGmap <- subset( getCurrentGeneMap(), SEQ_ID == mySeqID)
-			curCDSmap <- subset( getCurrentCdsMap(), SEQ_ID == mySeqID)
-			curSeqID <- mySeqID
-		}
+		curGmap <- subset( getCurrentGeneMap(), GENE_ID == myGeneID)
+		curCDSmap <- subset( getCurrentCdsMap(), GENE_ID == myGeneID)
 
-		smlAns <- convertGenomicDNApositionToAAposition( mySeqID, kmerAlignments$POSITION[j],
+		smlAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=myGeneID,
 								genemap=curGmap, cdsmap=curCDSmap)
-		aaPos[j] <- smlAns$AA_POSITION
-		if ( is.na( aaPos[j])) next
-		if ( is.na( kmerAlignments$STRAND[j])) next
-		if ( (thisGene <- kmerAlignments$GENE_ID[j]) != curGene) {
-			refProtein <- gene2Fasta( thisGene, genome.file, mode="aa")$seq[1]
-			curGene <- thisGene
-		}
+		aaPos[x] <<- myAApos <- smlAns$AA_POSITION
+
+		# fetch the reference protein
+		refProtein <- gene2Fasta( myGeneID, genome.file, mode="aa")$seq[1]
 		if ( !is.na(refProtein)) {
-			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=1:6, 
+			aaFrag[x] <<- myFrags <- DNAtoBestPeptide( kmerAlignments$Kmer[x], clip=F, readingFrame=1:6, 
 							tieBreakMode="reference", reference=refProtein,
 							substitutionMatrix=BLOSUM62)
 		} else {
-			readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
-			aaFrag[j] <- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+			for (j in x) {
+				readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
+				aaFrag[j] <<- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+			}
+			myFrags <- aaFrag[x]
 		}
-		if (verbose && i %% 1000 == 0) cat( "\r", i, kmerAlignments$GENE_ID[j], aaPos[j], aaFrag[j])
-	}
+
+		# try to tell how the Kmer differs from the reference
+		#NX <- length(x)
+		#half <- floor( nchar(myFrags)/2)
+		#myRefFrags <- substr( rep.int(refProtein,NX), myAApos-half, myAApos+half)
+		# force lengths to match
+		#myRefFrags <- substr( myRefFrags, 1, nchar(myFrags))
+		# put a dot notation to show just what's different
+		#refAAvec <- strsplit( myRefFrags, split="")
+		#myAAvec <- strsplit( myFrags, split="")
+		#lapply( 1:NX, function(i) {
+			#same <- which( refAAvec[[i]] == myAAvec[[i]])
+			#if ( length(same)) {
+				#tmp <- refAAvec[[i]]
+				#tmp[same] <- "."
+				#myRefFrags[i] <<- PASTE(tmp,collapse="")
+			#}
+			#return(NULL)
+		#})
+		#refFrag[x] <<- myRefFrags
+		if (verbose) cat( "\r", nDone, myGeneID, length(x), aaFrag[i])
+		return(NULL)
+	})
 	cat( "\nDone.\n")
 	
 	out <- kmerAlignments
 	out$AA_POSITION <- aaPos
-	out$PROTEIN_FRAGMENT <- aaFrag
+	out$KMER_FRAGMENT <- aaFrag
+	#out$REF_FRAGMENT <- refFrag
 	return( out)
 }
 
@@ -999,7 +1031,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		positions <- position( chunk)
 		kmerSeq <- readSeq( chunk)
 		lens <- nchar( kmerSeq)
-		middles <- positions + round( lens/2)
+		middles <- positions + floor( lens/2)
 		ans <- fastSP2GP( seqIDs, middles)
 		geneIDs <- ans$GENE_ID
 		
