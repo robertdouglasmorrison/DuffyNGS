@@ -449,6 +449,89 @@ MAX_KMERS <- 250000000
 }
 
 
+# try to show how the protein fragment differs from reference protein
+
+`mapProteinFragmentToReference` <- function( kmerAlignments, optionsFile="Options.txt", verbose=TRUE) {
+
+
+	# takes the output from 'alignKmersToGenome', and looks up where those sites 
+	# land on proteins
+	if ( ! all( c( "SEQ_ID", "GENE_ID", "AA_POSITION", "KMER_FRAGMENT") %in% colnames( kmerAlignments))) {
+		cat( "\nWarning:  expected a data.frame with SEQ_ID, AA_POSITION, GENE_ID, KMER_FRAGMENT columns.")
+		cat( "\nPerhaps run 'alignKmersToGenome()' and/or 'mapKmersToProteins()' first...")
+		return( NULL)
+	}
+
+	N <- nrow(kmerAlignments)
+	
+	genome.file <- getOptionValue( optionsFile, "genomicFastaFile", verbose=verbose)
+	# pre-fetch one chromosome for speed and better diagnostics
+        gdna <- getFastaSeqFromFilePath( filePath=genome.file, seqID=getCurrentSeqMap()$SEQ_ID[1],
+					verbose=verbose)
+
+	# for Kmers that hit genes, let's map to AA location and guess the protein fragment
+	aaDiff <- rep.int( "N/A", N)
+	geneHits <- setdiff( 1:N, grep( "(ng)", kmerAlignments$GENE_ID, fixed=T)) 
+	if (verbose) cat( "\nMapping", length(geneHits), "Kmer Gene hits to AA location and protein fragment sequence..\n")
+
+	# only try to map those with a valid fragment
+	noFrag <- which( kmerAlignments$KMER_FRAGMENT == "")
+	geneHits <- setdiff( geneHits, noFrag)
+
+	# visit them in gene order to make it faster
+	geneFac <- factor( kmerAlignments$GENE_ID[ geneHits])
+	require(Biostrings)
+	data(BLOSUM62)
+
+	nDone <- 0
+	tapply( geneHits, geneFac, function(x) {
+		
+		# given all the rows that belong to one gene
+		i <- x[1]
+		mySeqID <- kmerAlignments$SEQ_ID[i]
+		myGeneID <- kmerAlignments$GENE_ID[i]
+		if ( is.na(mySeqID) || is.na(myGeneID)) return()
+		nDone <<- nDone + length(x)
+
+		# pre fetch some maps
+		curGmap <- subset( getCurrentGeneMap(), GENE_ID == myGeneID)
+		curCDSmap <- subset( getCurrentCdsMap(), GENE_ID == myGeneID)
+
+		# fetch the reference protein
+		refProtein <- gene2Fasta( myGeneID, genome.file, mode="aa")$seq[1]
+		if ( !is.na(refProtein)) {
+			myFrags <- kmerAlignments$KMER_FRAGMENT[x]
+			pa <- pairwiseAlignment( myFrags, refProtein, type="global-local", scoreOnly=F)
+			refFrags <- as.character( subject(pa))
+
+			# try to tell how the Kmer differs from the reference
+			# put a dot notation to show just what's different
+			refAAvec <- strsplit( refFrags, split="")
+			myAAvec <- strsplit( myFrags, split="")
+			lapply( 1:length(myFrags), function(i) {
+				chUse <- 1 : min( length(refAAvec[[i]]), length(myAAvec[[i]]))
+				same <- which( refAAvec[[i]][chUse] == myAAvec[[i]][chUse])
+				if ( length(same)) {
+					tmp <- myAAvec[[i]]
+					tmp[same] <- "."
+					myFrags[i] <<- PASTE(tmp,collapse="")
+				}
+				return(NULL)
+			})
+			aaDiff[x] <<- myFrags
+		}
+
+		if (verbose) cat( "\r", nDone, myGeneID, length(x), aaDiff[i])
+		return(NULL)
+	})
+	cat( "\nDone.\n")
+	return( aaDiff)
+}
+
+
+# Kmerize a single FASTQ file
+
+
 # Kmerize a single FASTQ file
 
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
