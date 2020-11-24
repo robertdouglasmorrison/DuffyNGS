@@ -61,6 +61,9 @@
 	# record metrics to the audit file
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
 
+	# perhaps ttry to supplement the image with exon splice boundaries
+	showCPPspliceBoundaries( geneID, construct=consensusAns$Construct, optionsFile=optionsFile)
+
 	pdfFile1 <- file.path( peptide.path, paste( sampleID, geneName, "PeptidePileups.pdf", sep="."))
 	pdfFile2 <- file.path( peptide.path, paste( sampleID, geneName, "FinalConsensus.pdf", sep="."))
 	if ( mode == "realigned") {
@@ -857,5 +860,50 @@ CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptio
 	} else {
 		return( list( "CPP Commands"=ans1, "Modify_Subcommands"=ans2))
 	}
+}
+
+
+`showCPPspliceBoundaries` <- function( geneID, construct, optionsFile="Options.txt") {
+
+	# get the exon details
+	cdsMap <- subset( getCurrentCdsMap(), GENE_ID == geneID)
+	if ( nrow(cdsMap) < 2) return()
+	geneMap <- subset( getCurrentGeneMap(), GENE_ID == geneID)
+
+	# the protein may be a vector of single bases
+	if ( length(construct) > 1) construct <- paste( construct, collapse="")
+
+	# get the genomic locations of the splices
+	gPos <- sort( c( cdsMap$POSITION, cdsMap$END))
+	# the very first and last are the gene ends
+	gPos <- gPos[ 2:(length(gPos)-1)]
+	# what's left should be end, beg, end, beg, etc.  Let's use jus the begin spots
+	gPos <- gPos[ seq( 2, length(gPos), by=2)]
+	if ( !length(gPos)) return()
+
+	# map these to protein AA lcoations
+	posAns <- convertGenomicDNApositionToAAposition( cdsMap$SEQ_ID[1], DNAposition=gPos, geneID=geneID,
+					genemap=geneMap, cdsmap=cdsMap)
+	aaPos <- posAns$AA_POSITION
+	codonPos <- posAns$CODON_POSITION
+	# try to tweak where the exon splice line lands based on codon location
+	#toShift <- which( codonPos == 3)
+	#aaPos[ toShift] <- aaPos[toShift] - 1
+	
+	# we need the reference protein to know what these locations should look like
+	fa <- gene2Fasta( geneID, getOptionValue( optionsFile, "genomicFastaFile", verbose=F), mode="aa")
+	refProtein <- fa$seq[1]
+	if ( is.na(refProtein)) return()
+
+	require(Biostrings)
+	data( BLOSUM62)
+	myExonFrags <- substr( rep.int( refProtein,length(aaPos)), aaPos, aaPos+8)
+	myPA <- pairwiseAlignment( myExonFrags, refProtein, type="global-local", scoreOnly=F, 
+				substitutionMatrix=BLOSUM62)
+	myLocs <- start( subject( myPA))
+	for ( i in 1:length(myLocs)) {
+		lines( rep.int(myLocs[i]-0.5,2), c(-5,100), lwd=0.5, lty=2, col="steelblue")
+	}
+	return()
 }
 
