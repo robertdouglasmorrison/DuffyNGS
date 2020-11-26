@@ -1049,8 +1049,10 @@ kmerCallBowtie <- function( kmerFastaFile, kmerBamFile, optionsFile="Options.txt
 	cmdLine <- paste( cmdLine, " -f")
 	# we can know if a Kmer is unique or not by asking for up to 2 alignments
 	cmdLine <- paste( cmdLine, " -k 2")
-	# next is explicit alignment policy
-	cmdLine <- paste( cmdLine, " --very-sensitive")
+	# next is explicit alignment policy.   Since these are short Kmers that may not match the genome well
+	# we need to be quite lax to get the best chance of getting some hit for every kmer
+	# cmdLine <- paste( cmdLine, " --very-sensitive")  # default is " -D 20 -R 3 -N 0 -L 20 -i S,1,0.50"
+	cmdLine <- paste( cmdLine, " -D 20 -R 3 -N 0 -L 10 -i 3"
 	if ( quiet) cmdLine <- paste( cmdLine, " --quiet")
 	# when not catching the unaligned, allow explicit throw-away of unaligned
 	cmdLine <- paste( cmdLine, " --no-unal")
