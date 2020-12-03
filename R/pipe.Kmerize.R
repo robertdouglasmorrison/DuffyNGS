@@ -1061,7 +1061,7 @@ kmerCallBowtie <- function( kmerFastaFile, kmerBamFile, optionsFile="Options.txt
 	cmdLine <- paste( cmdLine, " --threads", nCores)
 	
 	# let's use a slightly more lax scoring threshold, to get a few more aligned sites for variant Kmers
-	cmdLine <- paste( cmdLine, " --score-min L,-0.7,-0.7 ")
+	cmdLine <- paste( cmdLine, " --score-min L,-0.9,-0.9 ")
 
 	# the index
 	index.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=FALSE)
