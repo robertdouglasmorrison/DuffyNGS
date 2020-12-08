@@ -6,7 +6,6 @@
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
-	target <- getAndSetTarget( optionsFile, sampleID=sampleID, annotationFile=annotationFile)
 
 	# set up for this species
 	needSetup <- FALSE
@@ -30,8 +29,6 @@
 	# set up if needed
 	if ( ! exists( "BarcodeSNPs") || needSetup) setupBarcodeSNPs()
 
-	cat( "\n\nProcessing Sample:  ", sampleID, "\n")
-
 	barcodeDetailsFile <- file.path( barcode.path, paste( sampleID, prefix, "AllBarcodeSites.csv", sep="."))
 	# make sure existing data matches the SNP set
 	wrongSize <- TRUE
@@ -42,12 +39,15 @@
 	readBAM <- (reload || ! file.exists(barcodeDetailsFile) || wrongSize)
 
 	if (readBAM) {
+		cat( "\nProcessing Sample:  ", sampleID, "\n")
+
 		# interogate this samples BAM file at all barcode marker sites
 		bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.sorted.bam", sep="."))
 		bamAns <- getBarcodeFromBAMfile( bamfile, genomeFastaFile=genomeFastaFile)
 		if ( is.null( bamAns)) return(NULL)
 		write.table( bamAns, barcodeDetailsFile, sep=",", quote=T, row.names=F)
 	} else {
+		cat( "\nUsing Previously Processed Sample:  ", sampleID, "\n")
 		bamAns <- read.csv( barcodeDetailsFile, as.is=T)
 		# it is sorted by Position, but force it to be sure
 		ord <- order( bamAns$SEQ_ID, bamAns$POSITION) 
@@ -88,6 +88,9 @@
 		}
 	}
 
+	# put the sampleID onto the motif
+	names(motif) <- sampleID
+
 	return( list( "Motif"=motif, "BarcodeID"=myBarcode, "EditDistance"=myDistance, "FDR"=myFDR))
 }
 
@@ -105,13 +108,21 @@
 	prefix <- getCurrentSpeciesFilePrefix()
 	f <- paste( prefix, "Barcode.SNPs", sep=".")
 	data( list=list(f), package="DuffyTools", envir=environment())
-
-	out <- snpTbl
+	out <- barcodeSNPs
 	out
 }
 
 
-extractMotifFromBAMans <- function( bamAns) {
+`referenceBarcodeMotif` <- function() {
+	
+	barcodeSNPs <- loadBarcodeSNPs()
+	motif <- paste( barcodeSNPs$REF_ALLELE, collapse="")
+	names(motif) <- getCurrentSpecies()
+	motif
+}
+
+
+`extractMotifFromBAMans` <- function( bamAns) {
 
 	# make sure we respect any 'Excluded' barcode markers
 	keep <- 1:nrow(bamAns)
@@ -123,7 +134,7 @@ extractMotifFromBAMans <- function( bamAns) {
 }
 
 
-bestBarcodeFromMotif <- function( motif, verbose=T) {
+`bestBarcodeFromMotif` <- function( motif, verbose=T) {
 
 	# we have a fixed length string, to compare to all known motifs
 	# regardless of 'N' from missing data, a simple edit distance is fine
@@ -173,7 +184,7 @@ bestBarcodeFromMotif <- function( motif, verbose=T) {
 }
 
 
-barcodeFDR <- function( motif, barcodeAns=NULL, nSimulations=2000) {
+`barcodeFDR` <- function( motif, barcodeAns=NULL, nSimulations=2000) {
 
 	if ( nSimulations < 1) return(NA)
 
@@ -213,7 +224,7 @@ barcodeFDR <- function( motif, barcodeAns=NULL, nSimulations=2000) {
 
 
 # extract from a BAM file all the base calls at the Barcode sites
-getBarcodeFromBAMfile <- function( bamfile, genomeFastaFile, verbose=T) {
+`getBarcodeFromBAMfile` <- function( bamfile, genomeFastaFile, verbose=T) {
 
 	if ( ! file.exists(bamfile)) {
 		cat( "BAM file not found: ", bamfile)

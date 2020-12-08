@@ -226,8 +226,9 @@
 		colnames(fakeAaM) <- c( "AA", "Frame1", "Frame2", "Frame3")
 		aaStrs <- DNAtoAA( ref.cdna, clip=F, read=1:3)
 		aaVecs <- strsplit( aaStrs, split="")
-		fakeAaM[ seq(2,Ncdna,by=3), 1] <- aaVecs[[1]]
-		fakeAaM[ seq(2,Ncdna,by=3), 2] <- aaVecs[[1]]
+		nChar <- length(aaVecs[[1]])
+		fakeAaM[ seq(2,Ncdna,by=3)[1:nChar], 1] <- aaVecs[[1]]
+		fakeAaM[ seq(2,Ncdna,by=3)[1:nChar], 2] <- aaVecs[[1]]
 		nChar <- length(aaVecs[[2]])
 		fakeAaM[ seq(3,Ncdna,by=3)[1:nChar], 3] <- aaVecs[[2]][1:nChar]
 		nChar <- length(aaVecs[[3]])
