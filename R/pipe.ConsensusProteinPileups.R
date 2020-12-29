@@ -62,7 +62,7 @@
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
 
 	# perhaps ttry to supplement the image with exon splice boundaries
-	showCPPspliceBoundaries( geneID, construct=consensusAns$Construct, optionsFile=optionsFile)
+	if (is.null(exon)) showCPPspliceBoundaries( geneID, construct=consensusAns$Construct, optionsFile=optionsFile)
 
 	pdfFile1 <- file.path( peptide.path, paste( sampleID, geneName, "PeptidePileups.pdf", sep="."))
 	pdfFile2 <- file.path( peptide.path, paste( sampleID, geneName, "FinalConsensus.pdf", sep="."))

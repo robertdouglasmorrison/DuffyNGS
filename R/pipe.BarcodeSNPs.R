@@ -2,32 +2,26 @@
 
 `pipe.BarcodeMotif` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, reload=FALSE, 
-				nFDR=2000, makePlots=TRUE, verbose=TRUE) {
+				max.depth=1000, nFDR=2000, makePlots=TRUE, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
 
 	# set up for this species
-	needSetup <- FALSE
 	if ( speciesID != getCurrentSpecies()) {
 		setCurrentSpecies(speciesID)
-		needSetup <- TRUE
 	}
 	prefix <- getCurrentSpeciesFilePrefix()
 	geneMap <- getCurrentGeneMap()
-
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
-	} else {
-		results.path <- results.path
 	}
 	genomeFastaFile <- getOptionValue( optT, "genomicFastaFile", verbose=FALSE)
-
 	barcode.path <- file.path( results.path, "BarcodeMotifs", sampleID)
 	if ( ! file.exists( barcode.path)) dir.create( barcode.path, recursive=TRUE)
 
 	# set up if needed
-	if ( ! exists( "BarcodeSNPs") || needSetup) setupBarcodeSNPs()
+	setupBarcodeSNPs()
 
 	barcodeDetailsFile <- file.path( barcode.path, paste( sampleID, prefix, "AllBarcodeSites.csv", sep="."))
 	# make sure existing data matches the SNP set
@@ -43,7 +37,7 @@
 
 		# interogate this samples BAM file at all barcode marker sites
 		bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.sorted.bam", sep="."))
-		bamAns <- getBarcodeFromBAMfile( bamfile, genomeFastaFile=genomeFastaFile)
+		bamAns <- getBarcodeFromBAMfile( bamfile, genomeFastaFile=genomeFastaFile, max.depth=max.depth)
 		if ( is.null( bamAns)) return(NULL)
 		write.table( bamAns, barcodeDetailsFile, sep=",", quote=T, row.names=F)
 	} else {
@@ -95,6 +89,86 @@
 }
 
 
+`pipe.BarcodeDistanceMatrix` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				speciesID=getCurrentSpecies(), results.path=NULL, addReferences=T) {
+
+	# get needed paths, etc. from the options file
+	optT <- readOptionsTable( optionsFile)
+	# set up for this species
+	if ( speciesID != getCurrentSpecies()) {
+		setCurrentSpecies(speciesID)
+	}
+	prefix <- getCurrentSpeciesFilePrefix()
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
+	}
+	barcode.path <- file.path( results.path, "BarcodeMotifs")
+	setupBarcodeSNPs()
+
+	# get the motif for each sample
+	N <- length(sampleIDset)
+	motifs <- rep.int( "", N)
+	for ( i in 1:N) {
+		thisSID <- sampleIDset[i]
+		barcodeDetailsFile <- file.path( barcode.path, thisSID, paste( thisSID, prefix, "AllBarcodeSites.csv", sep="."))
+		if ( ! file.exists(barcodeDetailsFile)) next
+		# make sure existing data matches the SNP set
+		bamAns <- read.csv( barcodeDetailsFile, as.is=T)
+		wrongSize <- ( nrow(bamAns) != nrow(BarcodeSNPs))
+		if ( wrongSize) {
+			cat( "\nWarning: Barcode Answer seems out of date w.r.t Barcode SNP data. Perhaps reload..", thisSID)
+			next
+		}
+		# it is sorted by Position, but force it to be sure
+		ord <- order( bamAns$SEQ_ID, bamAns$POSITION) 
+		bamAns <- bamAns[ ord, ]
+		motif <- extractMotifFromBAMans( bamAns) 
+		motifs[i] <- motif
+		names(motifs)[i] <- thisSID
+	}
+	drops <- which( motifs == "")
+	if ( length(drops)) motifs <- motifs[ -drops]
+	if ( ! length(motifs)) return(NULL)
+
+	# most like, also add in the references
+	refMotifs <- vector()
+	if (addReferences) {
+		refMotifs[1] <- referenceBarcodeMotif()
+		names(refMotifs)[1] <- getCurrentSpecies()
+		motifColumns <- grep( "^Motif", colnames(BarcodeSNPs))
+		for ( k in motifColumns) {
+			motifV <- BarcodeSNPs[[k]]
+			# don't let any blanks get through, messes up string length
+			motifV[ motifV == ""] <- "N"
+			refmotif <- paste( motifV, collapse="")
+			NK <- length(refMotifs) + 1
+			refMotifs[NK] <- refmotif
+			names(refMotifs)[NK] <- sub( "Motif_", "", colnames(BarcodeSNPs)[k])
+		}
+	}
+	if (length(refMotifs)) motifs <- c( refMotifs, motifs)
+	N <- length( motifs)
+
+	# now we can make the distance matrix
+	dm <- matrix( 0, nrow=N, ncol=N)
+	colnames(dm) <- rownames(dm) <- names(motifs)
+	for ( i in 1:(N-1)) {
+		myMotifV <- strsplit( motifs[i], split="")[[1]]
+		# disount 'N's from no coverage, so they don't raise the distance
+		isN <- which( myMotifV == "N")
+		for ( j in (i+1):N) {
+			thatMotifV <- strsplit( motifs[j], split="")[[1]]
+			thatN <- which( thatMotifV == "N")
+			ed <- sum( myMotifV != thatMotifV, na.rm=T)
+			nN <- length( setdiff( union(isN,thatN), intersect(isN,thatN)))
+			if ( nN > 0) ed <- ed - nN
+			dm[i,j] <- dm[j,i] <- ed
+		}
+	}
+	return( dm)
+}
+
+
 `setupBarcodeSNPs` <- function() {
 
 	BarcodeSNPs <<- loadBarcodeSNPs()
@@ -116,7 +190,10 @@
 `referenceBarcodeMotif` <- function() {
 	
 	barcodeSNPs <- loadBarcodeSNPs()
-	motif <- paste( barcodeSNPs$REF_ALLELE, collapse="")
+	motifV <- barcodeSNPs$REF_ALLELE
+	# don't let any blanks get through, messes up string length
+	motifV[ motifV == ""] <- "N"
+	motif <- paste( motifV, collapse="")
 	names(motif) <- getCurrentSpecies()
 	motif
 }
@@ -156,7 +233,7 @@
 		thatMotifV <- BarcodeSNPs[[k]]
 		thatN <- which( thatMotifV == "N")
 		editDist[i] <- sum( myMotifV != thatMotifV, na.rm=T)
-		nN <- length( setdiff( isN, thatN))
+		nN <- length( setdiff( union(isN,thatN), intersect(isN,thatN)))
 		if ( nN > 0) editDist[i] <- editDist[i] - nN
 	}
 	names( editDist) <- sub( "^Motif_", "", colnames(BarcodeSNPs)[motifColumns])
@@ -224,7 +301,7 @@
 
 
 # extract from a BAM file all the base calls at the Barcode sites
-`getBarcodeFromBAMfile` <- function( bamfile, genomeFastaFile, verbose=T) {
+`getBarcodeFromBAMfile` <- function( bamfile, genomeFastaFile, max.depth=1000, verbose=T) {
 
 	if ( ! file.exists(bamfile)) {
 		cat( "BAM file not found: ", bamfile)
@@ -237,13 +314,19 @@
 	rownames(depthM) <- paste( BarcodeSNPs$SEQ_ID, BarcodeSNPs$POSITION, sep="::")
 	motifV <- rep.int( "N", N)
 	if (verbose) cat( "\nExtracting Base Calls from", N, "Barcode marker sites..\n")
+	MATCH <- base::match
+	SUBSTR <- base::substr
+	WHICH <- base::which
+
 	for ( i in 1:N) {
 		thisSeqID <- BarcodeSNPs$SEQ_ID[i]
 		thisPos <- BarcodeSNPs$POSITION[i]
 		thisRef <- BarcodeSNPs$REF_ALLELE[i]
 		showBAMmessage <- (i == 1 && verbose)
+		#this loop seems ver hard to interrupt
+		Sys.sleep( 0.001)
 		bamAns <- BAM.mpileup( bamfile, seqID=thisSeqID, fastaFile=genomeFastaFile, start=thisPos, stop=thisPos, 
-					min.depth=1, summarize=TRUE, verbose=F)
+					min.depth=1, max.depth=max.depth, summarize=TRUE, verbose=F)
 		# a total fail is different than an empty result
 		if ( is.null( bamAns)) return(NULL)
 		# check for no depth coverage
@@ -255,13 +338,13 @@
 		if ( motifV[i] %in% c( "", " ", "*")) motifV[i] <- "-"
 
 		# also a slight chance of having an insertion called.  Just keep the first base
-		if ( nchar( motifV[i]) > 1) motifV[i] <- substr( motifV[i], 1,1)
+		if ( nchar( motifV[i]) > 1) motifV[i] <- SUBSTR( motifV[i], 1,1)
 
 		# also disect the full set of base calls
 		myBaseTbl <- MPU.callStringToTable( bamAns$BASE_TABLE[1])[[1]]
-		whoRef <- which( names(myBaseTbl) == ",")
+		whoRef <- WHICH( names(myBaseTbl) == ",")
 		if ( length(whoRef)) names(myBaseTbl)[whoRef[1]] <- thisRef
-		whereM <- match( colnames(depthM), names(myBaseTbl), nomatch=0)
+		whereM <- MATCH( colnames(depthM), names(myBaseTbl), nomatch=0)
 		depthM[ i, whereM > 0] <- myBaseTbl[ whereM]
 		if (verbose && i %% 50 == 0) cat( "\r", i, thisSeqID, thisPos, motifV[i], bamAns$BASE_TABLE[1])
 	}
