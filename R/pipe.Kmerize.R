@@ -319,7 +319,8 @@ MAX_KMERS <- 250000000
 
 # align Kmers to the genome
 
-`alignKmersToGenome` <- function( kmers, optionsFile="Options.txt", quiet=TRUE, verbose=!quiet) {
+`alignKmersToGenome` <- function( kmers, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
+				quiet=TRUE, verbose=!quiet) {
 
 	if ( is.data.frame(kmers) && ("Kmer" %in% colnames(kmers))) {
 		kmers <- kmers$Kmer
@@ -333,6 +334,12 @@ MAX_KMERS <- 250000000
 	kmerFastaFile <- "Temp.Kmers.BowtieInput.fasta"
 	writeFasta( as.Fasta( kmerIDs, kmers), kmerFastaFile)
 	kmerBamFile <- "Temp.Kmers.BowtieOutput.bam"
+
+	# to interpret the Bowtie results, make sure we are the corrent target and species
+	# force knowing the species before we look at target
+	mySpecies <- speciesID
+	target <- getAndSetTarget( optionsFile, verbose=TRUE)
+	setCurrentSpecies( mySpecies)
 	
 	# build a call to Bowtie2
 	ans <- kmerCallBowtie( kmerFastaFile, kmerBamFile, optionsFile=optionsFile, quiet=quiet, verbose=verbose)
