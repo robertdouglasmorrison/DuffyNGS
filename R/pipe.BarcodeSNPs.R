@@ -2,7 +2,7 @@
 
 `pipe.BarcodeMotif` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, reload=FALSE, 
-				max.depth=1000, nFDR=2000, makePlots=TRUE, verbose=TRUE) {
+				max.depth=1000, nFDR=2000, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -54,6 +54,9 @@
 
 	# see which 'lab line' barcode we are most like
 	motif <- extractMotifFromBAMans( bamAns) 
+	# put the sampleID onto the motif
+	names(motif) <- sampleID
+
 	barcodeAns <- bestBarcodeFromMotif( motif)
 	if ( is.null( barcodeAns)) {
 		# exit early with what we have...
@@ -72,18 +75,6 @@
 
 	resultFile <- file.path( barcode.path, paste( sampleID, prefix, "FinalBarcodeCalls.csv", sep="."))
 	write.table( barcodeAns$details, resultFile, sep=",", quote=T, row.names=F)
-
-	# measure for any mixed infection
-	if (FALSE) {
-		minorBarcodes <- measureInfectionMixture( sampleID, barcode=barcodeAns, results.path=results.path, makePlots=makePlots)
-		if (makePlots) {
-			pngFile <- file.path( barcode.path, paste( sampleID, "MinorBarcode.Frequency.Plot.png", sep="."))
-			dev.print( png, pngFile, width=1000, height=700)
-		}
-	}
-
-	# put the sampleID onto the motif
-	names(motif) <- sampleID
 
 	return( list( "Motif"=motif, "BarcodeID"=myBarcode, "EditDistance"=myDistance, "FDR"=myFDR))
 }
@@ -534,45 +525,31 @@ measureInfectionMixture <- function( sampleID, barcode=NULL, results.path="./res
 # grab the barcode calls previously done
 extractBarcodeCalls <- function( sampleIDset, results.path="./results") {
 
-	barcode.path <- file.path( results.path, BarcodeResultsFolder)
+	prefix <- getCurrentSpeciesFilePrefix()
 
 	# read each answer and grab the first entry
-	outSID <- outLin <- outDist <- outFDR <- outMixed <- outMinorLin <- outMinorPct <- vector()
-	for( i in 1:length(sampleIDset)) {
-		 s <- sampleIDset[i]
-		f <- file.path( barcode.path, paste( s, "FinalBarcodeCalls.csv", sep="."))
-		if ( ! file.exists(f)) {
-			cat( "\nNo Barcode final call file found.  Tried: ", f)
+	N <- length(sampleIDset)
+	outSID <- outLin <- outDist <- outFDR <- outSeq <- vector( length=N)
+	for( i in 1:N) {
+		s <- sampleIDset[i]
+		barcode.path <- file.path( results.path, "BarcodeMotifs", s)
+		detailsFile <- file.path( barcode.path, paste( s, prefix, "AllBarcodeSites.csv", sep="."))
+		finalFile <- file.path( barcode.path, paste( s, prefix, "FinalBarcodeCalls.csv", sep="."))
+		if ( ! file.exists(detailsFile)) {
+			cat( "\nNo Barcode details file found.  Tried: ", detailsFile)
 			next
 		}
-		tbl <- read.csv( f, as.is=T)
+		tbl <- read.csv( detailsFile, as.is=T)
 		outSID[i] <- s
+		outSeq[i] <- paste( tbl$CalledBase, collapse="")
+		if ( ! file.exists(finalFile)) next
+		tbl <- read.csv( finalFile, as.is=T)
 		outLin[i] <- bestBarcode <- tbl$BarcodeID[1]
 		outDist[i] <- tbl$EditDistance[1]
 		if ( "FDR" %in% colnames(tbl)) outFDR[i] <- tbl$FDR[1]
-
-		# also grab the minor barcode info
-		f2 <- file.path( barcode.path, paste( s, "MinorBarcode.Frequency.csv", sep="."))
-		if ( ! file.exists(f2)) next
-		tbl2 <- read.csv( f2, as.is=T)
-		# don't let the major barcode call come up here
-		majorRow <- which( tbl2$BarcodeID == bestBarcode)
-		if ( length(majorRow)) tbl2 <- tbl2[ -majorRow, ]
-		minorPct <- tbl2$MinorFreq[1]
-		if ( minorPct >= 0.05) {
-			outMixed[i] <- "Mixed"
-			outMinorPct[i] <- minorPct
-			outMinorLin[i] <- tbl2$BarcodeID[1]
-		} else {
-			outMixed[i] <- "Clonal"
-			outMinorPct[i] <- 0
-			outMinorLin[i] <- ""
-		}
 	}
 	out <- data.frame( "SampleID"=outSID, "BarcodeID"=outLin, "EditDistance"=outDist, 
-				"FDR"=outFDR, "Population"=outMixed, "MinorID"=outMinorLin, 
-					"MinorPct"=round( outMinorPct * 100, digits=1),
-					stringsAsFactors=F)
+				"FDR"=outFDR, "Motif"=outSeq, stringsAsFactors=F)
 	out
 }
 
