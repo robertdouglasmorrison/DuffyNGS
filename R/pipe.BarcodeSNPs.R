@@ -141,6 +141,14 @@
 	N <- length( motifs)
 
 	# now we can make the distance matrix
+	return( as.BarcodeDistanceMatrix( motifs))
+}
+
+
+`as.BarcodeDistanceMatrix` <- function( motifs) {
+
+	# turn a set of equal length motifs into a Barcode distance matrix
+	N <- length(motifs)
 	dm <- matrix( 0, nrow=N, ncol=N)
 	colnames(dm) <- rownames(dm) <- names(motifs)
 	for ( i in 1:(N-1)) {
