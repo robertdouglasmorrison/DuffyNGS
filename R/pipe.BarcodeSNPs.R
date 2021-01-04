@@ -151,16 +151,58 @@
 	N <- length(motifs)
 	dm <- matrix( 0, nrow=N, ncol=N)
 	colnames(dm) <- rownames(dm) <- names(motifs)
+
+	# when a diploid organism, try to allow for degenerate base calls
+	DIPLOID <- (getCurrentSpecies() %in% MAMMAL_SPECIES)
+	DIP_BASE <- c( "M", "R", "W", "S", "Y", "K")
+
 	for ( i in 1:(N-1)) {
 		myMotifV <- strsplit( motifs[i], split="")[[1]]
 		# disount 'N's from no coverage, so they don't raise the distance
 		isN <- which( myMotifV == "N")
+		if (DIPLOID) isDIP <- which( myMotifV %in% DIP_BASE)
 		for ( j in (i+1):N) {
 			thatMotifV <- strsplit( motifs[j], split="")[[1]]
 			thatN <- which( thatMotifV == "N")
 			ed <- sum( myMotifV != thatMotifV, na.rm=T)
+			# only those with only one being 'N' get discounted from the distance
 			nN <- length( setdiff( union(isN,thatN), intersect(isN,thatN)))
 			if ( nN > 0) ed <- ed - nN
+			if (DIPLOID) {
+				thatDIP <- which( thatMotifV %in% DIP_BASE)
+				# visit all the sites where either was diploid call, and decide how to adjust the 
+				# distance call.  By default, every mismatch was assessed a 1 unit penalty
+				dipD <- 0
+				for ( k in sort( union( isDIP, thatDIP))) {
+					b1 <- myMotifV[k]
+					b2 <- thatMotifV[k]
+					bb <- c( b1, b2)
+					if ( b1 == b2) next
+					if ( any(bb == "A") || any( bb %in% c( "M","R","W"))) {
+						dipD <- dipD + 0.5
+					} else if ( any(bb == "C") || any( bb %in% c( "M","S","Y"))) {
+						dipD <- dipD + 0.5
+					} else if ( any(bb == "G") || any( bb %in% c( "R","S","K"))) {
+						dipD <- dipD + 0.5
+					} else if ( any(bb == "T") || any( bb %in% c( "W","Y","K"))) {
+						dipD <- dipD + 0.5
+					} else if ( any(bb == "M") || any( bb %in% c( "R","W","S","Y"))) {
+						dipD <- dipD + 0.25
+					} else if ( any(bb == "R") || any( bb %in% c( "M","W","S","K"))) {
+						dipD <- dipD + 0.25
+					} else if ( any(bb == "W") || any( bb %in% c( "M","R","Y","K"))) {
+						dipD <- dipD + 0.25
+					} else if ( any(bb == "S") || any( bb %in% c( "M","Y","R","K"))) {
+						dipD <- dipD + 0.25
+					} else if ( any(bb == "Y") || any( bb %in% c( "M","S","W","K"))) {
+						dipD <- dipD + 0.25
+					} else if ( any(bb == "K") || any( bb %in% c( "R","S","W","Y"))) {
+						dipD <- dipD + 0.25
+					}
+				}
+				# the net diploid penalty will lower the original '1' distance partially
+				ed <- ed - dipD
+			}
 			dm[i,j] <- dm[j,i] <- ed
 		}
 	}
@@ -375,6 +417,27 @@
 
 	isMutate[ motifV == "N"] <- NA
 	expectedMutate[ motifV == "N"] <- NA
+
+	# for diploid organisms, we can expect to see 2 base calls. Try to capture that level of detail
+	# using degenerate base calls
+	DIPLOID <- (getCurrentSpecies() %in% MAMMAL_SPECIES)
+	if (DIPLOID) {
+		toCheck <- which( maxPct < 75)
+		if ( length(toCheck)) {
+			top2base <- apply( depthM[toCheck, ], MARGIN=1, function(x) {
+					ord <- order( x, decreasing=T)
+					my2 <- substr( colnames(depthM)[ord[1:2]],1,1)
+					return( paste( sort(my2), collapse=""))
+			})
+			# give those locations the degenerate call
+			motifV[ toCheck[ top2base == "AC"]] <- "M"
+			motifV[ toCheck[ top2base == "AG"]] <- "R"
+			motifV[ toCheck[ top2base == "AT"]] <- "W"
+			motifV[ toCheck[ top2base == "CG"]] <- "S"
+			motifV[ toCheck[ top2base == "CT"]] <- "Y"
+			motifV[ toCheck[ top2base == "GT"]] <- "K"
+		}
+	}
 
 	out <- cbind( BarcodeSNPs[,1:6], "CalledBase"=motifV, "CalledPct"=as.numeric(maxPct), "IsMutant"=isMutate, 
 			"IsBarcode"=expectedMutate, "IsClonal"=isClonal, depthM, pctM, 

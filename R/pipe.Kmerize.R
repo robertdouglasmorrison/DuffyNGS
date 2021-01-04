@@ -85,6 +85,12 @@ MAX_KMERS <- 250000000
 	myTime <- elapsedProcTime( startT, proc.time(), N=nTotalKmers, what="Kmer")
 	print( myTime)
 
+	# it is possible that the sample ends up with zero kmers...
+	if ( nTotalKmers < 100) {
+		cat( "\nSample produced too few Kmers..  Deleting Kmer file.")
+		file.delete( outfile)
+	}
+
 	out <- list( "nReadsIn"=nReadsIn, "nDistinctKmers"=nDistinctKmers, "nTotalKemrs"=nTotalKmers)
 	return( out)
 }
@@ -123,6 +129,12 @@ MAX_KMERS <- 250000000
 		myCounts <- bigKmerCounts[[1]]
 		nNow <- length( myKmers)
 		cat( "  N_In:", nNow)
+
+		# if not enough Kmers, just discard it
+		if (myCounts < 100) {
+			cat( "  Too Few, Ignore!")
+			next
+		}
 
 		# during the scan phase, only Kmers that meet the minimum count
 		# would get kept later, so no need to keep them at this point
@@ -403,8 +415,8 @@ MAX_KMERS <- 250000000
 		}
 
 		# pre fetch some maps
-		curGmap <- subset( getCurrentGeneMap(), GENE_ID == myGeneID)
-		curCDSmap <- subset( getCurrentCdsMap(), GENE_ID == myGeneID)
+		curGmap <- subset.data.frame( getCurrentGeneMap(), GENE_ID == myGeneID)
+		curCDSmap <- subset.data.frame( getCurrentCdsMap(), GENE_ID == myGeneID)
 
 		smlAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=myGeneID,
 								genemap=curGmap, cdsmap=curCDSmap)
@@ -424,25 +436,6 @@ MAX_KMERS <- 250000000
 			myFrags <- aaFrag[x]
 		}
 
-		# try to tell how the Kmer differs from the reference
-		#NX <- length(x)
-		#half <- floor( nchar(myFrags)/2)
-		#myRefFrags <- substr( rep.int(refProtein,NX), myAApos-half, myAApos+half)
-		# force lengths to match
-		#myRefFrags <- substr( myRefFrags, 1, nchar(myFrags))
-		# put a dot notation to show just what's different
-		#refAAvec <- strsplit( myRefFrags, split="")
-		#myAAvec <- strsplit( myFrags, split="")
-		#lapply( 1:NX, function(i) {
-			#same <- which( refAAvec[[i]] == myAAvec[[i]])
-			#if ( length(same)) {
-				#tmp <- refAAvec[[i]]
-				#tmp[same] <- "."
-				#myRefFrags[i] <<- PASTE(tmp,collapse="")
-			#}
-			#return(NULL)
-		#})
-		#refFrag[x] <<- myRefFrags
 		if (verbose) cat( "\r", nDone, myGeneID, length(x), aaFrag[i])
 		return(NULL)
 	})
@@ -587,8 +580,10 @@ MAX_KMERS <- 250000000
 	mergeKmerChunks( min.count)
 
 	# also do any RevComp resolving now too
-	cat( "\nSearch for RevComp pairs to join..")
-	kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	if ( bigKmerCounts[[1]] > 0) {
+		cat( "\nSearch for RevComp pairs to join..")
+		kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	}
 
 	return( list( "nReadsIn"=nread))
 }
