@@ -329,6 +329,40 @@ MAX_KMERS <- 250000000
 }
 
 
+# add all the details end user may want about the Kmers, typically after the 'Compare' Step
+
+`pipe.KmerAnnotation` <- function( kmerTbl, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
+				quiet=TRUE, verbose=!quiet) {
+
+	neededColumns <- c( "Kmer")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
+		return( NULL)
+	}
+
+	# 3 main steps
+
+	# STep 1:  Align to Genome
+	cat( "\n\nStep 1:  Align Kmers to Genome via Bowtie2..\n")
+	ansAlign <- alignKmersToGenome( kmerTbl$Kmer, optionsFile=optionsFile, speciesID=speciesID,
+				quiet=quiet, verbose=verbose)
+
+	# Step 2:  map those aligned locations onto proteins
+	cat( "\n\nStep 2:  Map Kmer Genome hits to Protein Fragments..\n")
+	ansProt <- mapKmersToProteins( ansAlign, optionsFile=optionsFile, verbose=verbose)
+
+	# Step 3:  discern protein fragment difference from expected reference
+	cat( "\n\nStep 3:  Compare Protein Fragments to Reference..\n")
+	ansDiff <- mapProteinFragmentToReference( ansProt, optionsFile=optionsFile, verbose=verbose)
+
+	# lastly, sew it all back together in a sensible order...
+	cat( "\n\nStep 4:  Combine and organize all results..")
+	out <- cbind( ansProt, "DIF_FROM_REF"=ansDiff, kmerTbl[ ,2:ncol(kmerTbl)], stringsAsFactors=F)
+	cat( "\nDone.\n")
+	return( out)
+}
+
+
 # align Kmers to the genome
 
 `alignKmersToGenome` <- function( kmers, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
