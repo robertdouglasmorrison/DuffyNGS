@@ -131,7 +131,7 @@ MAX_KMERS <- 250000000
 		cat( "  N_In:", nNow)
 
 		# if not enough Kmers, just discard it
-		if (myCounts < 100) {
+		if ( sum(myCounts) < 100) {
 			cat( "  Too Few, Ignore!")
 			next
 		}
