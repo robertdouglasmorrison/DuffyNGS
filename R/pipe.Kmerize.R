@@ -332,7 +332,7 @@ MAX_KMERS <- 250000000
 # add all the details end user may want about the Kmers, typically after the 'Compare' Step
 
 `pipe.KmerAnnotation` <- function( kmerTbl, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
-				quiet=TRUE, verbose=!quiet) {
+				quiet.bowtie=TRUE, verbose=TRUE) {
 
 	neededColumns <- c( "Kmer")
 	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
@@ -345,7 +345,7 @@ MAX_KMERS <- 250000000
 	# STep 1:  Align to Genome
 	cat( "\n\nStep 1:  Align Kmers to Genome via Bowtie2..\n")
 	ansAlign <- alignKmersToGenome( kmerTbl$Kmer, optionsFile=optionsFile, speciesID=speciesID,
-				quiet=quiet, verbose=verbose)
+				quiet=quiet.bowtie, verbose=verbose)
 
 	# Step 2:  map those aligned locations onto proteins
 	cat( "\n\nStep 2:  Map Kmer Genome hits to Protein Fragments..\n")
@@ -1285,4 +1285,107 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	}
 	return( filesToDo)
 }
+
+
+`plotSignificantKmers` <- function( kmerTbl, speciesID=getCurrentSpecies(), cut.fold=0.5, cut.pvalue=0.9,
+					show.gene.fraction=0.7, gene.cex=0.8, gene.pos=3) {
+
+	neededColumns <- c( "SEQ_ID", "POSITION", "GENE_ID", "Log2.Fold", "P.Value")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some of these needed columns: ", neededColumns)
+		return( NULL)
+	}
+	NK <- nrow(kmerTbl)
+
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+	gmap <- getCurrentGeneMap()
+
+	# only use the Kmers that did show some change
+	cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
+	keepFC <- which( abs( kmerTbl$Log2.Fold) >= cut.fold)
+	keepPV <- which( kmerTbl$P.Value <= cut.pvalue)
+	keep <- sort( union( keepFC, keepPV))
+	cat( "\nDropping: ", NK-length(keep), "   Keeping: ", length(keep))
+	kmerTbl <- kmerTbl[ keep, ]
+	NK <- nrow(kmerTbl)
+
+	# get the names of the two comparison groups
+	lkptmColumns <- grep( "LKPTM", toupper(colnames(kmerTbl)), value=T)
+	lkptmColumns <- sub( "^AVG_", "", lkptmColumns)
+	lkptmColumns <- sub( "_LKPTM$", "", lkptmColumns)
+	grp1Name <- lkptmColumns[1]
+	grp2Name <- lkptmColumns[2]
+
+	# we want to visit every gene in chromosomal order, so make a key that preserves that
+	# use the position of the gene's start in the annotation, not the position of the Kmer
+	cat( "\nFinding Kmers per Gene..")
+	myKmerGenePos <- gmap$POSITION[ match( kmerTbl$GENE_ID, gmap$GENE_ID)]
+	kmerKey <- paste( kmerTbl$SEQ_ID, myKmerGenePos, shortGeneName(kmerTbl$GENE_ID,keep=1), sep="::")
+	kmerFac <- factor( kmerKey)
+	NG <- nlevels( kmerFac)
+	cat( "   N_Genes=", NG, "\n")
+
+	# for each gene, we will gather a few metrics that summarize how big the fold and strong the P-value
+	gUpFold <- gDownFold <- rep.int( 0, NG)
+	gUpPval <- gDownPval <- rep.int( 1, NG)
+	gSID <- gName <- rep.int( "", NG)
+	nOut <- 0
+	tapply( 1:NK, kmerFac, function(x) {
+		# given all the rows from one gene
+		myGene <- kmerTbl$GENE_ID[ x[1]]
+		if ( is.na(myGene) || myGene == "") return(NULL)
+		nOut <<- nOut + 1
+		gName[nOut] <<- shortGeneName(myGene,keep=1)
+		gSID[nOut] <<- kmerTbl$SEQ_ID[x[1]]
+
+		myFC <- kmerTbl$Log2.Fold[x]
+		myPV <- kmerTbl$P.Value[x]
+		isUP <- which( myFC > 0)
+		isDOWN <- which( myFC < 0)
+		if ( length(isUP)) {
+			gUpFold[nOut] <<- mean( myFC[ isUP], na.rm=T)
+			gUpPval[nOut] <<- logmean( myPV[ isUP], na.rm=T)
+		}
+		if ( length(isDOWN)) {
+			gDownFold[nOut] <<- mean( myFC[ isDOWN], na.rm=T)
+			gDownPval[nOut] <<- logmean( myPV[ isDOWN], na.rm=T)
+		}
+		cat( "\rDebug: ", myGene, nOut, gUpFold[nOut], gUpPval[nOut])
+		return(NULL)
+	})
+	length(gUpFold) <- length(gDownFold) <- nOut
+	length(gUpPval) <- length(gDownPval) <- nOut
+	length(gSID) <- length(gName) <- nOut
+	NG <- nOut
+
+	# now with all the values known, set up to plot and color each gene
+	log10pvUp <- -log10( gUpPval)
+	log10pvDown <- log10( gDownPval)
+	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
+	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
+
+	colorRamp <- heatMapColors( 21, palette="red-white-blue", inflex=0.5, rampExponent=1.25)
+	myColorUp <- colorRamp[ 11 + round( gUpFold*10/bigFC)]
+	myColorDown <- colorRamp[ 11 + round( gDownFold*10/bigFC)]
+	plot( 1,1, type="n", main="Chromosomal Locations of Significant Kmers", xlab="All Genes in Chromosomal Order",
+		ylab=paste( "Log10 P-Value "), xlim=c(1,NG), ylim=c(-bigPV,bigPV))
+	
+	ord <- order( log10pvUp)
+	points( (1:NG)[ord], log10pvUp[ord], pch=19, col=myColorUp[ord], cex=1)
+	ord <- order( log10pvDown, decreasing=T)
+	points( (1:NG)[ord], log10pvDown[ord], pch=19, col=myColorDown[ord], cex=1)
+	lines( c(-100,NG+100), c(0,0), lty=1, col=1, lwd=1)
+
+	showGene <- bigPV * show.gene.fraction
+	whoShow <- which( log10pvUp > showGene)
+	if ( length(whoShow)) text( whoShow, log10pvUp[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=gene.pos)
+	whoShow <- which( log10pvDown < -showGene)
+	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos)
+
+	text( NG*0.1, bigPV*0.85, paste( "Kmers UP in", grp2Name), cex=1.25)
+	text( NG*0.1, -bigPV*0.85, paste( "Kmers UP in", grp1Name), cex=1.25)
+
+	return(NULL)
+}
+
 
