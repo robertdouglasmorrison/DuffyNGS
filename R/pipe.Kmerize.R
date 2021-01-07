@@ -1287,8 +1287,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
-`plotSignificantKmers` <- function( kmerTbl, speciesID=getCurrentSpecies(), cut.fold=0.5, cut.pvalue=0.9,
-					show.gene.fraction=0.7, gene.cex=0.8, gene.pos=3) {
+`plotSignificantKmers` <- function( kmerTbl, speciesID=getCurrentSpecies(), cut.fold=0.25, cut.pvalue=0.1,
+					show.gene.fraction=0.75, gene.cex=0.8, gene.pos=3) {
 
 	neededColumns <- c( "SEQ_ID", "POSITION", "GENE_ID", "Log2.Fold", "P.Value")
 	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
@@ -1320,6 +1320,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	# use the position of the gene's start in the annotation, not the position of the Kmer
 	cat( "\nFinding Kmers per Gene..")
 	myKmerGenePos <- gmap$POSITION[ match( kmerTbl$GENE_ID, gmap$GENE_ID)]
+	myKmerGenePos <- formatC( myKmerGenePos, format="d", width=12)
 	kmerKey <- paste( kmerTbl$SEQ_ID, myKmerGenePos, shortGeneName(kmerTbl$GENE_ID,keep=1), sep="::")
 	kmerFac <- factor( kmerKey)
 	NG <- nlevels( kmerFac)
@@ -1364,9 +1365,9 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
 	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
 
-	colorRamp <- heatMapColors( 21, palette="red-white-blue", inflex=0.5, rampExponent=1.25)
-	myColorUp <- colorRamp[ 11 + round( gUpFold*10/bigFC)]
-	myColorDown <- colorRamp[ 11 + round( gDownFold*10/bigFC)]
+	colorRamp <- heatMapColors( 41, palette="red-white-blue", inflex=0.5, rampExponent=1.0)
+	myColorUp <- colorRamp[ 21 + round( log10pvUp*20/bigPV)]
+	myColorDown <- colorRamp[ 21 + round( log10pvDown*20/bigPV)]
 	plot( 1,1, type="n", main="Chromosomal Locations of Significant Kmers", xlab="All Genes in Chromosomal Order",
 		ylab=paste( "Log10 P-Value "), xlim=c(1,NG), ylim=c(-bigPV,bigPV))
 	
@@ -1382,8 +1383,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	whoShow <- which( log10pvDown < -showGene)
 	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos)
 
-	text( NG*0.1, bigPV*0.85, paste( "Kmers UP in", grp2Name), cex=1.25)
-	text( NG*0.1, -bigPV*0.85, paste( "Kmers UP in", grp1Name), cex=1.25)
+	text( NG*0.1, bigPV*0.95, paste( "Kmers UP in", grp2Name), cex=1.15)
+	text( NG*0.1, -bigPV*0.95, paste( "Kmers UP in", grp1Name), cex=1.15)
 
 	return(NULL)
 }
