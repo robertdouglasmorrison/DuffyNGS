@@ -42,7 +42,7 @@
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisName, results.path=results.path,
-						max.depth=80, chunkSize.pileup=50000, maxNoHits.pileup=0,
+						max.depth=80, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
 						showFrameShiftPeptides=F)
 		}
 		# if the file still not found, must be some error, skip it
