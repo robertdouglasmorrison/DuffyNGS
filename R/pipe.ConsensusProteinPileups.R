@@ -2,11 +2,11 @@
 
 `pipe.ConsensusProteinPileups` <- function( sampleID, geneID, geneName=geneID, optionsFile="Options.txt",
 						results.path=NULL, exon=NULL, maxNoHits.pileup=1000000,
-						max.depth=60, txt.cex=0.25, forceSetup=FALSE, maxNoHits.setup=1000000,
+						max.depth=60, txt.cex=0.23, forceSetup=FALSE, maxNoHits.setup=1000000,
 						mode=c("normal","realigned"), plotOnly=FALSE, max.drawnPerSite=3,
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE,
-						startFromReference=FALSE, clipAtStop=TRUE) {
+						startFromReference=FALSE, clipAtStop=TRUE, showFrameShiftPeptides=TRUE) {
 
 	require(Biostrings)
 
@@ -56,7 +56,7 @@
 	consensusAns <<- proteinConstructPeptidePileups( sampleID, geneName=geneName, constructFile=consensusAAfile, 
 				peptide.path=peptide.path, txt.cex=txt.cex, maxNoHits=maxNoHits.pileup, 
 				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box,
-				chunkSize=chunkSize.pileup)
+				chunkSize=chunkSize.pileup, showFrameShiftPeptides=showFrameShiftPeptides)
 
 	# record metrics to the audit file
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)

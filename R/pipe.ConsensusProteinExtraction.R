@@ -38,7 +38,7 @@
 	
 	# get the consensus protein(s) themselves, and extract the initial guess about proportions from their names
 	topProteins <- cpp.ExtractTopProteins( summaryFile, min.minor.pct=min.minor.pct, min.mutation.pct=min.mutation.pct,
-											drop.gaps=FALSE)
+						drop.gaps=FALSE)
 	NPROT <- length( topProteins)
 	protNames <- names( topProteins)
 
@@ -54,9 +54,10 @@
 		for ( i in 2:NPROT) protProportions[i] <- as.numeric( sub( "(^MinorVariant.+Pct=)([0-9]+)(%$)", "\\2", protNames[i]))
 		protProportions[1] <- 100 - sum( protProportions[2:NPROT], na.rm=T)
 	}
-	cat( "\nInitial Proportions: \n")
-	print( paste( protNames, protProportions, sep=" = "))
-	
+	if (verbose) {
+		cat( "\nInitial Proportions: \n")
+		print( paste( protNames, protProportions, sep=" = "))
+	}
 	# as defined, all these constructs should be the same length.  Make sure
 	if ( any( nchar(topProteins) != NAA)) {
 		stop( "\nSize error:  consensus protein lengths not all equal..")
@@ -99,7 +100,7 @@
 	# now we need to reassess who is conserved or not by how many AA were called
 	nAAterms <- sapply( pctAAs, length)
 	useForScoring <- which( nAAterms > 1)
-	cat( "\nN AA with minor variants: ", length(useForScoring))
+	if (verbose) cat( "\nN AA with minor variants: ", length(useForScoring))
 	
 	# use one universal set of all possible AA for doing our compares and distance scoring
 	ALL.AA <- sort( unique( c( unlist( pctAAs), unlist(cntAAs))))
@@ -231,7 +232,8 @@
 			}
 			# we did all possible steps, was any better?
 			if ( is.null(bestAAtry)) next
-			if (verbose && any( myAAorig != bestAAtry)) cat( "\nAA Swap: ", k, "  OldDist:", origDist, "  OldAA:", myAAorig, "|  NewDist:", bestDist, "  NewAA:", bestAAtry)
+			if (verbose && any( myAAorig != bestAAtry)) cat( "\nAA Swap: ", k, "  OldDist:", origDist, "  OldAA:", myAAorig, 
+									"|  NewDist:", bestDist, "  NewAA:", bestAAtry)
 			
 			# update the proteins
 			aaM.out[ k, ] <- bestAAtry
@@ -246,8 +248,6 @@
 	topDistSites <- function( aaM, aaDist, cutoffDist, nExtraAA=2) {
 	
 		# gather the top residual distance sites as extra info
-		cat( "\nDebug:  ", dim(aaM))
-		
 		keep <- which( aaDist > cutoffDist)
 		badDist <- aaDist[ keep]
 		badMotif <- aaM[ keep, 1]
@@ -290,7 +290,7 @@
 	finalSuffix <- paste( round( finalProportions), "%", sep="")
 	finalNames <- paste( finalNames, finalSuffix, sep="_")
 	
-	cat( "\nFinal Extraction: \n", finalNames, "\nFinal Distance: ", finalDist)
+	if (verbose) cat( "\nFinal Extraction: \n", finalNames, "\nFinal Distance: ", finalDist)
 
 	outSeqs <- as.Fasta( finalNames, finalAAseqs)
 	finalFile <- file.path( peptide.path, paste( sampleID, geneName, "FinalExtractedAA.fasta", sep="."))
@@ -316,7 +316,7 @@
 
 
 `cpp.ExtractTopProteins` <- function( proteinSummaryFile, min.minor.pct=5.0, min.mutation.pct=1.0, 
-									drop.gaps=TRUE) {
+					drop.gaps=TRUE) {
 
 	# min.minor.pct - at any one amino acid, how frequent must a minor AA call be to not be treated as just noise
 	# min.mutation.pct -  for the full length protein, what fraction of AA must be mutated to call it a separate protein call

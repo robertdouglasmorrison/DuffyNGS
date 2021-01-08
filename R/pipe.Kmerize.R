@@ -1287,8 +1287,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
-`plotSignificantKmers` <- function( kmerTbl, speciesID=getCurrentSpecies(), cut.fold=0.25, cut.pvalue=0.1,
-					show.gene.fraction=0.75, gene.cex=0.8, gene.pos=3) {
+`plotSignificantKmers` <- function( kmerTbl, speciesID=getCurrentSpecies(), nKmersPerGene=100,
+					nGenesToLabel=10, gene.cex=0.8, gene.pos=3) {
 
 	neededColumns <- c( "SEQ_ID", "POSITION", "GENE_ID", "Log2.Fold", "P.Value")
 	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
@@ -1301,13 +1301,13 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	gmap <- getCurrentGeneMap()
 
 	# only use the Kmers that did show some change
-	cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
-	keepFC <- which( abs( kmerTbl$Log2.Fold) >= cut.fold)
-	keepPV <- which( kmerTbl$P.Value <= cut.pvalue)
-	keep <- sort( union( keepFC, keepPV))
-	cat( "\nDropping: ", NK-length(keep), "   Keeping: ", length(keep))
-	kmerTbl <- kmerTbl[ keep, ]
-	NK <- nrow(kmerTbl)
+	#cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
+	#keepFC <- which( abs( kmerTbl$Log2.Fold) >= cut.fold)
+	#keepPV <- which( kmerTbl$P.Value <= cut.pvalue)
+	#keep <- sort( union( keepFC, keepPV))
+	#cat( "\nDropping: ", NK-length(keep), "   Keeping: ", length(keep))
+	#kmerTbl <- kmerTbl[ keep, ]
+	#NK <- nrow(kmerTbl)
 
 	# get the names of the two comparison groups
 	lkptmColumns <- grep( "LKPTM", toupper(colnames(kmerTbl)), value=T)
@@ -1343,6 +1343,13 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		myPV <- kmerTbl$P.Value[x]
 		isUP <- which( myFC > 0)
 		isDOWN <- which( myFC < 0)
+		# use our traditional way of ranking by both Fold and Pvalue
+		ord <- diffExpressRankOrder( myFC, myPV)
+		# use the number of Kmers asked for, for each group
+		nUp <- min( length(isUP), nKmersPerGene)
+		nDown <- min( length(isDOWN), nKmersPerGene)
+		isUP <- ord[ 1:nUp]
+		isDOWN <- rev(ord)[ 1:nDown]
 		if ( length(isUP)) {
 			gUpFold[nOut] <<- mean( myFC[ isUP], na.rm=T)
 			gUpPval[nOut] <<- logmean( myPV[ isUP], na.rm=T)
@@ -1377,14 +1384,13 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	points( (1:NG)[ord], log10pvDown[ord], pch=19, col=myColorDown[ord], cex=1)
 	lines( c(-100,NG+100), c(0,0), lty=1, col=1, lwd=1)
 
-	showGene <- bigPV * show.gene.fraction
-	whoShow <- which( log10pvUp > showGene)
+	whoShow <- order( log10pvUp, decreasing=T)[1:nGenesToLabel]
 	if ( length(whoShow)) text( whoShow, log10pvUp[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=gene.pos)
-	whoShow <- which( log10pvDown < -showGene)
+	whoShow <- order( log10pvDown, decreasing=F)[1:nGenesToLabel]
 	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos)
 
-	text( NG*0.1, bigPV*0.95, paste( "Kmers UP in", grp2Name), cex=1.15)
-	text( NG*0.1, -bigPV*0.95, paste( "Kmers UP in", grp1Name), cex=1.15)
+	legend( 'topleft', paste( "Kmers UP in", grp2Name), pch=19, col='red', bg='white', cex=1.15)
+	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, col='blue', bg='white', cex=1.15)
 
 	return(NULL)
 }
