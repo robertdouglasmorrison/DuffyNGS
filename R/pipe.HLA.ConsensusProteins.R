@@ -62,6 +62,10 @@
 		proteins <- gsub( "*", "", proteins, fixed=T)
 		proteins <- gsub( "-", "", proteins, fixed=T)
 		proteins <- gsub( "X", "", proteins, fixed=T)
+		# small chance of getting back just one sequence
+		if ( is.na(proteins[2])) proteins[2] <- proteins[1]
+		# bail out if we got nothing
+		if ( nchar( proteins[1]) < 10) next
 
 		# step 3:  make the HLA type calls for these
 		referenceAAfile <- paste( thisName, "AA.fasta", sep=".")
