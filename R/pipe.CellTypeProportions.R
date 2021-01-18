@@ -41,7 +41,7 @@
 		# we have 2 different functions, using 2 different fit tools.  Do them all and average.
 		# and the deconvolution tool seems to see log2 transsformed data very differently
 		myColor <- annT$Color[ match( sampleID, annT$SampleID)]
-		if ( is.na(myColor)) myColor <- "orchid1"
+		if ( is.null(myColor) || is.na(myColor) || myColor == "") myColor <- "orchid1"
 
 		pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- rep.int( NA, N_CellTypes)
 		names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- names(cellTypeColors)
@@ -96,6 +96,7 @@
 		cellMean <- apply( cellM, 1, mean, na.rm=T)
 		cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
 		
+		# leave out the NLS of Log2 data for now...
 		cellAns <- data.frame( "CellType"=names(pcts1), "Final.Proportions"=cellMean, round(cellM[,-5],digits=3), stringsAsFactors=F)
 		
 		write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
