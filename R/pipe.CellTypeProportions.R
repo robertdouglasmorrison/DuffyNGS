@@ -13,7 +13,6 @@
 		setCurrentSpecies(speciesID)
 	}
 	prefix <- getCurrentSpeciesFilePrefix()
-	geneMap <- getCurrentGeneMap()
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
@@ -108,3 +107,92 @@
 	out <- data.frame( "SampleID"=sampleID, cellAns, stringsAsFactors=F)
 	return( invisible( out))
 }
+
+
+`pipe.CellTypeCompare` <- function( sampleIDset, groups, levels=sort(unique(as.character(groups))), 
+				annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				speciesID=getCurrentSpecies(), results.path=NULL, cellProportionsColumn="Final.Proportions", 
+				minPerGroup=3, test=t.test, plot=TRUE, plot.mode=c("bars", "auto", "pie", "lines"),
+				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, verbose=TRUE, ...) {
+
+	# get needed paths, etc. from the options file
+	optT <- readOptionsTable( optionsFile)
+	annT <- readAnnotationTable( annotationFile)
+
+	# set up for this species
+	if ( speciesID != getCurrentSpecies()) {
+		setCurrentSpecies(speciesID)
+	}
+	prefix <- getCurrentSpeciesFilePrefix()
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
+	}
+	celltype.path <- file.path( results.path, "CellTypeProportions")
+	if ( ! file.exists( celltype.path)) {
+		cat( "\nExpected folder of Cell Type Proportion calls not found: ", celltype.path)
+		return(NULL)
+	}
+
+	# set up if needed
+	verifyCellTypeSetup()
+	cellTypeColors <- getCellTypeColors()
+	N_CellTypes <- length( cellTypeColors)
+
+	# gather the cell type proportions data from every sample
+	NS <- length( sampleIDset)
+	if ( length(groups) != NS) stop( "Length of 'groups' must equal number of samples")
+	ctpM <- matrix( NA, nrow=N_CellTypes, ncol=NS)
+	colnames(ctpM) <- sampleIDset
+	rownames(ctpM) <- names( cellTypeColors)
+
+	for ( i in 1:NS) {
+		sid <- sampleIDset[i]
+
+		# name for  file of results
+		my.celltype.path <- file.path( celltype.path, sid)
+		celltypeDetailsFile <- file.path( my.celltype.path, paste( sid, prefix, "CellTypeProportions.csv", sep="."))
+		if ( ! file.exists(celltypeDetailsFile)) {
+			cat( "\nCell Type Proportions results not found for sample: ", sid, "|", celltypeDetailsFile)
+			next
+		}
+		cellAns <- read.csv( celltypeDetailsFile, as.is=T)
+		myCellPcts <- cellAns[[ cellProportionsColumn]]
+		if ( is.null( myCellPcts)) {
+			cat( "\nError: No column of cell type proportions file has name '", cellProportionColumn, "'", sep="")
+			return(NULL)
+		}
+
+		# stash these values
+		ctpM[ , i] <- myCellPcts
+	}
+
+	# now with this matrix of cell type percentages, call the comparison tool
+	plot.mode <- match.arg( plot.mode)
+	ans <- compareTranscriptProportions( ctpM, groups=groups, levels=levels, col=cellTypeColors, 
+					minPerGroup=minPerGroup, test=test, plot=plot, plot.mode=plot.mode, label=label, 
+					wt.fold=wt.fold, wt.pvalue=wt.pvalue, min.percent=min.percent, ...)
+
+	# if we did plot, decide what to call it...
+	levelString <- paste( levels, collapse=".v.")
+	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.png", sep="")
+	dev.print( png, file.path( celltype.path, plotFile), width=900)
+	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.pdf", sep="")
+	dev.print( pdf, file.path( celltype.path, plotFile), width=12)
+
+	out <- vector( mode="list")
+	out[[1]] <- ctpM
+	names(out)[1] <- "Proportions.Matrix"
+
+	if ( length(levels) < 3) {
+		out[[2]] <- ans
+		names(out)[2] <- "Comparison.Results"
+	} else {
+		for (j in 1:length(ans)) {
+			out[[j+1]] <- ans[[j]]
+			names(out)[j+1] <- names(ans)[j]
+		}
+	}
+
+	return( invisible( out))
+}
+
