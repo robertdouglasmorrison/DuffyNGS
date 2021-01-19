@@ -61,7 +61,7 @@
 
 	if ( doDE) {
 
-		ans <- multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
+		multicore.lapply( toolFuncList, FUN=function(x) x( sampleIDset, speciesID, 
 					annotationFile, optionsFile, useMultiHits=useMultiHits, results.path=results.path, 
 					groupColumn=groupColumn, colorColumn=colorColumn,
 					folderName=folderName, altGeneMap=altGeneMap, altGeneMapLabel=altGeneMapLabel,
@@ -248,7 +248,7 @@
 	    rm( outDF)
 
 	    # also make 2 new plot types that use this JOINED result type
-	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, " vs ", otherGrps)
+	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, "\nComparison Folder: ", folderName)
 	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
 	    			label=mainText, marker.cex=0.8)
 	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.png", fileout)
@@ -256,7 +256,7 @@
 	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.pdf", fileout)
 	    dev.print( pdf, plotfile, width=12)
 
-	    mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, " vs ", otherGrps)
+	    mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
 	    			label=mainText, label.cex=0.8)
 	    plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
