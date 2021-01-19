@@ -246,6 +246,23 @@
 	    outDF <- rbind( outUP, outDOWN)
 	    write.table( outDF, fileout, sep="\t", quote=F, row.names=F)
 	    rm( outDF)
+
+	    # also make 2 new plot types that use this JOINED result type
+	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, " vs ", otherGrps)
+	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
+	    			label=mainText, marker.cex=0.8)
+	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.png", fileout)
+	    dev.print( png, plotfile, width=900)
+	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.pdf", fileout)
+	    dev.print( pdf, plotfile, width=12)
+
+	    mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, " vs ", otherGrps)
+	    plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
+	    			label=mainText, label.cex=0.8)
+	    plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
+	    dev.print( png, plotfile, width=900)
+	    plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
+	    dev.print( pdf, plotfile, width=12)
 	}  # for the groups
 
 	# copy all the gene plots to this new results location
