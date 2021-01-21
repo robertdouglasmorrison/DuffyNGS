@@ -296,31 +296,38 @@ MAX_KMERS <- 250000000
 	normalize <- match.arg( normalize)
 	if ( normalize == "LKPTM") {
 		cat( "\nNormalizing to LKPTM (Log2 Kmers Per Ten Million)..")
-		useTbl <- as.LKPTM( useTbl)
+		normTbl <- as.LKPTM( useTbl)
+	} else {
+		stop( "Unknown or Unsupported Kmer normalization method: ", normalize)
 	}
 	gc()
 	
 	# we are now ready to do tests per Kmer
 	cat( "\nRunning Linear Model on ", NR, " Kmers..\n")
 	fold <- pval <- vector( mode="numeric", length=NR)
-	avg <- matrix( 0, 2, NR)
+	avg <- avg.cnt <- matrix( 0, 2, NR)
 	rownames(avg) <- paste( "Avg", grpLvls, "LKPTM", sep="_")
+	rownames(avg.cnt) <- paste( "Avg", grpLvls, "Depth", sep="_")
 	cnt <- matrix( 0, 2, NR)
 	rownames(cnt) <- paste( "N", grpLvls, "Samples", sep="_")
 
 	for ( i in 1:NR) {
-		v <- useTbl[ i, ]
+		v <- normTbl[ i, ]
+		vCnt <- useTbl[ i, ]
 		ans <- t.test( v[grp1], v[grp2])
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
 		cnt[1,i] <- sum( v[grp1] > 0)
 		cnt[2,i] <- sum( v[grp2] > 0)
+		avg.cnt[1,i] <- mean( vCnt[grp1])
+		avg.cnt[2,i] <- mean( vCnt[grp2])
 		if ( i %% 10000 == 0) cat( "\r", i, rownames(useTbl)[i], fold[i], pval[i])
 	}
 	cat( "\nDone.\n")
+	rm( normTbl)
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), t(avg.cnt), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
 			row.names=seq_len(NR), stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
