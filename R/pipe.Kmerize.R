@@ -1270,7 +1270,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		filesToDo <- expectedFiles
 	} else {
 		# is the data paired end or not
-		if (asMatePairs || (!is.null(forceMatePairs) && forceMatePairs)) {
+		if (asMatePairs || (!is.null(forceMatePairs) && forceMatePairs && length(filesToDo) == 2)) {
 			if (verbose) cat( "\nRunning 'CutAdapt' on mate pair files..")
 			filesToDo <- cutadapt( file1=inputFastqFiles[1], file2=inputFastqFiles[2], 
                         			cutadaptProgram=cutadaptProgram, min.length=kmer.size)
