@@ -356,8 +356,14 @@ MAX_KMERS <- 250000000
 	ansDiff <- mapProteinFragmentToReference( ansProt, optionsFile=optionsFile, verbose=verbose)
 
 	# lastly, sew it all back together in a sensible order...
+	# but force it all to comply exactly with the order we got as input
 	cat( "\n\nStep 4:  Combine and organize all results..")
-	out <- cbind( ansProt, "DIF_FROM_REF"=ansDiff, kmerTbl[ ,2:ncol(kmerTbl)], stringsAsFactors=F)
+	kmer.out <- kmerTbl$Kmer
+	whereProt <- match( kmer.out, ansProt$Kmer)
+	outProt <- ansProt[ whereProt, 2:ncol(ansProt)]
+	whereDiff <- match( kmer.out, ansDiff$Kmer)
+	outDiff <- ansDiff[ whereProt]
+	out <- cbind( "Kmer"=kmer.out, outProt, "DIF_FROM_REF"=outDiff, kmerTbl[ ,2:ncol(kmerTbl)], stringsAsFactors=F)
 	cat( "\nDone.\n")
 	return( out)
 }
