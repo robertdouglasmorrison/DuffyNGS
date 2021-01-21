@@ -250,9 +250,9 @@ MAX_KMERS <- 250000000
 `pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), 
 				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100) {
 
-	# just just the samples asked for
-	where <- match( sampleIDset, colnames(kmerTbl))
-	if ( any( is.na(where))) stop( "Some SampleIDs not in Kmer table")
+	# use just the samples asked for, and make sure the columns are in sample & group order
+	where <- match( sampleIDset, colnames(kmerTbl), nomatch=0)
+	if ( any( where == 0)) stop( "Some SampleIDs not in Kmer table")
 	if ( length(where) != ncol(kmerTbl) || !all( where == (1:ncol(kmerTbl)))) {
 		useTbl <- kmerTbl[ , where]
 	} else {
@@ -614,7 +614,7 @@ MAX_KMERS <- 250000000
 	mergeKmerChunks( min.count)
 
 	# also do any RevComp resolving now too
-	if ( bigKmerCounts[[1]] > 0) {
+	if ( sum(bigKmerCounts[[1]]) > 0) {
 		cat( "\nSearch for RevComp pairs to join..")
 		kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
 	}
