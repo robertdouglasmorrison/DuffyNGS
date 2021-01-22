@@ -35,6 +35,15 @@
 	}
 	protDF <- read.delim( summaryFile, as.is=T)
 	NAA <- nrow( protDF)
+
+	# there is a small chance that this file is old, from befoer the 'Counts' field was added.
+	# check and perhaps remake it
+	if ( ! "Counts" %in% colnames(protDF)) {
+		sumFile <- sub( "ProteinSummary.txt$", "Answer.rda", summaryFile)
+		tmpAns <- proteinConstructPileupSummary( sumFile, sampleID=sampleID, geneName=geneName, doPlot=F)
+		protDF <- read.delim( summaryFile, as.is=T)
+		NAA <- nrow( protDF)
+	}
 	
 	# get the consensus protein(s) themselves, and extract the initial guess about proportions from their names
 	topProteins <- cpp.ExtractTopProteins( summaryFile, min.minor.pct=min.minor.pct, min.mutation.pct=min.mutation.pct,
