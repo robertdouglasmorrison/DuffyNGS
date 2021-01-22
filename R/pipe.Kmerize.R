@@ -327,7 +327,7 @@ MAX_KMERS <- 250000000
 	cat( "\nDone.\n")
 	rm( normTbl)
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), t(avg.cnt), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), round(t(avg.cnt)), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
 			row.names=seq_len(NR), stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
@@ -368,7 +368,6 @@ MAX_KMERS <- 250000000
 	kmer.out <- kmerTbl$Kmer
 	whereProt <- match( kmer.out, ansProt$Kmer)
 	outProt <- ansProt[ whereProt, 2:ncol(ansProt)]
-	whereDiff <- match( kmer.out, ansDiff$Kmer)
 	outDiff <- ansDiff[ whereProt]
 	out <- cbind( "Kmer"=kmer.out, outProt, "DIF_FROM_REF"=outDiff, kmerTbl[ ,2:ncol(kmerTbl)], stringsAsFactors=F)
 	cat( "\nDone.\n")
