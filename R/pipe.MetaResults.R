@@ -256,13 +256,15 @@
 	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.pdf", fileout)
 	    dev.print( pdf, plotfile, width=12)
 
-	    mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
-	    plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
-	    			label=mainText, label.cex=0.8)
-	    plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
-	    dev.print( png, plotfile, width=900)
-	    plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
-	    dev.print( pdf, plotfile, width=12)
+	    if (addCellTypes) {
+	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
+	    	plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
+	    				label=mainText, label.cex=0.8)
+	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
+	    	dev.print( png, plotfile, width=900)
+	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
+	    	dev.print( pdf, plotfile, width=12)
+	    }
 	}  # for the groups
 
 	# copy all the gene plots to this new results location
