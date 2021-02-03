@@ -1277,9 +1277,9 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	expectedFiles <- inputFastqFiles
 	if( grepl( "\\.fastq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fastq", ".trimmed.fastq", inputFastqFiles)
 	if( grepl( "\\.fq", inputFastqFiles[1])) expectedFiles <- sub( "\\.fq", ".trimmed.fq", inputFastqFiles)
+	filesToDo <- expectedFiles
 	if ( all( file.exists( expectedFiles))) {
 		cat( "\nUsing existing 'cutadapt' results..")
-		filesToDo <- expectedFiles
 	} else {
 		# is the data paired end or not
 		if (asMatePairs || (!is.null(forceMatePairs) && forceMatePairs && length(filesToDo) == 2)) {
