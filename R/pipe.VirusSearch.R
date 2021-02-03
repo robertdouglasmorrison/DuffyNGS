@@ -19,17 +19,17 @@
 
 	# same with the viral Bowtie index
 	bowtieFile <- file.path( bowtie.path, paste( virusTargetName, "1.bt2", sep="."))
-	if ( ! file.exists( bowtieFile)) stop( paste( "Required Virus Bowtie2 target index file not found: ", bowtieFile))
+	if ( ! file.exists( bowtieFile)) stop( paste( "Required", virusTargetName, "Bowtie2 target index file not found: ", bowtieFile))
 
 	# make the place/file for our results
-	bam.path <- file.path( results.path, "Viral.BAMS")
+	bam.path <- file.path( results.path, paste( virusTargetName, "BAMS", sep="."))
 	if ( ! file.exists( bam.path)) dir.create( bam.path, recursive=T)
 
 	# since we don't expect much hits (if at all), allow doing a set of samples into one result
 	bigDF <- data.frame()
 	for (sid in sampleIDset) {
 
-		cat( "\n\nStarting 'Virus Search' for Sample:     ", sid, "\n")
+		cat( "\n\nStarting '", virusTargetName, "' Search for Sample:    ", sid, "\n", sep="")
 	
 		# get the file of noHit reads, as viral reads should still be in there
 		infile <- paste( sid, "noHits", "fastq", sep=".") 
@@ -49,7 +49,7 @@
 		}
 
 		# call Bowtie
-		bamFile <- file.path( bam.path, paste( sid, "ViralHits.bam", sep="."))
+		bamFile <- file.path( bam.path, paste( sid, virusTargetName, "Hits.bam", sep="."))
 		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=30, sampleID=sid, optionsFile=optionsFile,
 					alignIndex=virusTargetName, index.path=bowtie.path, keepUnaligned=FALSE, 
 					verbose=verbose, label=sid)
@@ -70,7 +70,7 @@
 		bamClose( reader)
 	
 		if ( ! length(viralHits)) {
-			cat( "\nNo Viral gene hits detected..")
+			cat( "\nNo", virusTargetName, "hits detected..")
 			next
 		}
 
@@ -87,7 +87,8 @@
 		ord <- order( hitCnts, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
-		outfile <- file.path( bam.path, paste( sid, "ViralHits.Summary.csv", sep="."))
+		colnames(smlDF)[2] <- paste( virusTargetName, "ID", sep=".")
+		outfile <- file.path( bam.path, paste( sid, virusTargetName, "Summary.csv", sep="."))
 		write.table( smlDF, outfile, sep=",", quote=T, row.names=F)
 
 		cat( "\nDone.  N_Hits: ", sum(hitTbl), "\n")
