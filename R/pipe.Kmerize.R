@@ -247,7 +247,7 @@ MAX_KMERS <- 250000000
 
 # do differential Kmer analysis by sample groups
 
-`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, normalize=c("LKPTM"), 
+`pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), normalize=c("LKPTM"), 
 				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100) {
 
 	# use just the samples asked for, and make sure the columns are in sample & group order
@@ -262,7 +262,12 @@ MAX_KMERS <- 250000000
 	NR <- nrow(useTbl)
 	
 	# get our group factors
-	grpFac <- factor( groupSet)
+	if ( ! is.factor( groupSet)) {
+		grpFac <- factor( groupSet, levels=levels)
+	} else {
+		grpFac <- groupSet
+		groupSet <- as.character(groupSet)
+	}
 	grpLvls <- levels( grpFac)
 	nGrps <- nlevels( grpFac)
 	if ( nGrps != 2) stop( "Expected exactly 2 Sample Groups")
