@@ -61,7 +61,7 @@
 		if ( is.null(myColor) || is.na(myColor) || myColor == "") myColor <- "orchid1"
 
 		# 1)  Steepest Descent of the 28-dimensional immune profile
-		if ( (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts1)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts1)))) {
 			cat( "\n1. Cell Type Profile: Fit by Steepest Descent:\n")
 			ans1 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlot='final', plot.path=celltype.path, algorithm='steep')
@@ -69,7 +69,7 @@
 		}
 
 		# 2)  Nonlinear Least Squares of the 28-dimensional immune profile
-		if ( (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts2)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts2)))) {
 			cat( "\n2. Cell Type Profile: Fit by Nonlinear Least Squares (NLS):\n")
 			ans2 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlot='final', plot.path=celltype.path, algorithm='nls')
@@ -77,7 +77,7 @@
 		}
 
 		# 3)  GenSA of the 28-dimensional immune profile
-		if ( (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts3)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts3)))) {
 			cat( "\n3. Cell Type Profile: Fit by Simulated Annealing (GenSA):\n")
 			ans3 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlot='final', plot.path=celltype.path, algorithm='GenSA')
@@ -85,7 +85,7 @@
 		}
 
 		# 4)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
-		if ( (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts4)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts4)))) {
 			cat( "\n4. Cell Type Deconvolution:  Fit RPKM by Nonlinear Least Squares (NLS):\n")
 			ans4 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=TRUE, plot.path=celltype.path, plot.col=cellTypeColors, verbose=F)
@@ -93,7 +93,7 @@
 		}
 		
 		# 5)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
-		if ( (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts5)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts5)))) {
 			cat( "\n5. Cell Type Deconvolution:  Fit RPKM by Simulated Annealing (GenSA):\n")
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=TRUE, plot.path=celltype.path, plot.col=cellTypeColors, verbose=F)
@@ -101,7 +101,7 @@
 		}
 		
 		# 6)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
-		if ( (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts6)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts6)))) {
 			cat( "\n6. Cell Type Deconvolution:  Fit Log2(RPKM) by Nonlinear Least Squares (NLS):\n")
 			cat( "           Not numerically stable..  Skip this method for now..\n")
 			#ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
@@ -110,7 +110,7 @@
 		}
 		
 		# 7)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
-		if ( (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts7)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts7)))) {
 			cat( "\n7. Cell Type Deconvolution:  Fit Log2(RPKM) by Simulated Annealing (GenSA):\n")
 			ans7 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=TRUE, plot=TRUE, plot.path=celltype.path, plot.col=cellTypeColors, verbose=F)
@@ -118,7 +118,7 @@
 		}
 		
 		# 8)  Transcriptome Deconvolution, by Steepest Descent...
-		if ( (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts8)))) {
+		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts8)))) {
 			cat( "\n8. Cell Type Deconvolution:  Fit RPKM by Steepest Descent:\n")
 			ans8 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=TRUE, plot.path=celltype.path, plot.col=cellTypeColors, verbose=F)
