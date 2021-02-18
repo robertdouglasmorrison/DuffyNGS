@@ -16,6 +16,7 @@
 	descTerms <- strsplit( viralFA$desc, split=" | ", fixed=T)
 	viralIDs <- sapply( descTerms, `[`, 1)
 	viralNames <- sapply( descTerms, `[`, 2)
+	if ( any( is.na( viralNames))) cat( "\nWarning:  some Fasta headers missing ' | ' product term delimitors")
 
 	# same with the viral Bowtie index
 	bowtieFile <- file.path( bowtie.path, paste( virusTargetName, "1.bt2", sep="."))
@@ -97,6 +98,7 @@
 		# accumulate the results
 		bigDF <- rbind( bigDF, smlDF)
 	}
+	if ( ! nrow(bigDF)) return( bigDF)
 
 	# final ordering is...
 	ord <- order( bigDF$N_Hits, decreasing=T)
