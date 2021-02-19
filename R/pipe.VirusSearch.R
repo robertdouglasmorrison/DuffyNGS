@@ -1,7 +1,7 @@
 # pipe.VirusSearch.R -- mine No Hits for evidence of Viruses
 
-`pipe.VirusSearch` <- function( sampleIDset, annotationFile="Annotation.txt",
-		optionsFile="Options.txt", virusTargetName="Virus.Genes", verbose=FALSE) {
+`pipe.VirusSearch` <- function( sampleIDset, virusTargetName="Virus.Genes", max.mismatch.per.100=5,
+				annotationFile="Annotation.txt", optionsFile="Options.txt", verbose=FALSE) {
 
 	# get options that we need
 	optT <- readOptionsTable( optionsFile)
@@ -51,7 +51,7 @@
 
 		# call Bowtie
 		bamFile <- file.path( bam.path, paste( sid, virusTargetName, "Hits.bam", sep="."))
-		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=30, sampleID=sid, optionsFile=optionsFile,
+		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=1, sampleID=sid, optionsFile=optionsFile,
 					alignIndex=virusTargetName, index.path=bowtie.path, keepUnaligned=FALSE, 
 					verbose=verbose, label=sid)
 		nReadsIn <- ans1$RawReads
@@ -66,12 +66,16 @@
 			if ( nReads < 1) break
 			refIDs <- refID( chunk)
 			seqID <- refID2seqID( refIDs, reader=reader, refData=refData)
-			viralHits <- c( viralHits, seqID)
+			# look at how many mismatches per read
+			misMatchCnt <- as.numeric( getTag( chunk, "XM"))
+			readLen <- nchar( readSeq( chunk))
+			goodHits <- which( (misMatchCnt * 100 / readLen) <= max.mismatch.per.100)
+			viralHits <- c( viralHits, seqID[goodHits])
 		}
 		bamClose( reader)
 	
 		if ( ! length(viralHits)) {
-			cat( "\nNo", virusTargetName, "hits detected..")
+			cat( "\nNo high quality", virusTargetName, "hits detected..")
 			next
 		}
 
@@ -83,8 +87,9 @@
 		where <- match( names(hitTbl), viralIDs)
 		products <- viralNames[where]
 
-		smlDF <- data.frame( "SampleID"=sid, "VirusID"=names(hitTbl), "Product"=products, "N_Hits"=hitCnts,
-				"PercentHits"=pctHits, "PerMillionNoHits"=perMilNoHits, stringsAsFactors=F)
+		smlDF <- data.frame( "SampleID"=sid, "VirusID"=names(hitTbl), "Product"=products, 
+				"Percent.Sample"=pctHits, "N_Hits"=hitCnts, "PerMillionNoHits"=perMilNoHits, 
+				stringsAsFactors=F)
 		ord <- order( hitCnts, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
