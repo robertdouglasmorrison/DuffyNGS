@@ -1,7 +1,8 @@
 # pipe.VirusSearch.R -- mine No Hits for evidence of Viruses
 
 `pipe.VirusSearch` <- function( sampleIDset, virusTargetName="Virus.Genes", max.mismatch.per.100=5,
-				annotationFile="Annotation.txt", optionsFile="Options.txt", verbose=FALSE) {
+				max.low.complexity=80, annotationFile="Annotation.txt", 
+				optionsFile="Options.txt", verbose=FALSE) {
 
 	# get options that we need
 	optT <- readOptionsTable( optionsFile)
@@ -28,9 +29,13 @@
 
 	# since we don't expect much hits (if at all), allow doing a set of samples into one result
 	bigDF <- data.frame()
+	nRejectMismatch <- nRejectLowComplex <- nFound <- 0
+
 	for (sid in sampleIDset) {
 
-		cat( "\n\nStarting '", virusTargetName, "' Search for Sample:    ", sid, "\n", sep="")
+		cat( "\n\nStarting '", virusTargetName, "' Search for Sample:    ", sid, 
+			"\n  Max base mismatches per 100bp:  ", max.mismatch.per.100, 
+			"\n  Max low complexity base %:      ", max.low.complexity, sep="")
 	
 		# get the file of noHit reads, as viral reads should still be in there
 		infile <- paste( sid, "noHits", "fastq", sep=".") 
@@ -50,6 +55,7 @@
 		}
 
 		# call Bowtie
+		cat( "\n  Aligning..")
 		bamFile <- file.path( bam.path, paste( sid, virusTargetName, "Hits.bam", sep="."))
 		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=1, sampleID=sid, optionsFile=optionsFile,
 					alignIndex=virusTargetName, index.path=bowtie.path, keepUnaligned=FALSE, 
@@ -57,20 +63,34 @@
 		nReadsIn <- ans1$RawReads
 
 		# now see what got hit
+		cat( "  Scan for high quality hits..")
 		reader <- bamReader( bamFile)
 		refData <- getRefData( reader)
 		viralHits <- vector()
+		nSeen <- 0
 		repeat {
 			chunk <- getNextChunk( reader, n=10000, alignedOnly=T)
 			nReads <- size( chunk)
 			if ( nReads < 1) break
+			nSeen <- nSeen + nReads
 			refIDs <- refID( chunk)
 			seqID <- refID2seqID( refIDs, reader=reader, refData=refData)
 			# look at how many mismatches per read
 			misMatchCnt <- as.numeric( getTag( chunk, "XM"))
 			readLen <- nchar( readSeq( chunk))
-			goodHits <- which( (misMatchCnt * 100 / readLen) <= max.mismatch.per.100)
+			badMatch <- which( (misMatchCnt * 100 / readLen) > max.mismatch.per.100)
+			# also look for low complexity
+			bases <- strsplit( readSeq( chunk), split="")
+			pctLow <- sapply( bases, function(x) {
+					myPct <- table(x) / length(x)
+					return( max(myPct))
+				})
+			badComplex <- which( (pctLow * 100) > max.low.complexity)
+			goodHits <- setdiff( 1:nReads, union( badMatch, badComplex))
 			viralHits <- c( viralHits, seqID[goodHits])
+			nFound <- nFound + length(goodHits)
+			nRejectMismatch <- nRejectMismatch + length(badMatch)
+			nRejectLowComplex <- nRejectLowComplex + length(badComplex)
 		}
 		bamClose( reader)
 	
@@ -97,7 +117,7 @@
 		outfile <- file.path( bam.path, paste( sid, virusTargetName, "Summary.csv", sep="."))
 		write.table( smlDF, outfile, sep=",", quote=T, row.names=F)
 
-		cat( "\nDone.  N_Hits: ", sum(hitTbl), "\n")
+		cat( "\nDone.  N_Aligned: ", nSeen, "  N_Good_Hits: ", sum(hitTbl), "\n")
 		print( head( smlDF, 3))
 
 		# accumulate the results
@@ -109,6 +129,12 @@
 	ord <- order( bigDF$N_Hits, decreasing=T)
 	bigDF <- bigDF[ ord, ]
 	rownames(bigDF) <- 1:nrow(bigDF)
+
+	# report the overall picture
+	cat( "\n\nSummary:")
+	cat( "\n  N Good Virus Reads Found:      ", nFound)
+	cat( "\n  N Rejected for Mismatches:     ", nRejectMismatch)
+	cat( "\n  N Rejected for Low Complexity: ", nRejectLowComplex, "\n")
 
 	return( bigDF)
 }
