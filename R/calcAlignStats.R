@@ -804,7 +804,7 @@ plotBaseStatData <- function( alignStatsData, asPNG=FALSE, plotPath=".", pause=0
 			prettyNum( as.integer( alignStatsData$nReads), big.mark=","))
 	barplot( posPcts, main=mainText, ylim=yLim,
 		xlab="Base Mismatch Position within Aligned Read", ylab="Percent of All Reads",
-		col="steelblue", cex.lab=1.2, cex.names=1.2, cex.axis=1.2)
+		col="steelblue", cex.lab=1.2, cex.names=1.2, cex.axis=1.2, border=(length(posPcts)>200))
 	if ( asPNG) {
 		pngfile <- paste( sampleID, alignPhase, "Base.Positions.png", sep=".")
 		dev.print( png, file=file.path( plotPath, pngfile), width=800, height=600, bg='white')
@@ -903,7 +903,8 @@ plotIndelStatData <- function( alignStatsData, asPNG=FALSE, plotPath=".", pause=
 
 	barplot( m, main=mainText, ylim=yLim,
 		xlab="Indel Position within Aligned Read", ylab="Percent of All Reads",
-		beside=TRUE, col=c("red","steelblue"), cex.lab=1.2, cex.names=1.2, cex.axis=1.2)
+		beside=TRUE, col=c("red","steelblue"), cex.lab=1.2, cex.names=1.2, cex.axis=1.2,
+		border=(ncol(m)>125))
 	legend( "topleft", c("Insertions","Deletions"), fill=c("red","steelblue"), bg="white",cex=1.05)
 
 	if ( asPNG) {
