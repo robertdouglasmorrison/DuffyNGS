@@ -728,13 +728,13 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	cat( "\nFinal Base Call String length: ", nrow(baseCalls))
 	
 	# finally make this into a distance matrix
+	# because we have exact same length strings, just count up mismatches.
+	# No need for distance tools
 	cat( "\nBuilding String Distance Matrix..")
-	if ( any( nchar(baseString) > 1000)) {
-		require( Biostrings)
-		dm <- as.matrix( stringDist( baseString))
-	} else {
-		dm <- adist( baseString)
-	}
+	NS <- ncol(baseCalls)
+	dm <- matrix( 0, NS, NS)
+	colnames(dm) <- row.names(dm) <- colnames(baseCalls)
+	for ( i in 1:(NS-1)) for ( j in (i+1):NS) dm[i,j] <- dm[j,i] <- sum( baseCalls[,i] != baseCalls[,j])
 	
 	# and show it
 	plotPhyloTree( baseString, dm=dm, ...)
