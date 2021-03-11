@@ -1,6 +1,6 @@
 # pipe.VirusSearch.R -- mine No Hits for evidence of Viruses
 
-`pipe.VirusSearch` <- function( sampleIDset, virusTargetName="Virus.Genes", max.mismatch.per.100=5,
+`pipe.VirusSearch` <- function( sampleIDset, targetName="Virus.Genes", fastaName=targetName, max.mismatch.per.100=5,
 				max.low.complexity=80, annotationFile="Annotation.txt", 
 				optionsFile="Options.txt", verbose=FALSE) {
 
@@ -11,20 +11,20 @@
 	bowtie.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=verbose)
 
 	# make sure we see and can load the virus data
-	viralFastaFile <- file.path( bowtie.path, "FastaFiles", paste( virusTargetName, "fasta", sep="."))
-	if ( ! file.exists( viralFastaFile)) stop( paste( "Required Virus FASTA file not found: ", viralFastaFile))
-	viralFA <- loadFasta( viralFastaFile, short.desc=FALSE, verbose=verbose)
+	fastaFile <- file.path( bowtie.path, "FastaFiles", paste( fastaName, "fasta", sep="."))
+	if ( ! file.exists( fastaFile)) stop( paste( "Required Virus FASTA file not found: ", fastaFile))
+	viralFA <- loadFasta( fastaFile, short.desc=FALSE, verbose=verbose)
 	descTerms <- strsplit( viralFA$desc, split=" | ", fixed=T)
 	viralIDs <- sapply( descTerms, `[`, 1)
 	viralNames <- sapply( descTerms, `[`, 2)
 	if ( any( is.na( viralNames))) cat( "\nWarning:  some Fasta headers missing ' | ' product term delimitors")
 
 	# same with the viral Bowtie index
-	bowtieFile <- file.path( bowtie.path, paste( virusTargetName, "1.bt2", sep="."))
-	if ( ! file.exists( bowtieFile)) stop( paste( "Required", virusTargetName, "Bowtie2 target index file not found: ", bowtieFile))
+	bowtieFile <- file.path( bowtie.path, paste( targetName, "1.bt2", sep="."))
+	if ( ! file.exists( bowtieFile)) stop( paste( "Required", targetName, "Bowtie2 target index file not found: ", bowtieFile))
 
 	# make the place/file for our results
-	bam.path <- file.path( results.path, paste( virusTargetName, "BAMS", sep="."))
+	bam.path <- file.path( results.path, paste( targetName, "BAMS", sep="."))
 	if ( ! file.exists( bam.path)) dir.create( bam.path, recursive=T)
 
 	# since we don't expect much hits (if at all), allow doing a set of samples into one result
@@ -33,7 +33,7 @@
 
 	for (sid in sampleIDset) {
 
-		cat( "\n\nStarting '", virusTargetName, "' Search for Sample:    ", sid, 
+		cat( "\n\nStarting '", targetName, "' Search for Sample:    ", sid, 
 			"\n  Max base mismatches per 100bp:  ", max.mismatch.per.100, 
 			"\n  Max low complexity base %:      ", max.low.complexity, sep="")
 	
@@ -56,9 +56,9 @@
 
 		# call Bowtie
 		cat( "\n  Aligning..")
-		bamFile <- file.path( bam.path, paste( sid, virusTargetName, "Hits.bam", sep="."))
+		bamFile <- file.path( bam.path, paste( sid, targetName, "Hits.bam", sep="."))
 		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=1, sampleID=sid, optionsFile=optionsFile,
-					alignIndex=virusTargetName, index.path=bowtie.path, keepUnaligned=FALSE, 
+					alignIndex=targetName, index.path=bowtie.path, keepUnaligned=FALSE, 
 					verbose=verbose, label=sid)
 		nReadsIn <- ans1$RawReads
 
@@ -95,7 +95,7 @@
 		bamClose( reader)
 	
 		if ( ! length(viralHits)) {
-			cat( "\nNo high quality", virusTargetName, "hits detected..")
+			cat( "\nNo high quality", targetName, "hits detected..")
 			next
 		}
 
@@ -113,8 +113,8 @@
 		ord <- order( hitCnts, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
-		colnames(smlDF)[2] <- paste( virusTargetName, "ID", sep=".")
-		outfile <- file.path( bam.path, paste( sid, virusTargetName, "Summary.csv", sep="."))
+		colnames(smlDF)[2] <- paste( targetName, "ID", sep=".")
+		outfile <- file.path( bam.path, paste( sid, targetName, "Summary.csv", sep="."))
 		write.table( smlDF, outfile, sep=",", quote=T, row.names=F)
 
 		cat( "\nDone.  N_Aligned: ", nSeen, "  N_Good_Hits: ", sum(hitTbl), "\n")
