@@ -115,3 +115,82 @@
 	return(out)
 }
 
+
+`cropHLAsuffix` <- function( hlaNames, max.suffix=2) {
+
+	# some HLA name specifiers can have multiple suffixes of specifity.  Allow cropping off the far right ends
+	suffix.pattern <- ":"
+	out <- hlaNames
+	N <- length(hlaNames)
+
+	hits <- gregexpr( suffix.pattern, hlaNames)
+	for ( i in 1:N) {
+		thisAns <- hits[[i]]
+		if ( length( thisAns) < max.suffix) next
+		lastWanted <- thisAns[ max.suffix]
+		out[i] <- substr( out[i], 1, lastWanted - 1)
+	}
+	out
+}
+
+
+`pipe.HLA.CombineSubjectReplicates` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL, max.suffix=2) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls")
+
+	# visit every replicate for this one subject
+	N <- length( sampleIDset)
+	hlaTbl <- data.frame()
+	for ( i in 1:N) {
+		sid <- sampleIDset[i]
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "HLA.Calls.csv", sep="."))
+		if ( ! file.exists( my.file)) {
+			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
+			next
+		}
+		smlTbl <- read.csv( my.file, as.is=T)
+		if ( ! nrow(smlTbl)) next
+		hlaTbl <- rbind( hlaTbl, smlTbl)
+	}
+
+	# Ok, now summmarize each HLA gene by what alleles were most often seen.
+	geneFac <- factor( hlaTbl$Locus)
+	namesOut <- cntsOut <- fullOut <- vector()
+	nOut <- 0
+	tapply( hlaTbl$IMGT_Name, geneFac, function(x) {
+		# given all the IMGT allele names for one gene from one subject
+		
+		# the alleles can have any number of ":xx:xx" suffix specifiers, that make calling common hits 
+		# very difficult.  Allow trimming off the far right ends to make them more constant
+		myAlleles <- cropHLAsuffix( x, max.suffix=max.suffix)
+		
+		# now count them, where we expect 2 calls for each gene (one from each parent)
+		alleleCnts <- sort( table( myAlleles), decreasing=T)
+		bestName <- names(alleleCnts)[1]
+		bestCnt <- as.integer( alleleCnts[1])
+		secondName <- names(alleleCnts)[2]
+		secondCnt <- as.integer( alleleCnts[2])
+		
+		# catch rare case of getting same allele from both parents
+		if ( is.na(secondCnt) || secondCnt < (N*0.29) || bestCnt > (N*1.35)) {
+			secondName <- bestName
+			secondCnt <- 0
+		}
+		
+		# make the combined call, after some text cleanup
+		nOut <<- nOut + 1
+		namesOut[nOut] <<- paste( sub( "^HLA\\-", "", bestName), sub( "^.+\\*", "*", secondName), sep="/")
+		cntsOut[nOut] <<- paste( bestCnt, secondCnt, sep=" / ")
+		fullOut[nOut] <<- paste( sub(  "^.+\\*", "*", names(alleleCnts)), "(", as.integer(alleleCnts), ")", 
+					sep="", collapse="; ")
+	})
+	
+	out <- data.frame( "Locus"=levels(geneFac), "Allele.Calls"=namesOut, "Allele.Counts"=cntsOut, 
+			"All.Alleles.Frequencies"=fullOut, stringsAsFactors=F)
+	return(out)
+}

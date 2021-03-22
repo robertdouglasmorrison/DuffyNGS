@@ -26,8 +26,9 @@
 	cat( "\n")
 	subfolders <- c( "align", "fastq", "html", "ratios", "riboClear", "splicing", "summary", 
 			"transcript", "wig", "AlignStats", "USR", "VariantCalls", 
-			"VelvetContigs", "VelvetPeptides", "CR", "HLA.typing", "ConsensusProteins",
-			"SieveAnalysis", "Viral.BAMS", "LineageCalls")
+			"VelvetContigs", "VelvetPeptides", "CR", "HLA.typing", "HLA.ProteinCalls", 
+			"ConsensusProteins", "CellTypeProportions", "BarcodeMotifs", "SieveAnalysis", 
+			"Viral.BAMS", "LineageCalls")
 	dataType <- getAnnotationValue( annotationFile, key=sampleID, columnArg="DataType", notfound="RNA-seq")
 	if ( dataType == "ChIP-seq") subfolders <- c( subfolders, "ChIPpeaks")
 
