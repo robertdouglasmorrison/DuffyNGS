@@ -7,6 +7,9 @@
 		chunkSize=1000000, maxReads=5000000, pause=0, verbose=T, nUSRkeep=1000000,
 		plotCRs=T, mode=c("all", "alignOnly", "pieOnly")) {
 
+	# make sure the sampleID has a valid name format
+	checkSampleNames( sampleID)
+
 	sink( file=paste( sampleID, "QuickQC.log.txt", sep="."), split=TRUE)
 	on.exit( sink())
 

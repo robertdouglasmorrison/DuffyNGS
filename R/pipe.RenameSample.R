@@ -19,6 +19,9 @@
 		stop()
 	}
 	
+	# make sure the sampleID has a valid name format
+	checkSampleNames( c( sampleID, newSampleID))
+
 	# make folders for all results...
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
