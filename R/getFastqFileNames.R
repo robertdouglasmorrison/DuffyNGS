@@ -5,7 +5,7 @@
 getRawFastqFileNames <- function( sampleID, annotationFile, optionsFile, verbose=T) {
 
 	annT <- readAnnotationTable( annotationFile)
-	rawFastqFile <- getAnnotationValue( annT, sampleID, "Filename")
+	rawFastqFile <- getAnnotationValue( annT, sampleID, "Filename", verbose=verbose)
 
 	# grab and show a few files, to force auto-mount of file system
 	fastq.path <- getOptionValue( optionsFile, "fastqData.path", verbose=verbose)

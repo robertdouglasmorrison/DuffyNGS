@@ -1,8 +1,8 @@
 # pipe.VirusSearch.R -- mine No Hits for evidence of Viruses
 
 `pipe.VirusSearch` <- function( sampleIDset, targetName="Virus.Genes", fastaName=targetName, max.mismatch.per.100=5,
-				max.low.complexity=80, annotationFile="Annotation.txt", 
-				optionsFile="Options.txt", verbose=FALSE) {
+				max.low.complexity=80, input.mode=c("nohits","fastq"), k.bowtie=1, 
+				annotationFile="Annotation.txt", optionsFile="Options.txt", verbose=FALSE) {
 
 	# get options that we need
 	optT <- readOptionsTable( optionsFile)
@@ -38,18 +38,26 @@
 			"\n  Max low complexity base %:      ", max.low.complexity, sep="")
 	
 		# get the file of noHit reads, as viral reads should still be in there
-		infile <- paste( sid, "noHits", "fastq", sep=".") 
-		infile <- file.path( results.path, "fastq", infile)
-		infile <- allowCompressedFileName( infile)
-		if ( ! file.exists( infile)) {
-			notgenomicfile <- paste( sid, "not.genomic", "fastq", sep=".") 
-			notgenomicfile <- file.path( results.path, "fastq", notgenomicfile)
-			notgenomicfile <- allowCompressedFileName( notgenomicfile)
-			cat( "\n'No Hits' File not found:  ", infile, "\nTrying: ", notgenomicfile)
-			infile <- notgenomicfile
+		input.mode <- match.arg( input.mode)
+		if ( input.mode == "nohits") {
+			infile <- paste( sid, "noHits", "fastq", sep=".") 
+			infile <- file.path( results.path, "fastq", infile)
+			infile <- allowCompressedFileName( infile)
+			if ( ! file.exists( infile)) {
+				notgenomicfile <- paste( sid, "not.genomic", "fastq", sep=".") 
+				notgenomicfile <- file.path( results.path, "fastq", notgenomicfile)
+				notgenomicfile <- allowCompressedFileName( notgenomicfile)
+				cat( "\n'No Hits' File not found:  ", infile, "\nTrying: ", notgenomicfile)
+				infile <- notgenomicfile
+			}
+			nNoHits <- getFileLineCount( infile, sid) / 4
+		} else {
+			# use the raw FASTQ files instead of the NoHits
+			rawFastq <- getRawFastqFileNames( sid, annotationFile, optionsFile, verbose=FALSE)
+			infile <- rawFastq$files
+			nNoHits <- getFileLineCount( infile[1], sid) / 4
 		}
-		nNoHits <- getFileLineCount( infile, sid) / 4
-		if ( ! file.exists( infile)) {
+		if ( ! all( file.exists( infile))) {
 			cat( "\nFASTQ file not found:  ", infile)
 			next
 		}
@@ -57,7 +65,7 @@
 		# call Bowtie
 		cat( "\n  Aligning..")
 		bamFile <- file.path( bam.path, paste( sid, targetName, "Hits.bam", sep="."))
-		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=1, sampleID=sid, optionsFile=optionsFile,
+		ans1 <- fastqToBAM( inputFastqFile=infile, outputFile=bamFile, k=k.bowtie, sampleID=sid, optionsFile=optionsFile,
 					alignIndex=targetName, index.path=bowtie.path, keepUnaligned=FALSE, 
 					verbose=verbose, label=sid)
 		nReadsIn <- ans1$RawReads
@@ -66,7 +74,7 @@
 		cat( "  Scan for high quality hits..")
 		reader <- bamReader( bamFile)
 		refData <- getRefData( reader)
-		viralHits <- vector()
+		viralHits <- viralWts <- vector()
 		nSeen <- 0
 		repeat {
 			chunk <- getNextChunk( reader, n=10000, alignedOnly=T)
@@ -88,6 +96,17 @@
 			badComplex <- which( (pctLow * 100) > max.low.complexity)
 			goodHits <- setdiff( 1:nReads, union( badMatch, badComplex))
 			viralHits <- c( viralHits, seqID[goodHits])
+			# also keep the weights if K more than one
+			if ( k.bowtie == 1) {
+				viralWts <- c( viralWts, rep.int(1,length(goodHits)))
+			} else {
+				# we need to calc the wts
+				readIDs <- readID( chunk)
+				readWts <- rep.int( 1, nReads)
+				tapply( 1:nReads, factor(readIDs), function(x) { readWts[x] <<- (1/length(x)); return(NULL)})
+				viralWts <- c( viralWts, readWts[goodHits])
+			}
+
 			nFound <- nFound + length(goodHits)
 			nRejectMismatch <- nRejectMismatch + length(badMatch)
 			nRejectLowComplex <- nRejectLowComplex + length(badComplex)
@@ -101,7 +120,8 @@
 
 		# now tablify
 		hitTbl <- table( viralHits)
-		hitCnts <- as.numeric( hitTbl)
+		if ( k.bowtie > 1) hitTbl <- tapply( viralWts, factor( viralHits), sum, na.rm=T)
+		hitCnts <- round( as.numeric( hitTbl))
 		pctHits <- round( hitCnts * 100 / sum(hitCnts), digits=2)
 		perMilNoHits <- round( hitCnts / (nReadsIn/1000000), digits=4)
 		where <- match( names(hitTbl), viralIDs)
@@ -129,6 +149,8 @@
 	ord <- order( bigDF$N_Hits, decreasing=T)
 	bigDF <- bigDF[ ord, ]
 	rownames(bigDF) <- 1:nrow(bigDF)
+
+	if ( input.mode == "fastq") colnames(bigDF) <- sub( "PerMillionNoHits", "PerMillionReads", colnames(bigDF))
 
 	# report the overall picture
 	cat( "\n\nSummary:")
