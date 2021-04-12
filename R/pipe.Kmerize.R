@@ -68,10 +68,11 @@ MAX_KMERS <- 250000000
 		nTotalKmers <- sum( bigKmerCounts[[1]])
 		cat( "\nSample: ", sampleID, "  File: ", i, basename(filesToDo[i]), "  N_Distinct: ", nDistinctKmers, 
 				"  N_Total: ", nTotalKmers, "\n")
-		if ( ! is.null(maxReads) && nReadsIn >= maxReads) {
-			cat( "\nReached 'maxReads' count. Stopping early..")
-			break
-		}
+		# treat the 'maxReads' as a "per file" max, so both Fwd & Rev get equal treatment...
+		#if ( ! is.null(maxReads) && nReadsIn >= maxReads) {
+		#	cat( "\nReached 'maxReads' count. Stopping early..")
+		#	break
+		#}
 	}
 
 	# now do the cleanup...
