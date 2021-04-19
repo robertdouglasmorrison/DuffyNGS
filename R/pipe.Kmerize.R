@@ -320,7 +320,7 @@ MAX_KMERS <- 250000000
 	for ( i in 1:NR) {
 		v <- normTbl[ i, ]
 		vCnt <- useTbl[ i, ]
-		ans <- sparse.t.test( v[grp1], v[grp2])
+		ans <- sparse.t.test( v[grp1], v[grp2], min.value=0)
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
 		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
