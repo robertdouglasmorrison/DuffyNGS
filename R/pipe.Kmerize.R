@@ -479,11 +479,11 @@ MAX_KMERS <- 250000000
 		if ( !is.na(refProtein)) {
 			aaFrag[x] <<- myFrags <- DNAtoBestPeptide( kmerAlignments$Kmer[x], clip=F, readingFrame=1:6, 
 							tieBreakMode="reference", reference=refProtein,
-							substitutionMatrix=BLOSUM62)
+							substitutionMatrix=BLOSUM62, breakAtStops=F)
 		} else {
 			for (j in x) {
 				readFrame <- if ( kmerAlignments$STRAND[j] == "+") 1:3 else if (kmerAlignments$STRAND[j] == "-") 4:6 else 1:6
-				aaFrag[j] <<- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame)
+				aaFrag[j] <<- DNAtoBestPeptide( kmerAlignments$Kmer[j], clip=F, readingFrame=readFrame, breakAtStops=F)
 			}
 			myFrags <- aaFrag[x]
 		}
@@ -554,7 +554,7 @@ MAX_KMERS <- 250000000
 		if ( !is.na(refProtein)) {
 			myFrags <- kmerAlignments$KMER_FRAGMENT[x]
 			pa <- pairwiseAlignment( myFrags, refProtein, type="global-local", scoreOnly=F)
-			refFrags <- as.character( subject(pa))
+			refFrags <- as.character( alignedSubject(pa))
 
 			# try to tell how the Kmer differs from the reference
 			# put a dot notation to show just what's different
