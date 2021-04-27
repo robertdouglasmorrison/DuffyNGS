@@ -961,7 +961,7 @@ mergeKmerChunks <- function( min.count) {
 	
 	# allow being given a saved file
 	loadSavedKmers( kmerFile)
-	myKmers <- bigKmerStrings[[1]]
+	myKmers <- as.character( bigKmerStrings[[1]])
 	N <- length( myKmers)
 	cat( "\nForcing alphabetical RevComp order.  N_Kmers in: ", N)
 
