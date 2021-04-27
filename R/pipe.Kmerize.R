@@ -450,6 +450,9 @@ MAX_KMERS <- 250000000
 	require(Biostrings)
 	data(BLOSUM62)
 
+	geneMap <- getCurrentGeneMap()
+	cdsMap <- getCurrentCdsMap()
+
 	nDone <- 0
 	tapply( geneHits, geneFac, function(x) {
 		
@@ -467,8 +470,8 @@ MAX_KMERS <- 250000000
 		}
 
 		# pre fetch some maps
-		curGmap <- subset.data.frame( getCurrentGeneMap(), GENE_ID == myGeneID)
-		curCDSmap <- subset.data.frame( getCurrentCdsMap(), GENE_ID == myGeneID)
+		curGmap <- subset.data.frame( geneMap, GENE_ID == myGeneID)
+		curCDSmap <- subset.data.frame( cdsMap, GENE_ID == myGeneID)
 
 		smlAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=myGeneID,
 								genemap=curGmap, cdsmap=curCDSmap)
@@ -535,6 +538,15 @@ MAX_KMERS <- 250000000
 	require(Biostrings)
 	data(BLOSUM62)
 
+	geneMap <- getCurrentGeneMap()
+	cdsMap <- getCurrentCdsMap()
+
+	LAPPLY <- base::lapply
+	STRSPLIT <- base::strsplit
+	WHICH <- base::which
+	MIN <- base::min
+	PASTE <- base::paste
+
 	nDone <- 0
 	tapply( geneHits, geneFac, function(x) {
 		
@@ -546,23 +558,35 @@ MAX_KMERS <- 250000000
 		nDone <<- nDone + length(x)
 
 		# pre fetch some maps
-		curGmap <- subset( getCurrentGeneMap(), GENE_ID == myGeneID)
-		curCDSmap <- subset( getCurrentCdsMap(), GENE_ID == myGeneID)
+		curGmap <- subset.data.frame( geneMap, GENE_ID == myGeneID)
+		curCDSmap <- subset.data.frame( cdsMap, GENE_ID == myGeneID)
 
 		# fetch the reference protein
 		refProtein <- gene2Fasta( myGeneID, genome.file, mode="aa")$seq[1]
 		if ( !is.na(refProtein)) {
 			myFrags <- kmerAlignments$KMER_FRAGMENT[x]
-			pa <- pairwiseAlignment( myFrags, refProtein, type="global-local", scoreOnly=F)
-			refFrags <- as.character( alignedSubject(pa))
+			pa <- pairwiseAlignment( myFrags, refProtein, type="global-local", scoreOnly=F, 
+						substitutionMatrix=BLOSUM62)
+
+			# the 'alignedSubject' function seems broke/slow.  Try to do by hand
+			#refFrags <- as.character( alignedSubject(pa))
+			refFrags <- as.character( subject(pa))
+			# when the pattern was not all used, append gap to start of subject
+			refStartOffsets <- start( pattern(pa))
+			toFix <- which( refStartOffsets > 1)
+			if ( NFIX <- length(toFix)) {
+				nGaps <- refStartOffsets[toFix] - 1
+				gapstring <- "------------------------------------------------------------------"
+				refFrags[toFix] <- paste( substr( rep.int(gapstring,NFIX), 1, nGaps), refFrags[toFix], sep="")
+			}
 
 			# try to tell how the Kmer differs from the reference
 			# put a dot notation to show just what's different
-			refAAvec <- strsplit( refFrags, split="")
-			myAAvec <- strsplit( myFrags, split="")
-			lapply( 1:length(myFrags), function(i) {
-				chUse <- 1 : min( length(refAAvec[[i]]), length(myAAvec[[i]]))
-				same <- which( refAAvec[[i]][chUse] == myAAvec[[i]][chUse])
+			refAAvec <- STRSPLIT( refFrags, split="")
+			myAAvec <- STRSPLIT( myFrags, split="")
+			LAPPLY( 1:length(myFrags), function(i) {
+				chUse <- 1 : MIN( length(refAAvec[[i]]), length(myAAvec[[i]]))
+				same <- WHICH( refAAvec[[i]][chUse] == myAAvec[[i]][chUse])
 				if ( length(same)) {
 					tmp <- myAAvec[[i]]
 					tmp[same] <- "."
