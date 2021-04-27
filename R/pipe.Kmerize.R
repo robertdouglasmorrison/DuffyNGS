@@ -979,6 +979,13 @@ mergeKmerChunks <- function( min.count) {
 	} else {
 		cat( "  All Kmers already in alphabetic Kmer order..")
 	}
+	rm( myKmers, rcKmer, needRC)
+
+	# now do the global cleanup...
+	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
+	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
+	gc()
+	
 	return( kmerFile)
 }
 
