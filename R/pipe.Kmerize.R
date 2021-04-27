@@ -971,7 +971,7 @@ mergeKmerChunks <- function( min.count) {
 	# we will keep the 'lower' one by sort order
 	needRC <- which( rcKmer < myKmers)
 	if (length(needRC)) {
-		cat( "  Converting to RevComp Kmer: ", length(needRC))
+		cat( "\nConverting to RevComp Kmer: ", length(needRC))
 		myKmers[needRC] <- rcKmer[needRC]
 		cat( "  re-save Kmers file..")
 		bigKmerStrings[[1]] <<- myKmers
@@ -988,6 +988,8 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	# set up to allow 'faster' lookup of previously calculated Rev Comps
 	N <- length( kmers)
 	out <- rep.int( "", N)
+	toTest <- 1:N
+
 	require(Biostrings)
 	
 	# allow 'fast' lookup via a file of previously done kmers
@@ -997,6 +999,10 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	myKmerXrefFile <- file.path( kmer.path, paste( sampleID, kmer.size, "Kmer.RevComp.Xref.rda", sep="."))
 	allKmerXrefFiles <- dir( kmer.path, pattern="Kmer.RevComp.Xref.rda$", full=T)
 	
+	WHICH <- base::which
+	MATCH <- base::match
+	SUM <- base::sum
+
 	if ( length(allKmerXrefFiles)) {
 	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files:")
 	    nLook <- 0
@@ -1008,20 +1014,21 @@ findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=
 	
 		# we got some from one Xref file, see if we get any hits
 		# but only check on the ones we still need on this pass around
-		toTest <- which( out == "")
 		cat( "  Lookup:", nLook <- nLook+1)
-		where1 <- match( kmers[toTest], xref$Kmer, nomatch=0)
+		where1 <- MATCH( kmers[toTest], xref$Kmer, nomatch=0)
 		out[ toTest[ where1 > 0]] <- xref$RevComp[ where1]
-		where2 <- match( kmers[toTest], xref$RevComp, nomatch=0)
+		where2 <- MATCH( kmers[toTest], xref$RevComp, nomatch=0)
 		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
-		cat( "  Found:", sum(where1 > 0 | where2 > 0))
+		cat( "  Found:", SUM( where1 > 0 | where2 > 0))
 		rm( xref, toTest, where1, where2)
 		if ( j %% 5 == 0) gc()
+		toTest <- WHICH( out == "")
+		if ( ! length(toTest)) break
 	    }
 	}
 	
 	# calculate the rest
-	toCalc <- which( out == "")
+	toCalc <- toTest
 	if ( length( toCalc)) {
 		cat( "  calc RevComps.. N=", length(toCalc), " (", round( length(toCalc)*100/N, digits=1),"%)", sep="")
 		rcKmer <- vapply( kmers[ toCalc], FUN=myReverseComplement, FUN.VALUE="ACGT", USE.NAMES=F)
