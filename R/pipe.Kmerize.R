@@ -80,6 +80,10 @@ MAX_KMERS <- 250000000
 	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
 
+	# one new last step:  Force all Kmers to be in RevComp alphabetical ordering, so when we later do table compares,
+	# we can garauntee that we don't have both a Kmer and its own RevComp present in 2 different files
+	kmerRevCompAlphaOrder.file( outfile, "sampleID"=sampleID, "kmer.path"=kmer.path, "kmer.size"=kmer.size)
+
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
 	cat( "\nTiming Stats: \n")
@@ -249,7 +253,7 @@ MAX_KMERS <- 250000000
 # do differential Kmer analysis by sample groups
 
 `pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), normalize=c("LKPTM"), 
-				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100) {
+				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100, offset=0.1) {
 
 	# use just the samples asked for, and make sure the columns are in sample & group order
 	where <- match( sampleIDset, colnames(kmerTbl), nomatch=0)
@@ -323,7 +327,7 @@ MAX_KMERS <- 250000000
 		ans <- sparse.t.test( v[grp1], v[grp2], min.value=0)
 		pval[i] <- ans$p.value
 		avg[ ,i] <- ans$estimate
-		fold[i] <- log2( (avg[2,i]+1) / (avg[1,i]+1))
+		fold[i] <- log2( (avg[2,i]+offset) / (avg[1,i]+offset))
 		cnt[1,i] <- sum( v[grp1] > 0)
 		cnt[2,i] <- sum( v[grp2] > 0)
 		avg.cnt[1,i] <- mean( vCnt[grp1])
@@ -872,64 +876,6 @@ mergeKmerChunks <- function( min.count) {
 }
 
 
-`kmerRevComp.file` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
-
-	# the Kmers may be from both strands, and we only want to keep one form of each
-	# so merge those where both are present
-	
-	# allow being given a saved file
-	load( kmerFile)
-	kmerTable <- bigKmerTable
-	isFile <- TRUE
-	
-	kmers <- names( kmerTable)
-	cnts <- as.numeric( kmerTable)
-	N <- length(kmerTable)
-	cat( "\nN_Kmers in: ", N)
-
-	# see what the RevComp of every Kmer is
-	rcKmer <- findKmerRevComp( kmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
-	
-	# then see if those Rev Comps are already in the table
-	cat( "\nLocate RevComp pairs..")
-	where <- match( rcKmer, kmers, nomatch=0)
-
-	# we will make a new 1-D table that has just the first form of each Kmer
-	# we can combine those that have both forms
-	cat( "  join..")
-	out <- rep.int( 0, N)
-	hasRC <- which( where > 0)
-	if ( length(hasRC)) {
-		myLoc <- (1:N)[hasRC]
-		rcLoc <- where[hasRC]
-		firstLoc <- pmin( myLoc, rcLoc)
-		out[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
-		names(out)[firstLoc] <- kmers[firstLoc]
-	}
-
-	# then those without their RevComp just stay as is
-	noRC <- which( where == 0)
-	if ( length(noRC)) {
-		out[noRC] <- cnts[noRC]
-		names(out)[noRC] <- kmers[noRC]
-	}
-
-	# lastly thown away the empty slots
-	drops <- which( out == 0)
-	if ( length( drops)) out <- out[ -drops]
-	Nout <- length(out)
-	cat( "\nN_Kmers out: ", Nout)
-	
-	cat( "  Pct Reduction: ", round( (N-Nout) * 100 / N), "%")
-
-	# done
-	bigKmerTable <- out
-	cat( "  re-save Kmers file..")
-	save( bigKmerTable, file=kmerFile)
-	return( kmerFile)
-}
-
-
 `kmerRevComp.GlobalTable` <- function( sampleID="SampleID", kmer.path=".", kmer.size=33) {
 
 	# the Kmers may be from both strands, and we only want to keep one form of each
@@ -1002,6 +948,38 @@ mergeKmerChunks <- function( min.count) {
 	rm( cntOut, kmerOut, cnts, hasRC, noRC, drops)
 	gc()
 	return( Nout)
+}
+
+
+`kmerRevCompAlphaOrder.file` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
+
+	# the Kmers within any one file may be from either strand.  We have already forced reduction of 
+	# if both a Kmer and its RevComp were present within a single file.
+	#
+	# BUT: before we can combine/compare between files, we need to make sure all files are using just
+	# the same set of Kmers.  Solution:  keep only the alphabetically first for every Kmer
+	
+	# allow being given a saved file
+	loadSavedKmers( kmerFile)
+	myKmers <- bigKmerStrings[[1]]
+	N <- length( myKmers)
+	cat( "\nForcing alphabetical RevComp order.  N_Kmers in: ", N)
+
+	# see what the RevComp of every Kmer is
+	rcKmer <- findKmerRevComp( myKmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	
+	# we will keep the 'lower' one by sort order
+	needRC <- which( rcKmer < myKmers)
+	if (length(needRC)) {
+		cat( "  Converting to RevComp Kmer: ", length(needRC))
+		myKmers[needRC] <- rcKmer[needRC]
+		cat( "  re-save Kmers file..")
+		bigKmerStrings[[1]] <<- myKmers
+		saveKmers( kmerFile)
+	} else {
+		cat( "  All Kmers already in alphabetic Kmer order..")
+	}
+	return( kmerFile)
 }
 
 
