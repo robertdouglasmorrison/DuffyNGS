@@ -611,9 +611,6 @@ MAX_KMERS <- 250000000
 
 # Kmerize a single FASTQ file
 
-
-# Kmerize a single FASTQ file
-
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
 				sampleID="SampleID", kmer.path=".", maxReads=NULL, min.count=2) {
 
@@ -984,6 +981,7 @@ mergeKmerChunks <- function( min.count) {
 	# now do the global cleanup...
 	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
 	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
+	if ( exists("xref", envir=.GlobalEnv)) rm( xref, envir=.GlobalEnv)
 	gc()
 	
 	return( kmerFile)
