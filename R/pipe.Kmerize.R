@@ -11,7 +11,7 @@ MAX_KMERS <- 250000000
 
 `pipe.Kmerize` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				kmer.size=33, doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
-				buffer.size=1000000, maxReads=NULL, min.count=2, verbose=TRUE) {
+				buffer.size=1000000, maxReads=NULL, min.count=2, kmer.debug=NULL, verbose=TRUE) {
 
 	if (verbose) {
 		cat( verboseOutputDivider)
@@ -58,7 +58,8 @@ MAX_KMERS <- 250000000
 	for ( i in 1:nFiles) {
 		# do one file, and save what we got
 		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, 
-					sampleID=sampleID, kmer.path=kmer.path, maxReads=maxReads, min.count=min.count)
+					sampleID=sampleID, kmer.path=kmer.path, maxReads=maxReads, min.count=min.count, 
+					kmer.debug=kmer.debug)
 		nReadsNow <- ans$nReadsIn
 		nReadsIn <- nReadsIn + nReadsNow
 		saveKmers( outfile)
@@ -612,7 +613,8 @@ MAX_KMERS <- 250000000
 # Kmerize a single FASTQ file
 
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
-				sampleID="SampleID", kmer.path=".", maxReads=NULL, min.count=2) {
+				sampleID="SampleID", kmer.path=".", maxReads=NULL, min.count=2, 
+				kmer.debug=NULL) {
 
 	# get ready to read the fastq file in chuncks...
 	filein <- allowCompressedFileName( filein)
@@ -650,9 +652,10 @@ MAX_KMERS <- 250000000
 		# each call just extends the global lists, just clean up memory
 		gc()
 	}
+	
+	if ( ! is.null(kmer.debug)) debugBigKmerTable( kmer.debug)
 
 	# with the file done, merge all the chunk results
-
 	# any K-mers with too few observations are not to be kept
 	mergeKmerChunks( min.count)
 
@@ -886,8 +889,9 @@ mergeKmerChunks <- function( min.count) {
 	N <- length(kmers)
 	cat( "\nN_Kmers in: ", N)
 
-	# see what the RevComp of every Kmer is
-	rcKmer <- DNAStringSet( findKmerRevComp( as.character(kmers), sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size))
+	# see what the RevComp of every Kmer is.  Now with DNAStrings, it is easy
+	#rcKmer <- DNAStringSet( findKmerRevComp( as.character(kmers), sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size))
+	rcKmer <- reverseComplement(kmers)
 	gc()
 	
 	# then see if those Rev Comps are already in the table
@@ -958,12 +962,13 @@ mergeKmerChunks <- function( min.count) {
 	
 	# allow being given a saved file
 	loadSavedKmers( kmerFile)
-	myKmers <- as.character( bigKmerStrings[[1]])
+	myKmers <- bigKmerStrings[[1]]
 	N <- length( myKmers)
 	cat( "\nForcing Kmers into RevComp alphabetical order.  N_Kmers in: ", N)
 
-	# see what the RevComp of every Kmer is
-	rcKmer <- findKmerRevComp( myKmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	# see what the RevComp of every Kmer is.  Now with DNAStrings, it is easy
+	#rcKmer <- findKmerRevComp( myKmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+	rcKmer <- reverseComplement( myKmers)
 	
 	# we will keep the 'lower' one by sort order
 	needRC <- which( rcKmer < myKmers)
@@ -1241,7 +1246,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
-`saveKmers` <- function(outfile, mode="first.time") {
+`saveKmers` <- function(outfile) {
 
 	# push the global results to disk
 	# turn the DNAString data to character
@@ -1251,10 +1256,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 
 	# the first time we make Kmers from larger DNAStrings, there seems to be excess memory use.
 	# so convert them to character and then back to DNAStrings
-	if (mode == "first.time") {
-		bigKmerStrings <- as.character( bigKmerStrings[[1]])
-		bigKmerStrings <- DNAStringSet( bigKmerStrings)
-	}
+	bigKmerStrings <- as.character( bigKmerStrings[[1]])
+	bigKmerStrings <- DNAStringSet( bigKmerStrings)
 	save( bigKmerStrings, bigKmerCounts, file=outfile)
 
 	if ( exists("bigKmerStrings")) rm( bigKmerStrings, bigKmerCounts)
@@ -1427,4 +1430,27 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	return(NULL)
 }
 
+
+`debugBigKmerTable` <- function( kmer.debug) {
+
+	# mine the big table for the presence of kmers
+	kmers <- DNAStringSet( kmer.debug)
+	rcKmers <- reverseComplement( kmers)
+	targets <- c( kmers, rcKmers)
+
+	Nbins <- length( bigKmerStrings)
+	for ( i in 1:Nbins) {
+		thisStrs <- bigKmerStrings[[i]]
+		thisCnts <- bigKmerCounts[[i]]
+		wh <- match( targets, thisStrs, nomatch=0)
+		myCounts <- thisCnts[wh]
+		if ( length( myCounts)) {
+			sml <- data.frame( "Kmer"=as.character(targets[wh > 0]), "Count"=myCounts, stringsAsFactors=F)
+			cat( "\nKmer Debug hits in Chunk: ", i, "\n")
+			print( sml)
+		} else {
+			cat( "\nKmer Debug: No hits in Chunk: ", i)
+		}
+	}
+}
 
