@@ -82,7 +82,7 @@ MAX_KMERS <- 250000000
 
 	# one new last step:  Force all Kmers to be in RevComp alphabetical ordering, so when we later do table compares,
 	# we can garauntee that we don't have both a Kmer and its own RevComp present in 2 different files
-	kmerRevCompAlphaOrder.file( outfile, "sampleID"=sampleID, "kmer.path"=kmer.path, "kmer.size"=kmer.size)
+	kmerAlphaRevCompOrder( outfile, "sampleID"=sampleID, "kmer.path"=kmer.path, "kmer.size"=kmer.size)
 
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
@@ -370,7 +370,7 @@ MAX_KMERS <- 250000000
 
 	# Step 3:  discern protein fragment difference from expected reference
 	cat( "\n\nStep 3:  Compare Protein Fragments to Reference..\n")
-	ansDiff <- mapProteinFragmentToReference( ansProt, optionsFile=optionsFile, verbose=verbose)
+	ansDiff <- mapKmerProteinFragmentsToReference( ansProt, optionsFile=optionsFile, verbose=verbose)
 
 	# lastly, sew it all back together in a sensible order...
 	# but force it all to comply exactly with the order we got as input
@@ -510,7 +510,7 @@ MAX_KMERS <- 250000000
 
 # try to show how the protein fragment differs from reference protein
 
-`mapProteinFragmentToReference` <- function( kmerAlignments, optionsFile="Options.txt", verbose=TRUE) {
+`mapKmerProteinFragmentsToReference` <- function( kmerAlignments, optionsFile="Options.txt", verbose=TRUE) {
 
 
 	# takes the output from 'alignKmersToGenome', and looks up where those sites 
@@ -951,7 +951,7 @@ mergeKmerChunks <- function( min.count) {
 }
 
 
-`kmerRevCompAlphaOrder.file` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
+`kmerAlphaRevCompOrder` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
 
 	# the Kmers within any one file may be from either strand.  We have already forced reduction of 
 	# if both a Kmer and its RevComp were present within a single file.
@@ -963,7 +963,7 @@ mergeKmerChunks <- function( min.count) {
 	loadSavedKmers( kmerFile)
 	myKmers <- as.character( bigKmerStrings[[1]])
 	N <- length( myKmers)
-	cat( "\nForcing alphabetical RevComp order.  N_Kmers in: ", N)
+	cat( "\nForcing Kmers into RevComp alphabetical order.  N_Kmers in: ", N)
 
 	# see what the RevComp of every Kmer is
 	rcKmer <- findKmerRevComp( myKmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
