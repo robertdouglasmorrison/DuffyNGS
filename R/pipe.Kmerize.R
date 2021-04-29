@@ -58,8 +58,7 @@ MAX_KMERS <- 250000000
 	for ( i in 1:nFiles) {
 		# do one file, and save what we got
 		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, 
-					sampleID=sampleID, kmer.path=kmer.path, maxReads=maxReads, min.count=min.count, 
-					kmer.debug=kmer.debug)
+					maxReads=maxReads, min.count=min.count, kmer.debug=kmer.debug)
 		nReadsNow <- ans$nReadsIn
 		nReadsIn <- nReadsIn + nReadsNow
 		saveKmers( outfile)
@@ -83,7 +82,7 @@ MAX_KMERS <- 250000000
 
 	# one new last step:  Force all Kmers to be in RevComp alphabetical ordering, so when we later do table compares,
 	# we can garauntee that we don't have both a Kmer and its own RevComp present in 2 different files
-	kmerAlphaRevCompOrder( outfile, "sampleID"=sampleID, "kmer.path"=kmer.path, "kmer.size"=kmer.size)
+	kmerAlphaRevCompOrder( outfile)
 
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'Kmerize Pipeline' on Sample:     ", sampleID, "\n")
@@ -360,7 +359,7 @@ MAX_KMERS <- 250000000
 
 	# 3 main steps
 
-	# STep 1:  Align to Genome
+	# Step 1:  Align to Genome
 	cat( "\n\nStep 1:  Align Kmers to Genome via Bowtie2..\n")
 	ansAlign <- alignKmersToGenome( kmerTbl$Kmer, optionsFile=optionsFile, speciesID=speciesID,
 				quiet=quiet.bowtie, verbose=verbose)
@@ -383,6 +382,77 @@ MAX_KMERS <- 250000000
 	out <- cbind( "Kmer"=kmer.out, outProt, "DIF_FROM_REF"=outDiff, kmerTbl[ ,2:ncol(kmerTbl)], stringsAsFactors=F)
 	cat( "\nDone.\n")
 	return( out)
+}
+
+
+# build DNA and AA contigs from Kmers unique to one comparison group
+
+`pipe.KmerNovelContigs` <- function( kmerTbl, group, min.count=5, min.kmers=100, 
+				velvet.path="~/NGS/bin", velveth.args="", velvetg.args="", 
+				min.contig.length=150, verbose=TRUE) {
+
+	wantedDepthColumn <- paste( "Avg", group, "Depth", sep="_")
+	neededColumns <- c( "Kmer", wantedDepthColumn)
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
+		return( NULL)
+	}
+
+	# 3 main steps
+
+	# Step 1:  Find the Kmers only seen by this group, and make a FASTA file for de novo
+	cat( "\n\nStep 1:  Gather Novel Kmers..\n")
+	otherDepthColumn <- setdiff( grep( "^Avg_.+_Depth$", colnames(kmerTbl), value=T), wantedDepthColumn)
+	if ( length(otherDepthColumn) != 1) {
+		cat( "\nFailed to find the 2 expected Kmer Depth columns..")
+		return( NULL)
+	}
+	wantedCounts <- as.numeric( kmerTbl[[ wantedDepthColumn]])
+	otherCounts <- as.numeric( kmerTbl[[ otherDepthColumn]])
+	novelRows <- which( wantedCounts >= min.count & otherCounts == 0)
+	if ( (NN <- length(novelRows)) < min.kmers) {
+		cat( "\nToo few novel Kmers to bother making contigs: ", NN)
+		return(NULL)
+	}
+	cat( "  N_Novel Kmers for group: ", group, "  = ", NN)
+	fa <- as.Fasta( paste( "Kmer", 1:NN, sep=""), kmerTbl$Kmer[novelRows])
+	faFile <- paste( "Novel.Kmers_", group, ".fasta", sep="")
+	writeFasta( fa, faFile, line=100)
+	
+	# Step 2:  hand those Kmer to Velvet
+	cat( "\n\nStep 2:  Do Vevet de novo assembly on Kmers..")
+	kmer.size <- nchar( fa$seq[1])
+	velvet.K <- round(kmer.size * 0.33) * 2 + 1	# make Velvet use an odd size about 2/3 of Kmer size
+	results.path <- paste( "Novel.Kmer.Contigs_", group, sep="")
+	
+	makeVelvetContigs( faFile, outpath=results.path,
+		velvet.path=velvet.path, buildHash=TRUE, buildContigs=TRUE,
+		kmerSize=velvet.K, minLength=min.contig.length, doPairedEnd=FALSE, minCoverage=NULL, 
+		velveth.args=velveth.args, velvetg.args=velvetg.args, verbose=verbose)
+
+	# Step 3:  turn those contigs into proteins
+	cat( "\n\nStep 3:  Map de novo contigs to best Proteins..\n")
+	contigs <- loadFasta( file.path( results.path, "contigs.fa"), short=FALSE)
+	cat( "\nN_Velvet_Contigs: ", length( contigs$desc))
+	if ( ! (NC <- length(contigs$desc))) {
+		cat( "\n\nWarning:  Velvet returned no contigs..")
+		return(0)
+	}
+
+	# convert to peptides
+	peps <- DNAtoBestPeptide( contigs$seq, clipAtStop=FALSE)
+	# drop those that are too short to be interesting
+	min.aa.len <- min.contig.length / 3
+	keep <- which( nchar(peps) >= min.aa.len)
+	NC <- length(keep)
+	faOut <- as.Fasta( paste( group, contigs$desc, sep="_")[keep], peps[keep])
+	outfile <- paste( group, "_Novel.Kmer.VelvetPeptides.fasta", sep="")
+	outfile <- file.path( results.path, outfile)
+	writeFasta( faOut, file=outfile, line.width=100) 
+	cat( "\nWrote Kmer Novel Proteins .FASTA file: ", outfile)
+
+	cat( "\nDone.\n")
+	return( length(faOut$desc))
 }
 
 
@@ -613,8 +683,7 @@ MAX_KMERS <- 250000000
 # Kmerize a single FASTQ file
 
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
-				sampleID="SampleID", kmer.path=".", maxReads=NULL, min.count=2, 
-				kmer.debug=NULL) {
+				maxReads=NULL, min.count=2, kmer.debug=NULL) {
 
 	# get ready to read the fastq file in chuncks...
 	filein <- allowCompressedFileName( filein)
@@ -653,16 +722,27 @@ MAX_KMERS <- 250000000
 		gc()
 	}
 	
-	if ( ! is.null(kmer.debug)) debugBigKmerTable( kmer.debug)
+	if ( ! is.null(kmer.debug)) {
+		cat( "\n\nDebug Kmer Counts:  Before Merge:\n")
+		debugBigKmerTable( kmer.debug)
+	}
 
 	# with the file done, merge all the chunk results
 	# any K-mers with too few observations are not to be kept
 	mergeKmerChunks( min.count)
+	if ( ! is.null(kmer.debug)) {
+		cat( "\n\nDebug Kmer Counts:  After Merge, before RevComp Combine:\n")
+		debugBigKmerTable( kmer.debug)
+	}
 
 	# also do any RevComp resolving now too
 	if ( sum(bigKmerCounts[[1]]) > 0) {
 		cat( "\nSearch for RevComp pairs to join..")
-		kmerRevComp.GlobalTable( sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
+		kmerRevComp.GlobalTable()
+		if ( ! is.null(kmer.debug)) {
+			cat( "\n\nDebug Kmer Counts:  After RevComp Combine:\n")
+			debugBigKmerTable( kmer.debug)
+		}
 	}
 
 	return( list( "nReadsIn"=nread))
@@ -745,77 +825,6 @@ mergeKmerChunks <- function( min.count) {
 }
 
 
-`kmerizeOneChunk` <- function( seqs, kmer.size=33) {
-
-	# make Kmers of every raw read in this chunk
-	# set up to get all N-mers for all the sequences in this chunk
-	LAPPLY <- base::lapply
-	SUBSTR <- base::substr
-
-	sizeM1 <- kmer.size - 1
-
-	# high chance of having duplicates, so only do each one once
-	seqTbl <- table.nosort( seqs)
-	seqCounts <- as.vector( seqTbl)
-	seqs <- names( seqTbl)
-	nSeq <- length( seqs)
-	cat( "  N_Unique:", nSeq)
-	seqLens <- base::nchar( seqs)
-	rm( seqTbl)
-	gc()
-
-	# pre-guess a size of output, based on size of input
-	expectNout <- length(seqs) * (max(seqLens) - sizeM1)
-	kmersOut <- vector( mode="character", length=expectNout)
-	nOut <- 0
-
-	# we can save a bit of time by doing all reads of the same length at one time
-	lenFac <- factor( seqLens)
-	cat( "  ReadLen=")
-	tapply( 1:nSeq, lenFac, function(x) {
-			
-		# given all the pointers to seqs of the same length
-		lenNow <- seqLens[ x[1]]
-		cat( ".", lenNow, sep="")
-		veryLastStart <- lenNow - sizeM1
-		if ( veryLastStart < 1) return(NULL)
-		fromSet <- 1:veryLastStart
-		toSet <- fromSet + sizeM1
-		nSubstrs <- length( fromSet)
-		#for ( j in x) {
-		LAPPLY( x, function(j) {
-			thisCount <- seqCounts[j]
-			hasN <- grepl( "N", seqs[j], fixed=T)
-			kmer <- SUBSTR( rep.int( seqs[j], nSubstrs), fromSet, toSet)
-			# we only want to keep valid DNA chunks, so discard any 'N's
-			if (hasN) {
-				isNNN <- grep( "N", kmer, fixed=T)
-				if ( length(isNNN)) kmer <- kmer[ -isNNN]
-				if ( ! length(kmer)) return(NULL)  #next
-			}
-			# account for the multiplicity of this read
-			if ( thisCount > 1) kner <- rep.int( kmer, thisCount)
-			n <- length(kmer)
-			now <- (nOut+1) : (nOut+n)
-			if ( nOut+n > length(kmersOut)) {
-				cat( "  MemRealloc..")
-				length(kmersOut) <<- (expectNout <<- expectNout + 1000000)
-			}
-			kmersOut[now] <<- kmer
-			nOut <<- nOut + n
-			return(NULL)
-		})
-		return(NULL)
-	})
-	# lastly trim size if we over estimated
-	if ( expectNout > nOut) length(kmersOut) <- nOut
-	gc()
-
-	cat( "  Tablulate..")
-	return( table.nosort( kmersOut))
-}
-
-
 `kmerizeOneChunk.as.DNAString` <- function( seqs, kmer.size=33) {
 
 	# make Kmers of every raw read in this chunk
@@ -876,7 +885,7 @@ mergeKmerChunks <- function( min.count) {
 }
 
 
-`kmerRevComp.GlobalTable` <- function( sampleID="SampleID", kmer.path=".", kmer.size=33) {
+`kmerRevComp.GlobalTable` <- function() {
 
 	# the Kmers may be from both strands, and we only want to keep one form of each
 	# so merge those where both are present
@@ -890,7 +899,6 @@ mergeKmerChunks <- function( min.count) {
 	cat( "\nN_Kmers in: ", N)
 
 	# see what the RevComp of every Kmer is.  Now with DNAStrings, it is easy
-	#rcKmer <- DNAStringSet( findKmerRevComp( as.character(kmers), sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size))
 	rcKmer <- reverseComplement(kmers)
 	gc()
 	
@@ -916,7 +924,6 @@ mergeKmerChunks <- function( min.count) {
 		rcLoc <- where[hasRC]
 		myRank <- rankOrder[ myLoc]
 		rcRank <- rankOrder[ rcLoc]
-		#firstLoc <- pmin( myLoc, rcLoc)
 		firstLoc <- ifelse( myRank < rcRank, myLoc, rcLoc)
 		cntOut[firstLoc] <- cnts[myLoc] + cnts[rcLoc]
 		rm( myLoc, rcLoc, firstLoc, myRank, rcRank)
@@ -952,7 +959,7 @@ mergeKmerChunks <- function( min.count) {
 }
 
 
-`kmerAlphaRevCompOrder` <- function( kmerFile, sampleID="SampleID", kmer.path=".", kmer.size=33) {
+`kmerAlphaRevCompOrder` <- function( kmerFile) {
 
 	# the Kmers within any one file may be from either strand.  We have already forced reduction of 
 	# if both a Kmer and its RevComp were present within a single file.
@@ -967,7 +974,6 @@ mergeKmerChunks <- function( min.count) {
 	cat( "\nForcing Kmers into RevComp alphabetical order.  N_Kmers in: ", N)
 
 	# see what the RevComp of every Kmer is.  Now with DNAStrings, it is easy
-	#rcKmer <- findKmerRevComp( myKmers, sampleID=sampleID, kmer.path=kmer.path, kmer.size=kmer.size)
 	rcKmer <- reverseComplement( myKmers)
 	
 	# we will keep the 'lower' one by sort order
@@ -990,72 +996,6 @@ mergeKmerChunks <- function( min.count) {
 	gc()
 	
 	return( kmerFile)
-}
-
-
-findKmerRevComp <- function( kmers, sampleID=sampleID, kmer.path=".", kmer.size=33) {
-
-	# set up to allow 'faster' lookup of previously calculated Rev Comps
-	N <- length( kmers)
-	out <- rep.int( "", N)
-	toTest <- 1:N
-
-	require(Biostrings)
-	
-	# allow 'fast' lookup via a file of previously done kmers
-	# we are switching to separate files for every sample, to try to minimize file
-	# access collisions.  You can read fron any sample's file, but only write to
-	# your own.
-	myKmerXrefFile <- file.path( kmer.path, paste( sampleID, kmer.size, "Kmer.RevComp.Xref.rda", sep="."))
-	allKmerXrefFiles <- dir( kmer.path, pattern="Kmer.RevComp.Xref.rda$", full=T)
-	
-	WHICH <- base::which
-	MATCH <- base::match
-	SUM <- base::sum
-
-	if ( length(allKmerXrefFiles)) {
-	    cat( "  searching", length(allKmerXrefFiles), "RevComp Xref files:")
-	    nLook <- 0
-	    for ( j in 1:length(allKmerXrefFiles)) {
-	    	f <- allKmerXrefFiles[j]
-		xref <- data.frame()
-		status <- tryCatch( load( f), error=function(e) { xref <<- data.frame()})
-		if ( ! nrow( xref)) next
-	
-		# we got some from one Xref file, see if we get any hits
-		# but only check on the ones we still need on this pass around
-		cat( "  Lookup:", nLook <- nLook+1)
-		where1 <- MATCH( kmers[toTest], xref$Kmer, nomatch=0)
-		out[ toTest[ where1 > 0]] <- xref$RevComp[ where1]
-		where2 <- MATCH( kmers[toTest], xref$RevComp, nomatch=0)
-		out[ toTest[ where2 > 0]] <- xref$Kmer[ where2]
-		cat( "  Found:", SUM( where1 > 0 | where2 > 0))
-		rm( xref, toTest, where1, where2)
-		if ( j %% 5 == 0) gc()
-		toTest <- WHICH( out == "")
-		if ( ! length(toTest)) break
-	    }
-	}
-	
-	# calculate the rest
-	toCalc <- toTest
-	if ( length( toCalc)) {
-		cat( "  calc RevComps.. N=", length(toCalc), " (", round( length(toCalc)*100/N, digits=1),"%)", sep="")
-		rcKmer <- vapply( kmers[ toCalc], FUN=myReverseComplement, FUN.VALUE="ACGT", USE.NAMES=F)
-		out[ toCalc] <- rcKmer
-	
-		# store these for the future
-		smlXref <- data.frame( "Kmer"=kmers[toCalc], "RevComp"=rcKmer, stringsAsFactors=FALSE)
-		
-		# but reload this sample's Xref first
-		xref <- data.frame()
-		if ( file.exists( myKmerXrefFile)) load( myKmerXrefFile)
-		cat( "  save updated RevComp Xref file..")
-		xref <- rbind( xref, smlXref)
-		save( xref, file=myKmerXrefFile)
-		rm( xref, rcKmer, smlXref, toCalc)
-	}
-	return( out)
 }
 
 
