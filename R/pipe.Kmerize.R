@@ -253,7 +253,7 @@ MAX_KMERS <- 250000000
 # do differential Kmer analysis by sample groups
 
 `pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), normalize=c("LKPTM"), 
-				kmer.size=33, min.count=NULL, min.samples=NULL, n.remove=100, offset=0.1) {
+				min.count=NULL, min.samples=NULL, n.remove=100, offset=0.1) {
 
 	# use just the samples asked for, and make sure the columns are in sample & group order
 	where <- match( sampleIDset, colnames(kmerTbl), nomatch=0)
@@ -313,7 +313,7 @@ MAX_KMERS <- 250000000
 	gc()
 	
 	# we are now ready to do tests per Kmer
-	cat( "\nRunning Linear Model on ", NR, " Kmers..\n")
+	cat( "\nRunning Differential Detection on ", NR, " Kmers..\n")
 	fold <- pval <- vector( mode="numeric", length=NR)
 	avg <- avg.cnt <- matrix( 0, 2, NR)
 	rownames(avg) <- paste( "Avg", grpLvls, "LKPTM", sep="_")
@@ -453,6 +453,83 @@ MAX_KMERS <- 250000000
 
 	cat( "\nDone.\n")
 	return( length(faOut$desc))
+}
+
+
+# search all Kmers for hits to one given CDS protein sequence
+
+`pipe.KmerSearchForProtein` <- function( kmerTbl, cds.seq, chunk.size=1000) {
+
+	neededColumns <- c( "Kmer")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
+		return( NULL)
+	}
+	require( Biostrings)
+	
+	# prep the cds protein sequence we will search for hits to
+	cds.seq <- as.character( cds.seq[1])
+	aa <- DNAtoAA( cds.seq, clipAtStop=F, readingFrame=1)
+	cdsDNAstr <- DNAString( cds.seq)
+	
+	# prep all the Kmers
+	kmers <- as.character( kmerTbl$Kmer)
+	NKmer <- length(kmers)
+	kmer.size <- nchar( kmers[1])
+	
+	# prep for doing a bunch of alignmetns
+	dnaMatrix <- nucleotideSubstitutionMatrix()
+	minScore <- round( kmer.size * 0.80)
+	
+	# we will visit in chunks, and collect Kmers that score well enough
+	outRow <- outKmer <- outAAfrag <- outCDSloc <- outAAloc <- vector()
+	nOut <- 0
+	nDone <- 0
+	cat( "\nSearching Kmers..\n")
+	while (nDone < NKmer) {
+		first <- (nDone+1)
+		last <- min( NKmer, nDone+chunk.size)
+		nextChunk <- first:last
+		nDone <- last
+		myKmers <- DNAStringSet( kmers[ nextChunk])
+		myRcKmers <- reverseComplement( myKmers)
+		
+		# get the scores only for now
+		scoreFwd <- pairwiseAlignment( myKmers, cdsDNAstr, type="global-local", scoreOnly=T, substitutionMatrix=dnaMatrix)
+		scoreRev <- pairwiseAlignment( myRcKmers, cdsDNAstr, type="global-local", scoreOnly=T, substitutionMatrix=dnaMatrix)
+		myScores <- pmax( scoreFwd, scoreRev)
+		myHits <- which( myScores >= minScore)
+		if ( ! (NHits <- length(myHits))) next
+		
+		# grab the right form of the high scoring Kmers
+		bestKmers <- ifelse( scoreFwd[myHits] > scoreRev[myHits], as.character(myKmers[myHits]), as.character(myRcKmers[myHits]))
+		
+		# and see exactly where they land
+		bestKmerStrs <- DNAStringSet( bestKmers)
+		pa <- pairwiseAlignment( bestKmerStrs, cdsDNAstr, type="global-local", scoreOnly=F, substitutionMatrix=dnaMatrix)
+		cdsStarts <- start( subject(pa))
+		
+		# calc all the facts we need, and save them up
+		aaStarts <- floor((cdsStarts-1)/3) + 1
+		aaFrags <- sapply( 1:NHits, function(x) DNAtoAA( bestKmers[x], readingFrame=((cdsStarts[x]-1) %% 3)+1))
+		now <- (nOut+1) : (nOut+NHits)
+		outKmer[now] <- bestKmers
+		outCDSloc[now] <- cdsStarts
+		outAAloc[now] <- aaStarts
+		outAAfrag[now] <- aaFrags
+		outRow[now] <- nextChunk[myHits]
+		nOut <- nOut + NHits
+		
+		# go get anouther chunk
+		cat( "\r(Kmers,Hits): ", nDone, nOut)
+	}
+	
+	# pull it all together
+	out1 <- kmerTbl[ outRow, ]
+	out2 <- data.frame( "Hit.Kmer"=outKmer, "CDS_POSITION"=outCDSloc, "AA_POS"=outAAloc, "AA_FRAGMENT"=outAAfrag,
+				stringsAsFactors=FALSE)
+	out <- cbind( out1, out2, stringsAsFactors=FALSE)
+	return( out)
 }
 
 
