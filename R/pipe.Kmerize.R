@@ -476,13 +476,17 @@ MAX_KMERS <- 250000000
 	kmers <- as.character( kmerTbl$Kmer)
 	NKmer <- length(kmers)
 	kmer.size <- nchar( kmers[1])
+	kmer.hw.cds <- floor( kmer.size/2)
+	kmer.hw.aa <- floor( kmer.size/6)
 	
 	# prep for doing a bunch of alignmetns
 	dnaMatrix <- nucleotideSubstitutionMatrix()
+	data(BLOSUM62)
 	minScore <- round( kmer.size * 0.80)
 	
 	# we will visit in chunks, and collect Kmers that score well enough
-	outRow <- outKmer <- outAAfrag <- outCDSloc <- outAAloc <- vector()
+	outKmer <- outAAfrag <- outAAdiff <- vector()
+	outRow <- outCDSloc <- outAAloc <- outScore <- vector()
 	nOut <- 0
 	nDone <- 0
 	cat( "\nSearching Kmers..\n")
@@ -503,20 +507,36 @@ MAX_KMERS <- 250000000
 		
 		# grab the right form of the high scoring Kmers
 		bestKmers <- ifelse( scoreFwd[myHits] > scoreRev[myHits], as.character(myKmers[myHits]), as.character(myRcKmers[myHits]))
+		bestScores <- myScores[myHits]
 		
 		# and see exactly where they land
 		bestKmerStrs <- DNAStringSet( bestKmers)
 		pa <- pairwiseAlignment( bestKmerStrs, cdsDNAstr, type="global-local", scoreOnly=F, substitutionMatrix=dnaMatrix)
 		cdsStarts <- start( subject(pa))
 		
-		# calc all the facts we need, and save them up
+		# calc all the facts we need
 		aaStarts <- floor((cdsStarts-1)/3) + 1
-		aaFrags <- sapply( 1:NHits, function(x) DNAtoAA( bestKmers[x], readingFrame=((cdsStarts[x]-1) %% 3)+1))
+		aaFrags <- sapply( 1:NHits, function(x) DNAtoBestPeptide( bestKmers[x], clipAtStop=F, tieBreak="reference", ref=aa))
+		pa2 <- pairwiseAlignment( aaFrags, aa, type="global-local", scoreOnly=F, substitutionMatrix=BLOSUM62)
+		aaCDS <- as.character( alignedSubject(pa2))
+		aaChars <- strsplit( aaFrags, split="")
+		cdsChars <- strsplit( aaCDS, split="")
+		aaDiffs <- sapply( 1:NHits, function(x) {
+				n <- min( length( ch1 <- aaChars[[x]]), length(ch2 <- cdsChars[[x]]))
+				isSame <- which( ch1[1:n] == ch2[1:n])
+				ch1[ isSame] <- "."
+				return( paste( ch1, collapse=""))
+		})
+		
+		# and finally save them up
 		now <- (nOut+1) : (nOut+NHits)
 		outKmer[now] <- bestKmers
-		outCDSloc[now] <- cdsStarts
-		outAAloc[now] <- aaStarts
+		outScore[now] <- bestScores
+		# convention is to report the center of the kmer, not the head
+		outCDSloc[now] <- cdsStarts + kmer.hw.cds
+		outAAloc[now] <- aaStarts + kmer.hw.aa
 		outAAfrag[now] <- aaFrags
+		outAAdiff[now] <- aaDiffs
 		outRow[now] <- nextChunk[myHits]
 		nOut <- nOut + NHits
 		
@@ -526,8 +546,8 @@ MAX_KMERS <- 250000000
 	
 	# pull it all together
 	out1 <- kmerTbl[ outRow, ]
-	out2 <- data.frame( "Hit.Kmer"=outKmer, "CDS_POSITION"=outCDSloc, "AA_POS"=outAAloc, "AA_FRAGMENT"=outAAfrag,
-				stringsAsFactors=FALSE)
+	out2 <- data.frame( "CDS_SCORE"=outScore, "CDS_POS"=outCDSloc, "AA_POS"=outAAloc, "AA_FRAGMENT"=outAAfrag, 
+				"DIF_FROM_CDS"=outAAdiff, stringsAsFactors=FALSE)
 	out <- cbind( out1, out2, stringsAsFactors=FALSE)
 	return( out)
 }
