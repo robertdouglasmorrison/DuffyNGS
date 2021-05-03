@@ -387,7 +387,7 @@ MAX_KMERS <- 250000000
 
 # build DNA and AA contigs from Kmers unique to one comparison group
 
-`pipe.KmerNovelContigs` <- function( kmerTbl, group, min.count=5, min.kmers=100, 
+`pipe.KmerNovelContigs` <- function( kmerTbl, group, folder.keyword=group, min.count=5, min.kmers=100, 
 				velvet.path="~/NGS/bin", velveth.args="", velvetg.args="", 
 				min.contig.length=150, verbose=TRUE) {
 
@@ -398,6 +398,9 @@ MAX_KMERS <- 250000000
 		return( NULL)
 	}
 
+	results.path <- paste( "Novel.Kmer.Contigs_", folder.keyword, sep="")
+	if ( ! file.exists(results.path)) dir.create( results.path, recursive=T)
+	
 	# 3 main steps
 
 	# Step 1:  Find the Kmers only seen by this group, and make a FASTA file for de novo
@@ -416,14 +419,13 @@ MAX_KMERS <- 250000000
 	}
 	cat( "  N_Novel Kmers for group: ", group, "  = ", NN)
 	fa <- as.Fasta( paste( "Kmer", 1:NN, sep=""), kmerTbl$Kmer[novelRows])
-	faFile <- paste( "Novel.Kmers_", group, ".fasta", sep="")
+	faFile <- file.path( results.path, paste( "Novel.Kmers_", group, ".fasta", sep=""))
 	writeFasta( fa, faFile, line=100)
 	
 	# Step 2:  hand those Kmer to Velvet
 	cat( "\n\nStep 2:  Do Vevet de novo assembly on Kmers..")
 	kmer.size <- nchar( fa$seq[1])
 	velvet.K <- round(kmer.size * 0.33) * 2 + 1	# make Velvet use an odd size about 2/3 of Kmer size
-	results.path <- paste( "Novel.Kmer.Contigs_", group, sep="")
 	
 	makeVelvetContigs( faFile, outpath=results.path,
 		velvet.path=velvet.path, buildHash=TRUE, buildContigs=TRUE,

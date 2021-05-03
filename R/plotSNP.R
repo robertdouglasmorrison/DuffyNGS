@@ -17,6 +17,7 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 	xLim <- c( xLo, xHi)
 	xWide <- base::diff( xLim)
 	lineWidth <- (600/xWide) * (xFig/10) * linewidth.factor
+	if (lineWidth < 0.5) lineWidth <- 0.5
 	baseCex <- (60/xWide) * (xFig/10)
 	if ( baseCex > 1.5) baseCex <- 1.5
 	mainCex <- 1
@@ -162,11 +163,15 @@ plotSNP <- function( position, seqID, sampleID, bamfile, vcffile, fastaFile, gen
 		if ( csums[ i, 1] < (csums[ i, 7] * 0.90)) smallSNPbars <- mask
 		isSNPbars <- append( isSNPbars, smallSNPbars[mask])
 	}
+	# try making the colors a wee bit thinner than the gray
+	finalLWD <- rep.int( lineWidth, length(allX))
+	finalLWD[ allColor != "grey50"] <- lineWidth * 0.9
 	# sort them into tallest to shortest at every x
 	ord <- base::order( allX, -allY)
 	allX <- allX[ ord]
 	allY <- allY[ ord]
 	allColor <- allColor[ ord]
+	finalLWD <- finalLWD[ ord]
 	isSNPbars <- isSNPbars[ ord]
 
 	# now we can set the Y scaling.  Then stretch the lower bound and set where the annotations go
