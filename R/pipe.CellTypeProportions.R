@@ -5,6 +5,11 @@
 				recalculate=c("none", "all", "missing", "profile", "deconvolution"), 
 				verbose=TRUE) {
 
+	if ( length(sampleID) > 1) {
+		cat( "\nWarning: expected a single sample ID..")
+		sampleID <- sampleID[1]
+	}
+
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
 	annT <- readAnnotationTable( annotationFile)
