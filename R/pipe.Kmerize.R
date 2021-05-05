@@ -389,7 +389,7 @@ MAX_KMERS <- 250000000
 
 `pipe.KmerNovelContigs` <- function( kmerTbl, group, folder.keyword=group, min.count=5, min.kmers=100, 
 				velvet.path="~/NGS/bin", velveth.args="", velvetg.args="", 
-				min.contig.length=150, verbose=TRUE) {
+				min.contig.length=150, proteinsFastaFile=NULL, verbose=FALSE) {
 
 	wantedDepthColumn <- paste( "Avg", group, "Depth", sep="_")
 	neededColumns <- c( "Kmer", wantedDepthColumn)
@@ -448,11 +448,23 @@ MAX_KMERS <- 250000000
 	keep <- which( nchar(peps) >= min.aa.len)
 	NC <- length(keep)
 	faOut <- as.Fasta( paste( group, contigs$desc, sep="_")[keep], peps[keep])
-	outfile <- paste( group, "_Novel.Kmer.VelvetPeptides.fasta", sep="")
+	outfile <- paste( group, "_Novel.Kmer.Velvet.Peptides.fasta", sep="")
 	outfile <- file.path( results.path, outfile)
 	writeFasta( faOut, file=outfile, line.width=100) 
-	cat( "\nWrote Kmer Novel Proteins .FASTA file: ", outfile)
+	cat( "\nWrote Kmer Novel Peptides .FASTA file: ", outfile)
 
+	# perhaps also lastly map these novel peptides onto reference proteins
+	if ( ! is.null( proteinsFastaFile)) {
+		cat( "\nNow mapping peptides onto reference proteins..")
+		ans <- peptide2BestProtein( faOut$seq, proteinsFastaFile=proteinsFastaFile, 
+				substitutionMatrix=BLOSUM62, tieBreakMode="all", details=T)
+		bigAns <- data.frame()
+		for (i in 1:length(ans)) { if (!is.null(ans[[i]])) bigAns <- rbind( bigAns, ans[[i]])}
+		outfile <- paste( group, "_Novel.Kmer.Velvet.ProteinHits.csv", sep="")
+		outfile <- file.path( results.path, outfile)
+		write.csv( bigAns, outfile, row.names=F)
+		cat( "\nWrote Kmer Novel Protein Hits .CSV file: ", outfile)
+	}
 	cat( "\nDone.\n")
 	return( length(faOut$desc))
 }
@@ -1493,3 +1505,22 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	}
 }
 
+
+`kmerGrep` <- function( kmerTbl, dnaPattern, fixed=TRUE, value=FALSE) {
+
+	# try to find Kmer substrings quickly
+	neededColumns <- c( "Kmer")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
+		return( NULL)
+	}
+	
+	rcPattern <- myReverseComplement( dnaPattern)
+	
+	ans1 <- grep( dnaPattern, kmerTbl$Kmer, fixed=fixed)
+	ans2 <- grep( rcPattern, kmerTbl$Kmer, fixed=fixed)
+	
+	out <- unique( sort( c( ans1, ans2)))
+	if (value) out <- kmerTbl$Kmer[out]
+	out
+}
