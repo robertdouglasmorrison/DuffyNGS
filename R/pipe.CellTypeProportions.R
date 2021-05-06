@@ -36,13 +36,14 @@
 	# set up if needed
 	verifyCellTypeSetup()
 	cellTypeColors <- getCellTypeColors()
+	cellTypeNames <- names(cellTypeColors)
 	N_CellTypes <- length( cellTypeColors)
 
 	# name for the file of results
 	celltypeDetailsFile <- file.path( celltype.path, paste( sampleID, prefix, "CellTypeProportions.csv", sep="."))
 	cellAns <- NULL
 	pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- pcts7 <- pcts8 <- rep.int( NA, N_CellTypes)
-	names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- names(pcts7) <-  names(pcts8) <- names(cellTypeColors)
+	names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- names(pcts7) <-  names(pcts8) <- cellTypeNames
 	TestNames <- c( "Fit.SteepDescent", "Fit.NLS", "Fit.GenSA", "Deconv.NLS", "Deconv.GenSA", "Deconv.Log2.NLS", "Deconv.Log2.GenSA", "Deconv.SteepDescent")
 	
 	recalculate <- match.arg( recalculate)
@@ -51,6 +52,9 @@
 
 	if ( file.exists(celltypeDetailsFile)) {
 		cellAns <- read.csv( celltypeDetailsFile, as.is=T)
+		# make sure existing data is in the currently expected order
+		cellWhere <- match( cellTypeNames, cellAns$CellType)
+		cellAns <- cellAns[ cellWhere, ]
 		if ( TestNames[1] %in% colnames(cellAns)) pcts1 <- as.numeric( cellAns[[ TestNames[1]]])
 		if ( TestNames[2] %in% colnames(cellAns)) pcts2 <- as.numeric( cellAns[[ TestNames[2]]])
 		if ( TestNames[3] %in% colnames(cellAns)) pcts3 <- as.numeric( cellAns[[ TestNames[3]]])
@@ -75,7 +79,11 @@
 			ans1 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='steep',
 						geneUniverse=geneUniverse)
-			if ( ! is.null(ans1)) pcts1 <- ans1$CellProportions
+			if ( ! is.null(ans1)) {
+				pcts1 <- ans1$CellProportions
+				cellWhere <- match( cellTypeNames, names(pcts1))
+				pcts1 <- pcts1[ cellWhere]
+			}
 		}
 
 		# 2)  Nonlinear Least Squares of the 28-dimensional immune profile
@@ -84,7 +92,11 @@
 			ans2 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='nls',
 						geneUniverse=geneUniverse)
-			if ( ! is.null(ans2)) pcts2 <- ans2$CellProportions
+			if ( ! is.null(ans2)) {
+				pcts2 <- ans2$CellProportions
+				cellWhere <- match( cellTypeNames, names(pcts2))
+				pcts2 <- pcts2[ cellWhere]
+			}
 		}
 
 		# 3)  GenSA of the 28-dimensional immune profile
@@ -93,7 +105,11 @@
 			ans3 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='GenSA',
 						geneUniverse=geneUniverse)
-			if ( ! is.null(ans3)) pcts3 <- ans3$CellProportions
+			if ( ! is.null(ans3)) {
+				pcts3 <- ans3$CellProportions
+				cellWhere <- match( cellTypeNames, names(pcts3))
+				pcts3 <- pcts3[ cellWhere]
+			}
 		}
 
 		# 4)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
@@ -102,7 +118,11 @@
 			ans4 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			if ( ! is.null(ans4)) pcts4 <- ans4$BestFit
+			if ( ! is.null(ans4)) {
+				pcts4 <- ans4$BestFit
+				cellWhere <- match( cellTypeNames, rownames(pcts4))
+				pcts4 <- pcts4[ cellWhere, 1]
+			}
 		}
 		
 		# 5)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
@@ -111,7 +131,12 @@
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			if ( ! is.null(ans5)) pcts5 <- ans5$BestFit
+			#if ( ! is.null(ans5)) pcts5 <- ans5$BestFit
+			if ( ! is.null(ans5)) {
+				pcts5 <- ans5$BestFit
+				cellWhere <- match( cellTypeNames, rownames(pcts5))
+				pcts5 <- pcts5[ cellWhere, 1]
+			}
 		}
 		
 		# 6)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
@@ -130,7 +155,12 @@
 			ans7 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=TRUE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			if ( ! is.null(ans7)) pcts7 <- ans7$BestFit
+			#if ( ! is.null(ans7)) pcts7 <- ans7$BestFit
+			if ( ! is.null(ans7)) {
+				pcts7 <- ans7$BestFit
+				cellWhere <- match( cellTypeNames, rownames(pcts7))
+				pcts7 <- pcts7[ cellWhere, 1]
+			}
 		}
 		
 		# 8)  Transcriptome Deconvolution, by Steepest Descent...
@@ -139,7 +169,12 @@
 			ans8 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			if ( ! is.null(ans8)) pcts8 <- ans8$BestFit
+			#if ( ! is.null(ans8)) pcts8 <- ans8$BestFit
+			if ( ! is.null(ans8)) {
+				pcts8 <- ans8$BestFit
+				cellWhere <- match( cellTypeNames, rownames(pcts8))
+				pcts8 <- pcts8[ cellWhere, 1]
+			}
 		}
 	}
 	
@@ -159,7 +194,7 @@
 	cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
 		
 	# leave out the NLS of Log2 data for now...
-	cellAns <- data.frame( "CellType"=names(cellTypeColors), "Final.Proportions"=cellMean, round(cellM[,-6],digits=3), stringsAsFactors=F)
+	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM[,-6],digits=3), stringsAsFactors=F)
 	write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
 
 	out <- data.frame( "SampleID"=sampleID, cellAns, stringsAsFactors=F)
