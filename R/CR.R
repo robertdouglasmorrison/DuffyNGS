@@ -1014,7 +1014,7 @@ drawOneRead <- function( x, y, len, colorVec, bbox=TRUE) {
 	yu <- y + 0.85
 	# we may need to leave out the black edges...
 	if (bbox) {
-		rect( xl, y, xr, yu, col=BASE_COLORS[colorVec], border=(len>150))
+		rect( xl, y, xr, yu, col=BASE_COLORS[colorVec], border=(len<75))
 		rect( xl[1], y, xr[len], yu, col=NULL, lwd=2)
 	} else {
 		rect( xl, y, xr, yu, col=BASE_COLORS[colorVec], border=NA)

@@ -27,6 +27,11 @@ MAX_KMERS <- 250000000
 	inputFastqFiles <- rawFastq$files
 	asMatePairs <- rawFastq$asMatePairs
 
+	# allow trimming of raw reads before Kmerize (but afgter Cutadapt..)
+	trim <- getReadTrimming( sampleID=sampleID, annotationFile=annotationFile, optionsFile=optionsFile, verbose=verbose)
+	trim5 <- trim$trim5
+	trim3 <- trim$trim3
+
 	# if we are doing the Cutadapt pass, check for those files, and call it if we need.
 	if (doCutadapt) {
 		filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=asMatePairs, forceMatePairs=forceMatePairs,
@@ -58,7 +63,8 @@ MAX_KMERS <- 250000000
 	for ( i in 1:nFiles) {
 		# do one file, and save what we got
 		ans <- kmerizeOneFastqFile( filesToDo[i], kmer.size=kmer.size, buffer.size=buffer.size, 
-					maxReads=maxReads, min.count=min.count, kmer.debug=kmer.debug)
+					maxReads=maxReads, min.count=min.count, kmer.debug=kmer.debug,
+					trim5=trim5, trim3=trim3)
 		nReadsNow <- ans$nReadsIn
 		nReadsIn <- nReadsIn + nReadsNow
 		saveKmers( outfile)
@@ -794,7 +800,7 @@ MAX_KMERS <- 250000000
 # Kmerize a single FASTQ file
 
 `kmerizeOneFastqFile` <- function( filein, kmer.size=33, buffer.size=1000000, 
-				maxReads=NULL, min.count=2, kmer.debug=NULL) {
+				maxReads=NULL, min.count=2, kmer.debug=NULL, trim5=0, trim3=0) {
 
 	# get ready to read the fastq file in chuncks...
 	filein <- allowCompressedFileName( filein)
@@ -824,6 +830,16 @@ MAX_KMERS <- 250000000
 		nread <- nread + length( seqTxt)
 		cat( "  N_Reads: ", prettyNum( as.integer(nread), big.mark=","))
 		rm( chunk)
+
+		# allow base trimming before we kmerize
+		if ( trim5 > 0 || trim3 > 0) {
+			cat( "  Trim..")
+			firstBP <- trim5 + 1
+			lastBP <- max( nchar( seqTxt)) - trim3
+			seqTxt <- substr( seqTxt, firstBP, lastBP)
+			drops <- which( nchar(seqTxt) < kmer.size)
+			if ( length(drops)) seqTxt <- seqTxt[ -drops]
+		}
 
 		timeStat <- round( system.time( kmerizeOneChunk.as.DNAString( seqTxt, kmer.size=kmer.size)), digits=1)
 		cat( "  Time(usr,sys)=",timeStat[3],"(",timeStat[1],",",timeStat[2],")", sep="")
@@ -945,7 +961,8 @@ mergeKmerChunks <- function( min.count) {
 	seqLens <- base::nchar( seqs)
 
 	# ignore any with N for building the Kmers
-	hasN <- grep( "N", seqs, fixed=T)
+	# long reads may have more N's, must do this after chopping, not before
+	#hasN <- grep( "N", seqs, fixed=T)
 	
 	# initial where we will store the growing output
 	kmerSets <- vector( mode="list", length=nSeq)
@@ -964,18 +981,20 @@ mergeKmerChunks <- function( min.count) {
 		toSet <- fromSet + sizeM1
 		nSubstrs <- length( fromSet)
 
-		x <- setdiff( x, hasN)
+		# x <- setdiff( x, hasN)
 		
 		base::lapply( x, function(j) {
 			kmers <- subseq( rep.int( seqs[j], nSubstrs), fromSet, toSet)
-			#if ( j %in% hasN) kmers <- kmers[ -grep("N",kmers)]
+			#if ( j %in% hasN) kmers <- kmers[ -grep("N",kmers,fixed=T)]
+			hasN <- grep( "N", kmers, fixed=T)
+			if ( length(hasN)) kmers <- kmers[ -hasN]
 			nOut <<- nOut + 1
 			kmerSets[[nOut]] <<- kmers
 			return(NULL)
 		})
 		return(NULL)
 	})
-	rm( seqLens, hasN, lenFac)
+	rm( seqLens, lenFac)
 
 	# turn from list back to one giant DNAStringSet
 	cat( " tabulate..")

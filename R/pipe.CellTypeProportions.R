@@ -205,6 +205,7 @@
 `pipe.CellTypeCompare` <- function( sampleIDset, groups, levels=sort(unique(as.character(groups))), 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, cellProportionsColumn="Final.Proportions", 
+				prefix=NULL, 
 				minPerGroup=3, test=t.test, plot=TRUE, plot.mode=c("bars", "auto", "pie", "lines"),
 				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, verbose=TRUE, ...) {
 
@@ -216,7 +217,6 @@
 	if ( speciesID != getCurrentSpecies()) {
 		setCurrentSpecies(speciesID)
 	}
-	prefix <- getCurrentSpeciesFilePrefix()
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
@@ -234,6 +234,12 @@
 	# gather the cell type proportions data from every sample
 	NS <- length( sampleIDset)
 	if ( length(groups) != NS) stop( "Length of 'groups' must equal number of samples")
+	# allow passsing in of explicit prefix to allow mixed organism copmares..
+	if ( is.null( prefix)) {
+		prefix <- getCurrentSpeciesFilePrefix()
+	}
+	prefix <- rep( prefix, length.out=NS)
+
 	ctpM <- matrix( NA, nrow=N_CellTypes, ncol=NS)
 	colnames(ctpM) <- sampleIDset
 	rownames(ctpM) <- names( cellTypeColors)
@@ -243,7 +249,7 @@
 
 		# name for  file of results
 		my.celltype.path <- file.path( celltype.path, sid)
-		celltypeDetailsFile <- file.path( my.celltype.path, paste( sid, prefix, "CellTypeProportions.csv", sep="."))
+		celltypeDetailsFile <- file.path( my.celltype.path, paste( sid, prefix[i], "CellTypeProportions.csv", sep="."))
 		if ( ! file.exists(celltypeDetailsFile)) {
 			cat( "\nCell Type Proportions results not found for sample: ", sid, "|", celltypeDetailsFile)
 			next
