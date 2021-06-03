@@ -354,7 +354,7 @@ MAX_KMERS <- 250000000
 
 # add all the details end user may want about the Kmers, typically after the 'Compare' Step
 
-`pipe.KmerAnnotation` <- function( kmerTbl, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
+`pipe.KmerAnnotate` <- function( kmerTbl, optionsFile="Options.txt", speciesID=getCurrentSpecies(), 
 				quiet.bowtie=TRUE, verbose=TRUE) {
 
 	neededColumns <- c( "Kmer")
@@ -394,8 +394,10 @@ MAX_KMERS <- 250000000
 # build DNA and AA contigs from Kmers unique to one comparison group
 
 `pipe.KmerNovelContigs` <- function( kmerTbl, group, folder.keyword=group, min.count=5, min.kmers=100, 
+				max.copies.out=5,
 				velvet.path="~/NGS/bin", velveth.args="", velvetg.args="", 
-				min.contig.length=150, proteinsFastaFile=NULL, verbose=FALSE) {
+				min.contig.length=100, proteinsFastaFile=NULL, 
+				min.score=100, verbose=FALSE) {
 
 	wantedDepthColumn <- paste( "Avg", group, "Depth", sep="_")
 	neededColumns <- c( "Kmer", wantedDepthColumn)
@@ -424,14 +426,23 @@ MAX_KMERS <- 250000000
 		return(NULL)
 	}
 	cat( "  N_Novel Kmers for group: ", group, "  = ", NN)
-	fa <- as.Fasta( paste( "Kmer", 1:NN, sep=""), kmerTbl$Kmer[novelRows])
+	# make multiple copies of each Kmer, using the depth, up to some max
+	kmerOut <- kmerTbl$Kmer[novelRows]
+	nEach <- kmerTbl[[wantedDepthColumn]][ novelRows]
+	nEach[ nEach > max.copies.out] <- max.copies.out
+	kmersOut <- rep( kmerOut, times=nEach)
+	idsOut <- paste( "Kmer", rep(1:NN,times=nEach), "_copy", unlist(lapply(nEach,function(x) 1:x)), sep="")
+	fa <- as.Fasta( idsOut, kmersOut)
 	faFile <- file.path( results.path, paste( "Novel.Kmers_", group, ".fasta", sep=""))
 	writeFasta( fa, faFile, line=100)
 	
 	# Step 2:  hand those Kmer to Velvet
 	cat( "\n\nStep 2:  Do Vevet de novo assembly on Kmers..")
 	kmer.size <- nchar( fa$seq[1])
-	velvet.K <- round(kmer.size * 0.33) * 2 + 1	# make Velvet use an odd size about 2/3 of Kmer size
+	# when Velvet chps up the Kmers, it generates non-unique contigs, which violates the entire premise
+	# so force it to use the same size
+	#velvet.K <- round(kmer.size * 0.33) * 2 + 1	# make Velvet use an odd size about 2/3 of Kmer size
+	velvet.K <- kmer.size - 2
 	
 	makeVelvetContigs( faFile, outpath=results.path,
 		velvet.path=velvet.path, buildHash=TRUE, buildContigs=TRUE,
@@ -449,11 +460,14 @@ MAX_KMERS <- 250000000
 
 	# convert to peptides
 	peps <- DNAtoBestPeptide( contigs$seq, clipAtStop=FALSE)
+	pepNames <- contigs$desc
 	# drop those that are too short to be interesting
 	min.aa.len <- min.contig.length / 3
 	keep <- which( nchar(peps) >= min.aa.len)
+	peps <- peps[keep]
+	pepNames <- pepNames[keep]
 	NC <- length(keep)
-	faOut <- as.Fasta( paste( group, contigs$desc, sep="_")[keep], peps[keep])
+	faOut <- as.Fasta( paste( group, pepNames, sep="_"), peps)
 	outfile <- paste( group, "_Novel.Kmer.Velvet.Peptides.fasta", sep="")
 	outfile <- file.path( results.path, outfile)
 	writeFasta( faOut, file=outfile, line.width=100) 
@@ -462,17 +476,32 @@ MAX_KMERS <- 250000000
 	# perhaps also lastly map these novel peptides onto reference proteins
 	if ( ! is.null( proteinsFastaFile)) {
 		cat( "\nNow mapping peptides onto reference proteins..")
-		ans <- peptide2BestProtein( faOut$seq, proteinsFastaFile=proteinsFastaFile, 
+		nCoresWas <- multicore.currentCoreCount()
+		if ( nCoresWas < 2) multicore.setup( 4)
+		ans <- peptide2BestProtein( peps, proteinsFastaFile=proteinsFastaFile, 
 				substitutionMatrix=BLOSUM62, tieBreakMode="all", details=T)
 		bigAns <- data.frame()
-		for (i in 1:length(ans)) { if (!is.null(ans[[i]])) bigAns <- rbind( bigAns, ans[[i]])}
+		for (i in 1:length(ans)) { 
+			if (is.null(ans[[i]])) next
+			smlAns <- data.frame( "ContigID"=pepNames[i], ans[[i]], stringsAsFactors=F)
+			bigAns <- rbind( bigAns, smlAns)
+		}
+		# put the biggest/best at the top
+		ord <- order( bigAns$Score, decreasing=T)
+		bigAns <- bigAns[ ord, ]
+		keep <- which( bigAns$Score >= min.score)
+		bigAns <- bigAns[ keep, ]
+		rownames(bigAns) <- 1:nrow(bigAns)
+		# write it out
 		outfile <- paste( group, "_Novel.Kmer.Velvet.ProteinHits.csv", sep="")
 		outfile <- file.path( results.path, outfile)
 		write.csv( bigAns, outfile, row.names=F)
 		cat( "\nWrote Kmer Novel Protein Hits .CSV file: ", outfile)
+		cat( "\nN_High Scoring Protein Fragments: ", nrow(bigAns))
+		if ( nCoresWas < 2) multicore.setup( 1)
 	}
 	cat( "\nDone.\n")
-	return( length(faOut$desc))
+	return( NC)
 }
 
 
@@ -1267,6 +1296,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		strand <- ! reverseStrand( chunk)
 		
 		# and a yes/no call about who had 2+ alignments
+		uniq <- rep.int(TRUE,nNow)
 		isDup <- duplicated( kmerSeq)
 		if (any( isDup)) {
 			# we only keep one copy of each
