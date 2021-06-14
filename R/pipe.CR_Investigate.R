@@ -217,16 +217,24 @@
 	explainGroup[ explainGroup == ""] <- "No BLAST hits found"
 
 	myPcts <- tbl$PCT_READS
+	myCounts <- tbl$N_READS
 	ans <- tapply( myPcts, factor(explainGroup), FUN=sum, na.rm=T)
+	ans2 <- tapply( myCounts, factor(explainGroup), FUN=sum, na.rm=T)
 
-	ans <- sort( ans, decreasing=T)
+	ord <- order( ans, decreasing=T)
+	ans <- ans[ ord]
+	ans2 <- ans2[ ord]
 
 	# very small fractions can break log scale...
-	drops <- which( ans < 0.0005)
-	if ( length(drops)) ans <- ans[ -drops]
+	pcts <- as.numeric(ans)
+	drops <- which( pcts < 0.0005)
+	if ( length(drops)) {
+		ans <- ans[ -drops]
+		pcts <- pcts[ -drops]
+		ans2 <- ans2[ -drops]
+	}
 
 	# control how many get drawn, and how...
-	pcts <- as.numeric(ans)
 	Nshow <- length(ans)
 	if ( Nshow > max.show) {
 		ans <- ans[1:max.show]
@@ -264,10 +272,41 @@
 	dev.print( png, pngFile, width=800)
 
 	# make a text version too
-	out <- data.frame( "Blast.Explanation"=names(ans), "NoHit.Percentages"=pcts, stringsAsFactors=F)
+	out <- data.frame( "Blast.Explanation"=names(ans), "NoHit.Percentage"=pcts, "N_READS"=as.numeric(ans2), 
+			stringsAsFactors=F)
 	outFile <- file.path( cr.path, paste( sampleID, "CR.SummaryPercentages.txt", sep="."))
 	write.table( out, outFile, sep="\t", quote=F, row.names=F)
 
 	return( ans)
+}
+
+
+`pipe.Extract.CR_Summary` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				results.path=NULL, verbose=TRUE) {
+
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=verbose)
+	}
+
+	out <- data.frame()
+	for ( sampleID in sampleIDset) {
+
+		cr.path <- file.path( results.path, "CR", sampleID)
+		inFile <- file.path( cr.path, paste( sampleID, "CR.SummaryPercentages.txt", sep="."))
+		if ( ! file.exists(inFile)) {
+			cat( "\nWarning: CR Summary file not found: ", inFile)
+			next
+		}
+		tbl <- read.delim( inFile, as.is=T)
+		sml <- data.frame( "SampleID"=sampleID, tbl, stringsAsFactors=F)
+		out <- rbind( out, sml)
+	}
+
+	# final order by No Hit peroentage
+	ord <- order( out$NoHit.Percentage, decreasing=T)
+	out <- out[ ord, ]
+	if ( nrow(out)) rownames(out) <- 1:nrow(out)
+
+	return( out)
 }
 
