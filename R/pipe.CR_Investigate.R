@@ -37,7 +37,7 @@
 `pipe.CR_Investigate` <- function( sampleID, annotationFile="Annotation.txt",
 		optionsFile="Options.txt", mode=c( "normal", "QuickQC", "genomic"),
 		blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="nt"),
-		doCR=TRUE, doBlast=TRUE, maxReads=500000, maxTime=1000, maxCycles=10, 
+		doCR=FALSE, doBlast=FALSE, maxReads=500000, maxTime=1000, maxCycles=10, 
 		ratePerCycle=NULL, maxCR=4000, pause=0, 
 		nIterations=1000, nBest=10, results.path=NULL, makePlots=TRUE,
 		trim5=NULL, trim3=NULL, verbose=TRUE) {
@@ -262,6 +262,11 @@
 	dev.flush()
 	pngFile <- file.path( cr.path, paste( sampleID, "CR.SummaryPlot.png", sep="."))
 	dev.print( png, pngFile, width=800)
+
+	# make a text version too
+	out <- data.frame( "Blast.Explanation"=names(ans), "NoHit.Percentages"=pcts, stringsAsFactors=F)
+	outFile <- file.path( cr.path, paste( sampleID, "CR.SummaryPercentages.txt", sep="."))
+	write.table( out, outFile, sep="\t", quote=F, row.names=F)
 
 	return( ans)
 }
