@@ -10,7 +10,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
-				nFDRsimulations=0,
+				nFDRsimulations=0, gene.pct.clustering=2,
 				addCellTypes=(speciesID %in% MAMMAL_SPECIES), 
 				addLifeCycle=(speciesID %in% PARASITE_SPECIES), PLOT.FUN=NULL, ...)
 {
@@ -259,7 +259,7 @@
 	    if (addCellTypes) {
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    	plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
-	    				label=mainText, label.cex=0.8, gene.pct=2)
+	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering)
 	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
 	    	dev.print( png, plotfile, width=900)
 	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
