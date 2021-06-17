@@ -131,7 +131,11 @@ function( inputFastaFile, outputIndexFile, optionsFile="Options.txt", verbose=TR
 	if (debug) progName <- base::paste( progName, "-debug", sep="")
 	out <- progName
 
-	out <- base::paste( out, " -f ", paste(inputFastaFile,collapse=","), " ")
+	# next is threads
+	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=verbose))
+	out <- base::paste( out, " --threads", nCores)
+
+	out <- base::paste( out, " -f", paste(inputFastaFile,collapse=","))
 
 	out <- base::paste( out, outputIndexFile, sep=" ")
 	
