@@ -102,7 +102,7 @@
 				plotfile <- paste( gname, "pdf", sep=".")
 				plotfile <- file.cleanSpecialCharactersFromFileName( plotfile)
 				plotfile <- file.path( plot.path, plotfile)
-				dev.print( png, plotfile, width=pdf.width, height=pdf.height, "bg"="white")
+				dev.print( pdf, plotfile, width=pdf.width, height=pdf.height, "bg"="white")
 			}
 			if (length(mygenes) > 1) cat( "  ",gname)
 		}
