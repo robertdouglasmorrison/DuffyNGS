@@ -261,8 +261,10 @@
 			return(NULL)
 		}
 
-		# stash these values
-		ctpM[ , i] <- myCellPcts
+		# stash these values, allowing some to be missing
+		myCellNames <- cellAns$CellType
+		where <- match( rownames(ctpM), myCellNames)
+		ctpM[ , i] <- myCellPcts[ where]
 	}
 
 	# now with this matrix of cell type percentages, call the comparison tool
@@ -273,6 +275,7 @@
 
 	# if we did plot, decide what to call it...
 	levelString <- paste( levels, collapse=".v.")
+	if ( length(levels) > 3) levelString <- paste( paste( levels[1:3], collapse=".v."), ".v.etc", sep="")
 	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.png", sep="")
 	dev.print( png, file.path( celltype.path, plotFile), width=900)
 	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.pdf", sep="")
