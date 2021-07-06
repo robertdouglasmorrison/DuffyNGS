@@ -8,7 +8,7 @@
 	# these functions assume the reads are in the raw order coming off the alignment tool
 
 	# so try to catch any sorted bamRange object as invalid
-	Ntest <- min( 1000, size(chunk))
+	Ntest <- min( 10000, size(chunk))
 	if (Ntest < 1) return( FALSE)
 
 	# method 1:  the alignments should not be in order
