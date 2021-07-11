@@ -34,7 +34,10 @@
 
 	if (mode == "addData") {
 
-		if ( ! is.bamChunk(chunk)) return(NULL)
+		if ( ! is.bamChunk(chunk)) {
+			cat( "\nWarning: BAM content does not look unsorted. Unable to assess BAM alignment summary")
+			return(NULL)
+		}
 		N <- size( chunk)
 		cat( "  summarize..")
 		fac <- factor.align( chunk)
@@ -100,6 +103,10 @@
 	nMultiSpecies <- readStatsNmultiS
 	genePattTable <- readStatsGenePattTable
 	speciesTable <- readStatsSpeciesTable
+	if ( is.null( genePattTable)) {
+		cat( "Warning: no gene data collected from BAM file.")
+		return( NULL)
+	}
 
 	outText <- base::append( outText, base::paste( "\nN_Reads:             \t", 
 				formatC(nReads, format="d", width=12, big.mark=",")))

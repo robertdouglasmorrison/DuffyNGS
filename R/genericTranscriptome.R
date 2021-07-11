@@ -48,9 +48,10 @@
 		rpkm <- v
 		reads <- rpkm * readsPerSample / sum(rpkm)
 		sigma <- rosettaSigma( reads)
+		tpm <- rpkm * 1000000 / sum(rpkm)
 		sml <- data.frame( "GENE_ID"=gids, "PRODUCT"=prods,
-				"RPKM_M"=rpkm, "READS_M"=reads, "SIGMA_M"=sigma, "STRAND_M"=1,
-				"RPKM_U"=rpkm, "READS_U"=reads, "SIGMA_U"=sigma, "STRAND_U"=1,
+				"RPKM_M"=rpkm, "READS_M"=reads, "TPM_M"=tpm, "SIGMA_M"=sigma, "STRAND_M"=1,
+				"RPKM_U"=rpkm, "READS_U"=reads, "TPM_U"=tpm, "SIGMA_U"=sigma, "STRAND_U"=1,
 				"N_EXON_BASES"=nexonb, stringsAsFactors=F)
 		ord <- order( rpkm, decreasing=T)
 		sml <- sml[ ord, ]
