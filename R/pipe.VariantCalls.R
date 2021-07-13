@@ -355,8 +355,8 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	eSID <- unique.default( exonMap$SEQ_ID) 
 	if ( length( eSID) > 1) {
 		exonMap <- subset.data.frame( exonMap, SEQ_ID == mySID)
-		if ( nrow( exonMap) < 2) return(tbl)
 	}
+	if ( nrow( exonMap) < 2) return(tbl)
 	
 	# build a lookup table of exon starts and stops
 	NE2 <- nrow( exonMap) * 2
