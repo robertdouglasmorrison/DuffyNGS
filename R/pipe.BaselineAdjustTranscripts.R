@@ -6,7 +6,7 @@
 				adjusted.path="adjustedResults/transcript",
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, 
-				max.scale.factor=10, verbose=TRUE) {
+				max.scale.factor=3, min.expression.for.scaling=1, verbose=TRUE) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	speciesPrefix <- getCurrentSpeciesFilePrefix()
@@ -89,7 +89,8 @@
 			isSMALL <- which( scaleFac < (1.0/max.scale.factor))
 			if ( length(isSMALL)) scaleFac[isSMALL] <- (1.0/max.scale.factor)
 		}
-		scaleFac[ myTime0 <= 0] <- 0
+		# prevent divide by zero and extreme scaling
+		scaleFac[ myTime0 <= min.expression.for.scaling] <- 1
 		allUsedScaleFactors <- c( allUsedScaleFactors, scaleFac[ scaleFac > 0])
 	
 		# make the new adjusted transcriptome
