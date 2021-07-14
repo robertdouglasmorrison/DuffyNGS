@@ -39,7 +39,7 @@
 	avgGeneNames <- rownames( expressM)
 	
 	# now read every transcriptome, adjust all expression columns and write it out
-	ExpressColumns <- c("RPKM_M", "SIGMA_M", "RPKM_U", "SIGMA_U", "READS_M", "READS_U")
+	ExpressColumns <- c("RPKM_M", "SIGMA_M", "RPKM_U", "SIGMA_U", "READS_M", "READS_U", "TPM_M", "TPM_U")
 
 	# the scaling is based on time zero, and applied to all other of the same subjectID
 	allUsedScaleFactors <- vector()
@@ -103,6 +103,12 @@
 		}
 		newtbl$SIGMA_M <- ifelse( newtbl$SIGMA_M < minSigma, minSigma, newtbl$SIGMA_M)
 		newtbl$SIGMA_U <- ifelse( newtbl$SIGMA_U < minSigma, minSigma, newtbl$SIGMA_U)
+
+		# force the TPM units to sum to a million
+		if ( "TPM_M" %in% colnames(newtbl)) {
+			newtbl$TPM_M <- tpm( newtbl$READS_M, newtbl$N_EXON_BASES)
+			newtbl$TPM_U <- tpm( newtbl$READS_U, newtbl$N_EXON_BASES)
+		}
 	
 		# put the new transcripome back into expression order
 		exOrd <- order( newtbl$RPKM_M, decreasing=T)
