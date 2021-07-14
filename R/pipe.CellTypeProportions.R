@@ -207,7 +207,8 @@
 				speciesID=getCurrentSpecies(), results.path=NULL, cellProportionsColumn="Final.Proportions", 
 				prefix=NULL, 
 				minPerGroup=3, test=t.test, plot=TRUE, plot.mode=c("bars", "auto", "pie", "lines"),
-				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, verbose=TRUE, ...) {
+				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, 
+				significance.scaling=TRUE, verbose=TRUE, ...) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -271,7 +272,8 @@
 	plot.mode <- match.arg( plot.mode)
 	ans <- compareTranscriptProportions( ctpM, groups=groups, levels=levels, col=cellTypeColors, 
 					minPerGroup=minPerGroup, test=test, plot=plot, plot.mode=plot.mode, label=label, 
-					wt.fold=wt.fold, wt.pvalue=wt.pvalue, min.percent=min.percent, ...)
+					wt.fold=wt.fold, wt.pvalue=wt.pvalue, min.percent=min.percent, 
+					significance.scaling=significance.scaling, ...)
 
 	# if we did plot, decide what to call it...
 	levelString <- paste( levels, collapse=".v.")
