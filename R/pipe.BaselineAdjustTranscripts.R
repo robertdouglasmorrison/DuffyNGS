@@ -6,7 +6,8 @@
 				adjusted.path="adjustedResults/transcript",
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, 
-				max.scale.factor=3, min.expression.for.scaling=1, verbose=TRUE) {
+				max.scale.factor=4, min.expression.for.scaling=1, scale.units="RPKM_M",
+				verbose=TRUE, debug.genes=NULL) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	speciesPrefix <- getCurrentSpeciesFilePrefix()
@@ -30,7 +31,7 @@
 
 	# grab all the original transcriptomes into a matrix to aid calculations
 	cat( "\nGathering original transcriptomes..")
-	expressM <- expressionFileSetToMatrix( fileSet, sampleIDs, intensityColumn="RPKM_M", 
+	expressM <- expressionFileSetToMatrix( fileSet, sampleIDs, intensityColumn=scale.units,
 					missingGenes="na", keepIntergenic=T, verbose=T)
 	
 	# deduce the median Day 0 expression level for each gene
@@ -111,6 +112,16 @@
 			#newtbl$TPM_U <- tpm( newtbl$READS_U, newtbl$N_EXON_BASES)
 		#}
 	
+		# inspect details about some genes?
+		if ( ! is.null(debug.genes)) {
+			for (dbgG in debug.genes) {
+				whereTbl <- match( dbgG, shortGeneName(tbl$GENE_ID,keep=1))
+				whereScale <- match( dbgG, shortGeneName(avgGeneNames,keep=1))
+				cat( "\nDebug: ", dbgG, "(whT,whS,oldV,my0,avg0,scale,newV)", whereTbl, whereScale, tbl[[scale.units]][whereTbl],
+					"|", myTime0[whereScale], avgTime0[whereScale], scaleFac[whereScale], "|", newtbl[[scale.units]][whereTbl])
+			}
+		}
+
 		# put the new transcripome back into expression order
 		exOrd <- order( newtbl$RPKM_M, decreasing=T)
 		newtbl <- newtbl[ exOrd, ]
