@@ -91,7 +91,8 @@
 		}
 		# prevent divide by zero and extreme scaling
 		scaleFac[ myTime0 <= min.expression.for.scaling] <- 1
-		allUsedScaleFactors <- c( allUsedScaleFactors, scaleFac[ scaleFac > 0])
+		allUsedScaleFactors <- c( allUsedScaleFactors, scaleFac)
+		cat( " ", summary(scaleFac))
 	
 		# make the new adjusted transcriptome
 		cat( "  applyScaling..")
