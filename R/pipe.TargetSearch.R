@@ -133,7 +133,6 @@
 		ord <- order( hitCnts, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
-		colnames(smlDF)[2] <- paste( targetName, "ID", sep=".")
 		outfile <- file.path( bam.path, paste( sid, targetName, "Summary.csv", sep="."))
 		write.table( smlDF, outfile, sep=",", quote=T, row.names=F)
 
