@@ -1,6 +1,6 @@
-# pipe.VirusSearch.R -- mine No Hits for evidence of Viruses
+# pipe.TargetSearch.R -- mine No Hits (or raw fASTQ) for evidence of arbitrary Target
 
-`pipe.VirusSearch` <- function( sampleIDset, targetName="Virus.Genes", fastaName=targetName, max.mismatch.per.100=5,
+`pipe.TargetSearch` <- function( sampleIDset, targetName="Virus.Genes", fastaName=targetName, max.mismatch.per.100=5,
 				max.low.complexity=80, input.mode=c("nohits","fastq"), k.bowtie=1, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", verbose=FALSE) {
 
@@ -10,21 +10,21 @@
 	fastq.path <- getOptionValue( optT, "fastqData.path", verbose=verbose)
 	bowtie.path <- getOptionValue( optT, "bowtie2Index.path", notfound=".", verbose=verbose)
 
-	# make sure we see and can load the virus data
+	# make sure we see and can load the target data
 	fastaFile <- file.path( bowtie.path, "FastaFiles", paste( fastaName, "fasta", sep="."))
-	if ( ! file.exists( fastaFile)) stop( paste( "Required Virus FASTA file not found: ", fastaFile))
-	viralFA <- loadFasta( fastaFile, short.desc=FALSE, verbose=verbose)
-	descTerms <- strsplit( viralFA$desc, split=" | ", fixed=T)
-	viralIDs <- sapply( descTerms, `[`, 1)
-	viralNames <- sapply( descTerms, `[`, 2)
-	if ( any( is.na( viralNames))) cat( "\nWarning:  some Fasta headers missing ' | ' product term delimitors")
+	if ( ! file.exists( fastaFile)) stop( paste( "Required Target FASTA file not found: ", fastaFile))
+	targetFA <- loadFasta( fastaFile, short.desc=FALSE, verbose=verbose)
+	descTerms <- strsplit( targetFA$desc, split=" | ", fixed=T)
+	targetIDs <- sapply( descTerms, `[`, 1)
+	targetNames <- sapply( descTerms, `[`, 2)
+	if ( any( is.na( targetNames))) cat( "\nWarning:  some Fasta headers missing ' | ' product term delimitors")
 
-	# same with the viral Bowtie index
+	# same with the target Bowtie index
 	bowtieFile <- file.path( bowtie.path, paste( targetName, "1.bt2", sep="."))
 	if ( ! file.exists( bowtieFile)) stop( paste( "Required", targetName, "Bowtie2 target index file not found: ", bowtieFile))
 
 	# make the place/file for our results
-	bam.path <- file.path( results.path, paste( targetName, "BAMS", sep="."))
+	bam.path <- file.path( results.path, "TargetSearch", paste( targetName, "BAMS", sep="."))
 	if ( ! file.exists( bam.path)) dir.create( bam.path, recursive=T)
 
 	# since we don't expect much hits (if at all), allow doing a set of samples into one result
@@ -37,7 +37,7 @@
 			"\n  Max base mismatches per 100bp:  ", max.mismatch.per.100, 
 			"\n  Max low complexity base %:      ", max.low.complexity, sep="")
 	
-		# get the file of noHit reads, as viral reads should still be in there
+		# get the file of noHit reads, as target reads should still be in there
 		input.mode <- match.arg( input.mode)
 		if ( input.mode == "nohits") {
 			infile <- paste( sid, "noHits", "fastq", sep=".") 
@@ -74,7 +74,7 @@
 		cat( "  Scan for high quality hits..")
 		reader <- bamReader( bamFile)
 		refData <- getRefData( reader)
-		viralHits <- viralWts <- vector()
+		targetHits <- targetWts <- vector()
 		nSeen <- 0
 		repeat {
 			chunk <- getNextChunk( reader, n=10000, alignedOnly=T)
@@ -95,16 +95,16 @@
 				})
 			badComplex <- which( (pctLow * 100) > max.low.complexity)
 			goodHits <- setdiff( 1:nReads, union( badMatch, badComplex))
-			viralHits <- c( viralHits, seqID[goodHits])
+			targetHits <- c( targetHits, seqID[goodHits])
 			# also keep the weights if K more than one
 			if ( k.bowtie == 1) {
-				viralWts <- c( viralWts, rep.int(1,length(goodHits)))
+				targetWts <- c( targetWts, rep.int(1,length(goodHits)))
 			} else {
 				# we need to calc the wts
 				readIDs <- readID( chunk)
 				readWts <- rep.int( 1, nReads)
 				tapply( 1:nReads, factor(readIDs), function(x) { readWts[x] <<- (1/length(x)); return(NULL)})
-				viralWts <- c( viralWts, readWts[goodHits])
+				targetWts <- c( targetWts, readWts[goodHits])
 			}
 
 			nFound <- nFound + length(goodHits)
@@ -113,22 +113,22 @@
 		}
 		bamClose( reader)
 	
-		if ( ! length(viralHits)) {
+		if ( ! length(targetHits)) {
 			cat( "\nNo high quality", targetName, "hits detected..")
 			next
 		}
 
 		# now tablify
-		hitTbl <- table( viralHits)
-		if ( k.bowtie > 1) hitTbl <- tapply( viralWts, factor( viralHits), sum, na.rm=T)
+		hitTbl <- table( targetHits)
+		if ( k.bowtie > 1) hitTbl <- tapply( targetWts, factor( targetHits), sum, na.rm=T)
 		hitCnts <- round( as.numeric( hitTbl))
 		pctHits <- round( hitCnts * 100 / sum(hitCnts), digits=2)
-		perMilNoHits <- round( hitCnts / (nReadsIn/1000000), digits=4)
-		where <- match( names(hitTbl), viralIDs)
-		products <- viralNames[where]
+		perMil <- round( hitCnts / (nReadsIn/1000000), digits=4)
+		where <- match( names(hitTbl), targetIDs)
+		products <- targetNames[where]
 
-		smlDF <- data.frame( "SampleID"=sid, "VirusID"=names(hitTbl), "Product"=products, 
-				"Percent.Sample"=pctHits, "N_Hits"=hitCnts, "PerMillionNoHits"=perMilNoHits, 
+		smlDF <- data.frame( "SampleID"=sid, "TargetID"=names(hitTbl), "Product"=products, 
+				"Percent.Sample"=pctHits, "N_Hits"=hitCnts, "PerMillion"=perMil, 
 				stringsAsFactors=F)
 		ord <- order( hitCnts, decreasing=T)
 		smlDF <- smlDF[ ord, ]
@@ -150,11 +150,9 @@
 	bigDF <- bigDF[ ord, ]
 	rownames(bigDF) <- 1:nrow(bigDF)
 
-	if ( input.mode == "fastq") colnames(bigDF) <- sub( "PerMillionNoHits", "PerMillionReads", colnames(bigDF))
-
 	# report the overall picture
 	cat( "\n\nSummary:")
-	cat( "\n  N Good Virus Reads Found:      ", nFound)
+	cat( "\n  N Good Target Reads Found:      ", nFound)
 	cat( "\n  N Rejected for Mismatches:     ", nRejectMismatch)
 	cat( "\n  N Rejected for Low Complexity: ", nRejectLowComplex, "\n")
 
