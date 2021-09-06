@@ -237,15 +237,19 @@ MAX_KMERS <- 250000000
 	}
 	cat( "\nDone loading.\n")
 	
-	cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
-	nGood <- apply( kmerTbl, 1, function(x) sum( x >= min.count))
-	drops <- which( nGood < min.samples)
-	if ( length(drops)) {
-		cat( "  Removing", length(drops), "Kmers rows..")
-		kmerTbl <- kmerTbl[ -drops, ]
-		allKmers <- allKmers[ -drops]
-		cat( "  N_Kmer: ", nrow(kmerTbl))
+	if ( min.count > 1 && min.samples > 1) {
+		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
+		nGood <- apply( kmerTbl, 1, function(x) sum( x >= min.count))
+		drops <- which( nGood < min.samples)
+		if ( length(drops)) {
+			cat( "  Removing", length(drops), "Kmers rows..")
+			kmerTbl <- kmerTbl[ -drops, ]
+			allKmers <- allKmers[ -drops]
+			cat( "  N_Kmer: ", nrow(kmerTbl))
+		}
 	}
+
+	# clean up
 	if ( exists("bigKmerStrings", envir=.GlobalEnv)) rm( bigKmerStrings, envir=.GlobalEnv)
 	if ( exists("bigKmerCounts", envir=.GlobalEnv)) rm( bigKmerCounts, envir=.GlobalEnv)
 	gc()
@@ -599,6 +603,76 @@ MAX_KMERS <- 250000000
 				"DIF_FROM_CDS"=outAAdiff, stringsAsFactors=FALSE)
 	out <- cbind( out1, out2, stringsAsFactors=FALSE)
 	return( out)
+}
+
+
+`plotKmerSearchForProteinDepth` <- function( kmerTbl, countColumns, col=rainbow(length(countColumns),end=0.7), 
+						featureMap=NULL, label="", lwd=2, legend.cex=1, feature.cex=1) {
+
+	neededColumns <- c( "CDS_POS")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
+		return( NULL)
+	}
+
+	# extract the numeric counts we will show
+	NR <- nrow( kmerTbl)
+	cdsP <- as.numeric( kmerTbl$CDS_POS)
+	cntsM <- as.matrix( kmerTbl[ , countColumns])
+	NS <- ncol(cntsM)
+	cdsOrd <- order( cdsP)
+	if ( ! all( cdsOrd == 1:NR)) {
+		cntsM <- cntsM[ ord, ]
+		cdsP <- cdsP[ ord]
+	}
+
+	# there can be 2+ values at each CDS, so trim to just the deepest
+	if ( any( duplicated( cdsP))) {
+		cntsM <- apply( cntsM, MARGIN=2, function(x) tapply( x, factor( cdsP), sum))
+		cdsP <- unique( cdsP)
+		NR <- nrow(cntsM)
+	}
+	
+	# set up to do the plotting
+	xLimits <- range( c( 1, cdsP))
+	bigX <- xLimits[2]
+	yLimits <- range( c( 0, cntsM))
+	col <- rep( col, length.out=NS)
+
+	if ( ! is.null( featureMap)) {
+		featureColumns <- c( "GENE_ID", "POSITION", "END", "COLOR")
+		if ( ! all( featureColumns %in% colnames(featureMap))) {
+			cat( "\nWarning: Feature Map is missing some needed columns: ", featureColumns, "\nIgnoring..")
+			featureMap <- NULL
+		} else {
+			yFeatureLow <- -yLimits[2] * 0.1
+			yFeatureHigh <- yFeatureLow * 0.25
+			yFeatureMid <- (yFeatureLow + yFeatureHigh) / 2
+			yLimits[1] <- yFeatureLow * 1.05
+		}
+	}
+
+	mainText <- paste( "Kmer Search: ", label)
+	plot( 1, 1, type="n", main=mainText, xlab="Position on Target Sequence", ylab="Kmer Depth",
+			xlim=xLimits*c(1,1.1), ylim=yLimits*c(1,1.1))
+
+	if ( ! is.null( featureMap)) {
+		for ( j in 1:nrow(featureMap)) {
+			rect( featureMap$POSITION[j], yFeatureLow, featureMap$END[j], yFeatureHigh, col=featureMap$COLOR[j], border=1)
+			text( (featureMap$POSITION[j] + featureMap$END[j])/2, yFeatureMid, featureMap$GENE_ID[j], col=1, cex=feature.cex)
+		}
+	}
+
+	for ( i in 1:NS) {
+		vIn <- cntsM[ , i]
+		vOut <- rep.int( 0, bigX)
+		vOut[ cdsP] <- vIn
+		lines( 1:bigX, vOut, lwd=lwd, lty=1, col=col[i])
+	}
+
+	legend( 'topright', colnames(cntsM), lwd=lwd, col=col, bg='white', cex=legend.cex)
+	dev.flush()
+	return(NULL)
 }
 
 
