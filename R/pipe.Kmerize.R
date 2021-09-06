@@ -608,7 +608,7 @@ MAX_KMERS <- 250000000
 
 `plotKmerSearchForProteinDepth` <- function( kmerTbl, countColumns, col=rainbow(length(countColumns),end=0.7), 
 						featureMap=NULL, label="", lwd=2, legend.cex=1, feature.cex=1,
-						min.score=NULL, forceYmax=NULL) {
+						mode=c("depth","KPM"), min.score=NULL, forceYmax=NULL) {
 
 	neededColumns <- c( "CDS_POS", "CDS_SCORE")
 	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
@@ -627,6 +627,17 @@ MAX_KMERS <- 250000000
 		cntsM <- cntsM[ ord, ]
 		cdsP <- cdsP[ ord]
 		cdsS <- cdsS[ ord]
+	}
+
+	# raw depth, or nornalized
+	yLabel <- "Kmer Depth"
+	mode <- match.arg( mode)
+	if ( mode == "KPM") {
+		for ( i in 1:NS) {
+			v <- cntsM[ ,i]
+			cntsM[ ,i] <- v * 1000000 / sum(v)
+		}
+		yLabel <- "Normalized Kmer Depth (KPM)"
 	}
 
 	# perhaps discard some low scoring Kmers?..
@@ -667,7 +678,7 @@ MAX_KMERS <- 250000000
 	}
 
 	mainText <- paste( "Kmer Search: ", label)
-	plot( 1, 1, type="n", main=mainText, xlab="Position on Target Sequence", ylab="Kmer Depth",
+	plot( 1, 1, type="n", main=mainText, xlab="Position on Target Sequence", ylab=yLabel,
 			xlim=xLimits*c(1,1.1), ylim=yLimits*c(1,1.1))
 
 	if ( ! is.null( featureMap)) {
