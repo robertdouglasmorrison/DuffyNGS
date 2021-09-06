@@ -607,9 +607,10 @@ MAX_KMERS <- 250000000
 
 
 `plotKmerSearchForProteinDepth` <- function( kmerTbl, countColumns, col=rainbow(length(countColumns),end=0.7), 
-						featureMap=NULL, label="", lwd=2, legend.cex=1, feature.cex=1) {
+						featureMap=NULL, label="", lwd=2, legend.cex=1, feature.cex=1,
+						min.score=NULL, forceYmax=NULL) {
 
-	neededColumns <- c( "CDS_POS")
+	neededColumns <- c( "CDS_POS", "CDS_SCORE")
 	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
 		cat( "\nError: Kmer table is missing some needed columns: ", neededColumns)
 		return( NULL)
@@ -618,12 +619,24 @@ MAX_KMERS <- 250000000
 	# extract the numeric counts we will show
 	NR <- nrow( kmerTbl)
 	cdsP <- as.numeric( kmerTbl$CDS_POS)
+	cdsS <- as.numeric( kmerTbl$CDS_SCORE)
 	cntsM <- as.matrix( kmerTbl[ , countColumns])
 	NS <- ncol(cntsM)
 	cdsOrd <- order( cdsP)
 	if ( ! all( cdsOrd == 1:NR)) {
 		cntsM <- cntsM[ ord, ]
 		cdsP <- cdsP[ ord]
+		cdsS <- cdsS[ ord]
+	}
+
+	# perhaps discard some low scoring Kmers?..
+	if ( ! is.null( min.score)) {
+		drops <- which( cdsS < min.score)
+		if ( length(drops)) {
+			cntsM <- cntsM[ -drops, ]
+			cdsP <- cdsP[ -drops]
+			NR <- nrow( cntsM)
+		}
 	}
 
 	# there can be 2+ values at each CDS, so trim to just the deepest
@@ -637,6 +650,7 @@ MAX_KMERS <- 250000000
 	xLimits <- range( c( 1, cdsP))
 	bigX <- xLimits[2]
 	yLimits <- range( c( 0, cntsM))
+	if ( ! is.null( forceYmax)) yLimits[2] <- as.numeric( forceYmax)
 	col <- rep( col, length.out=NS)
 
 	if ( ! is.null( featureMap)) {
