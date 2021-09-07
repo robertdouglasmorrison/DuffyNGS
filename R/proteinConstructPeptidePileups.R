@@ -132,7 +132,7 @@
 	mtext( " BLUE = 'NoHit' read failed genomic alignment", side=3, line=1, adj=0, col='dodgerblue', cex=txt.cex*1.5)
 	mtext( " RED  =  Amino Acid differs from Construct", side=3, line=1.5, adj=0, col=2, cex=txt.cex*1.5)
 	mtext( "PURPLE = Frame Shift +1 required to fit", side=3, line=1, adj=1, col='purple', cex=txt.cex*1.5)
-	mtext( " GREEN = Frame Shift +2 required to fit", side=3, line=1.5, adj=1, col='green', cex=txt.cex*1.5)
+	mtext( " GREEN = Frame Shift +2 required to fit", side=3, line=1.5, adj=1, col='green3', cex=txt.cex*1.5)
 
 	# put domain boxes on?
 	if ( geneName == "Var2csa") {
@@ -366,7 +366,7 @@
 				myScore <- c( myScore, tmpScore)
 				mySeq <- c( mySeq, tmpSeq)
 				myWts <- c( myWts, tmpWts)
-				pepColor <- c( pepColor, rep.int( 'green', length(hitsRF3)))
+				pepColor <- c( pepColor, rep.int( 'green3', length(hitsRF3)))
 				pepShift <- c( pepShift, rep.int( 0.67, length(hitsRF3)))
 			}
 			
