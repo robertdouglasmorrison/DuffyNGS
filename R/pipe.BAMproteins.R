@@ -3,7 +3,7 @@
 
 # convert a BAM file into a FASTA of all proteins
 
-`pipe.BAMproteins` <- function( sampleID, geneIDset=NULL, annotationFile="Annotation.txt",
+`pipe.BAMproteins.CreateFasta` <- function( sampleID, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				noReadCalls=NULL, SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, 
 				makeFastaFile=TRUE, verbose=TRUE) {
@@ -20,7 +20,7 @@
 	}
 	if ( is.null(noReadCalls) || !(noReadCalls %in% c("blank","genomic"))) {
 		cat( "\nArgument 'noReadCalls' must be one of 'blank' or 'genomic'")
-		stop( "See command 'pipe.BAMproteins()'")
+		stop( "See command 'pipe.BAMproteins.CreateFasta()'")
 	}
 
 	# make sure we have the BAM file already sorted
@@ -93,7 +93,7 @@
 		}
 
 		# the consensus now returns a confidence score
-		conf <- if ( is.null( ans$aa.confidence)) 0 else round( as.numeric( ans$aa.confidence) * 100, digits=4)
+		conf <- if ( is.null( ans$aa.confidence)) 0 else round( as.numeric( ans$aa.confidence) * 100, digits=2)
 
 		if (verbose) cat( "\r", gid, NCHAR(myProt), conf)
 		return( list( "seq"=myProt, "confidence"=conf))
@@ -102,7 +102,7 @@
 
 	if (verbose) cat( "\nExtracting proteins from BAM consensus:  N_Genes =", length(geneIDset), "\n")
 	ans <- multicore.lapply( geneIDset, FUN=getProteinOneGene)
-	#if (exists( "MCLAPPLY_DEBUG")) rm( MCLAPPLY_DEBUG)
+	if ( exists( "MCLAPPLY_DEBUG")) rm( MCLAPPLY_DEBUG, inherits=T)
 	
 	if ( length(geneIDset) > 1) {
 		allProts <- sapply( ans, function(x) if (is.null(x)) NA else x[[1]])
@@ -136,7 +136,7 @@
 
 # summarize BAM protein differences between 2 samples
 
-`pipe.BAMprotein.Difference` <- function( sampleID1, sampleID2=NULL, geneIDset=NULL, annotationFile="Annotation.txt",
+`pipe.BAMproteins.SampleCompare` <- function( sampleID1, sampleID2=NULL, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, dropGenes=NULL,
 				min.confidence=40, min.editDist=1, nWorst=20, show.details=T, nMutations=10, 
 				folder=NULL, otherIDs=NULL, verbose=T) {
@@ -152,7 +152,7 @@
 	f1 <- file.path( results.path, "ConsensusProteins", sampleID1, f1)
 	if ( ! file.exists( f1)) {
 		cat( "\nExpected FASTA file not found: ", f1)
-		cat( "\nPerhaps run 'pipe.BAMproteins()' first..")
+		cat( "\nPerhaps run 'pipe.BAMproteins.CreateFasta()' first..")
 		return( NULL)
 	}
 
@@ -176,7 +176,7 @@
 			cat( "\nDone.\n")
 		} else {
 			cat( "\nExpected FASTA file not found: ", f2)
-			cat( "\nPerhaps run 'pipe.BAMproteins()' first..")
+			cat( "\nPerhaps run 'pipe.BAMproteins.CreateFasta()' first..")
 			return( NULL)
 		}
 	}
@@ -412,7 +412,7 @@
 }
 
 
-`pipe.BAMprotein.GroupCompare` <- function( sampleIDset, groupSet, geneIDset=NULL, annotationFile="Annotation.txt",
+`pipe.BAMproteins.GroupCompare` <- function( sampleIDset, groupSet, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
 				comparison=c("reference","pairwise"), tbl=NULL, dropGenes=NULL, min.confidence=40,
 				wt.estimate=1, wt.pvalue=1, folder=NULL, Ngenes=50, verbose=T) {
@@ -798,9 +798,8 @@
 }
 
 
-`gatherBAMproteins` <- function( sampleIDset, geneID, groupSet=NULL, annotationFile="Annotation.txt",
-				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				verbose=F) {
+`pipe.BAMproteins.GatherOneGene` <- function( sampleIDset, geneID, groupText=NULL, optionsFile="Options.txt", 
+						speciesID=getCurrentSpecies(), results.path=NULL, verbose=F) {
 
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
@@ -808,8 +807,8 @@
 	}
 	if (speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 
-	geneID <- alias2Gene( geneID[1])
-	shortID <- shortGeneName( geneID, keep=1)
+	#geneID <- alias2Gene( geneID[1])
+	shortID <- shortGeneName( geneID[1], keep=1)
 
 	seqs <- descs <- vector()
 
@@ -817,16 +816,25 @@
 	# first the reference genome
 	if (verbose) cat( "\nGathering..\n")
 	refFile <- paste( speciesID, "ReferenceProteins.fasta", sep=".")
+	if ( ! file.exists( refFile)) {
+		cat( "\nMaking FASTA of Reference Proteins..\n")
+		genomicFastaFile <- getOptionValue( optT, "genomicFastaFile", notfound="Pf_genomicDNA.fasta", verbose=F)
+		allGenes <- unique( getCurrentCdsMap()$GENE_ID)
+		fa <- gene2Fasta( allGenes, genomicFastaFile, mode="aa", verbose=T)
+		writeFasta( fa, refFile, line.width=100)
+		cat( "\nDone.\n")
+	}
 	if ( file.exists( refFile)) {
 		fa <- loadFasta( refFile, short=T, verbose=F)
 		wh <- match( geneID, fa$desc, nomatch=0)
 		if (wh) {
-			descs <- c( descs, paste( "Reference", speciesID, sep="_"))
+			descs <- c( descs, paste( "Reference", sep="_"))
 			seqs <- c( seqs, fa$seq[wh])
 			if (verbose) cat( "\rReference", length(seqs))
 		}
 	}
 	# then in each sample 
+	if ( ! is.null(groupText)) groupText <- rep( groupText, length.out=length(sampleIDset))
 	for ( i in 1:length(sampleIDset)) {
 		sid <- sampleIDset[i]
 		f <- file.path( results.path, "ConsensusProteins", sid, paste( "All.BAM.Proteins", sid, "fasta", sep="."))
@@ -834,7 +842,7 @@
 			fa <- loadFasta( f, short=T, verbose=F)
 			wh <- match( geneID, fa$desc, nomatch=0)
 			if (wh) {
-				descs <- c( descs, if ( is.null(groupSet)) sid else paste( sid, groupSet[i], sep="_"))
+				descs <- c( descs, if ( is.null(groupText)) sid else paste( sid, groupText[i], sep="_"))
 				seqs <- c( seqs, fa$seq[wh])
 				if (verbose) cat( "\r", sid, length(seqs))
 			}
@@ -850,16 +858,209 @@
 	}
 	descs <- paste( descs, shortID, sep="_")
 	faOut <- as.Fasta( descs, seqs)
-	faFile <- paste( "One.BAM.Protein", geneID, "AA.fasta", sep=".")
+	faFile <- paste( geneID, "BAM.Proteins.fasta", sep=".")
+	outPath <- file.path( results.path, "ConsensusProteins", "BAM.Proteins.By.Gene")
+	faFile <- file.path( outPath, faFile)
+	if ( ! file.exists( outPath)) dir.create( outPath, recursive=T)
 	writeFasta( faOut, faFile, line.width=100)
 	if ( length(descs) > 1) {
 		if (verbose) cat( "\nAligning..")
-		alnFile <- paste( "One.BAM.Protein", geneID, "AA.aln", sep=".")
-		aln <- mafft( faFile, alnFile, mode='local', mafftArgs=" --anysymbol ", verbose=verbose)
+		alnFile <- file.path( outPath, paste( geneID, "BAM.Proteins.aln", sep="."))
+		#aln <- mafft( faFile, alnFile, mode='local', mafftArgs=" --anysymbol ", verbose=verbose)
+		aln <- mafft( faFile, alnFile, mode='local', mafftArgs="", verbose=verbose)
 		writeALN( aln, alnFile, line.width=100)
 	}
 
 	# done.
-	return( faOut)
+	return( invisible(faOut))
+}
+
+
+`pipe.BAMproteins.FindDifferencesOneGene` <- function( sampleIDset, geneID, groupSet, optionsFile="Options.txt", 
+						results.path=NULL, verbose=F) {
+
+	optT <- readOptionsTable( optionsFile)
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=verbose)
+	}
+
+	# find this one gene's FASTA and ALN under the BAM proteins folder
+	bamProteinPath <- file.path( results.path, "ConsensusProteins", "BAM.Proteins.By.Gene")
+	faFile <- file.path( bamProteinPath, paste( geneID, "BAM.Proteins.fasta", sep="."))
+	if ( ! file.exists( faFile)) {
+		cat( "\nExpected FASTA file not found: ", faFile)
+		cat( "\nPerhaps run 'pipe.BAMproteins.GatherOneGene()' first..")
+		return(NULL)
+	}
+	fa <- loadFasta( faFile, short=F, verbose=verbose)
+	alnFile <- file.path( bamProteinPath, paste( geneID, "BAM.Proteins.aln", sep="."))
+	if ( ! file.exists( alnFile)) {
+		cat( "\nExpected ALN file not found: ", alnFile)
+		cat( "\nPerhaps run 'pipe.BAMproteins.GatherOneGene()' first..")
+		return(NULL)
+	}
+	aln <- readALN( alnFile, verbose=verbose)
+	alnM <- aln$alignment
+
+	# get the alignment rows that match the samples we want, noting that the reference is in row #1
+	# since ALN can crop sample names, be more careful finding the sample IDs
+	N <- length( sampleIDset)
+	if ( length( groupSet) != N) stop( "'groupSet' must be same length as 'sampleIDset'")
+	grpFac <- factor( groupSet)
+	if ( nlevels(grpFac) != 2) stop( "'groupSet' must contain exactly 2 factor levels")
+	id2alnPtr <- rep.int( 0, N)
+	for ( i in 1:N) {
+		sid <- sampleIDset[i]
+		wh <- pmatch( sid, rownames(alnM), nomatch=0)
+		if (wh == 0) {
+			sid <- substr( sampleIDset[i], 1, 15)
+			wh <- pmatch( sid, rownames(alnM), nomatch=0)
+		}
+		id2alnPtr[i] <- wh
+	}
+	if ( any( id2alnPtr == 0)) {
+		keep <- which( id2alnPtr > 0)
+		missing <- which( id2alnPtr == 0)
+		cat( "\nSome samples not found in BAM protein FASTA files: ", length(missing))
+		cat( "\nMissing = ", sampleIDset[missing])
+		sampleIDset <- sampleIDset[keep]
+		groupSet <- groupSet[keep]
+		grpFac <- factor( groupSet)
+		if ( nlevels(grpFac) != 2) stop( "'groupSet' must contain exactly 2 factor levels")
+		id2alnPtr <- id2alnPtr[keep]
+	}
+	refM <- alnM[ 1, ]
+	alnM <- alnM[ id2alnPtr, ]
+
+	# set up to do AA comparisons at every location along the protein, using the reference for AA counting 
+	is1 <- which( as.numeric(grpFac) == 1)
+	is2 <- which( as.numeric(grpFac) == 2)
+	if ( length(is1) < 2 || length(is2) < 2) {
+		cat( "\nNot enough samples in some groups. Unable to compare:\n")
+		print( table( groupSet))
+		return(NULL)
+	}
+	NAA <- ncol( alnM)
+	refAApos <- 0
+	outPos <- outPval <- outCons1 <- outCons2 <- outStr1 <- outStr2 <- vector()
+	
+	PASTE <- base::paste
+	SORT <- sort.default
+	TABLE <- base::table
+	WHICH.MAX <- base::which.max
+
+	for ( i in 1:NAA) {
+		refAA <- refM[ i]
+		if ( refAA != "-") refAApos <- refAApos + 1
+		outPos[i] <- refAApos
+		aaV <- alnM[ , i]
+		allAA <- sort.default( unique.default( aaV))
+		if ( length(allAA) > 1) {
+			cnts1 <- TABLE( factor( aaV[ is1], levels=allAA))
+			cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
+			cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
+			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
+			outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
+			outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
+			cnts1 <- SORT( cnts1, decreasing=T)
+			cnts2 <- SORT( cnts2, decreasing=T)
+			outStr1[i] <- PASTE( names(cnts1), as.numeric(cnts1), sep=":", collapse="; ")
+			outStr2[i] <- PASTE( names(cnts2), as.numeric(cnts2), sep=":", collapse="; ")
+		} else {
+			outPval[i] <- 1
+			outCons1[i] <- outCons2[i] <- allAA
+			outStr1[i] <- PASTE( allAA,  length(is1), sep=":")[1]
+			outStr2[i] <- PASTE( allAA,  length(is2), sep=":")[1]
+		}
+	}
+
+	# package up the results
+	out <- data.frame( "ALN.POS"=1:NAA, "REF.POS"=outPos, "REF.AA"=refM, "Consensus.1"=outCons1, 
+			"Consensus.2"=outCons2, "Distribution.1"=outStr1, "Distribution.2"=outStr2,
+			"P.Value"=outPval, stringsAsFactors=F)
+
+	# put the group names in explicitly
+	colnames(out)[4:5] <- paste( "Consensus", levels(grpFac), sep="_")
+	colnames(out)[6:7] <- paste( "Distribution", levels(grpFac), sep="_")
+
+	# done.
+	return( out)
+}
+
+
+
+`pipe.BAMproteins.FindGeneDifferences` <- function( sampleIDset, groupSet, geneIDset=NULL, optionsFile="Options.txt", 
+					results.path=NULL, speciesID=getCurrentSpecies(), 
+					min.pvalue=0.05, verbose=F) {
+
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies(speciesID)
+	optT <- readOptionsTable( optionsFile)
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=verbose)
+	}
+
+	# find all gene FASTA and ALN under the BAM proteins folder
+	bamProteinPath <- file.path( results.path, "ConsensusProteins", "BAM.Proteins.By.Gene")
+	if ( ! file.exists( bamProteinPath)) dir.create( bamProteinPath, recursive=T)
+
+	# get the list of genes to query
+	if ( is.null( geneIDset)) {
+		cmap <- getCurrentCdsMap()
+		geneIDset <- unique( cmap$GENE_ID)
+	}
+
+	cat( "\nVisiting", length(geneIDset), "proteins..\n")
+
+	# do it as a local function so we can parallelize
+	gatherOneBamProteinGene <- function( g) {
+
+		# visit each gene, using existing data if it's there
+		faFile <- file.path( bamProteinPath, paste( g, "BAM.Proteins.fasta", sep="."))
+		alnFile <- file.path( bamProteinPath, paste( g, "BAM.Proteins.aln", sep="."))
+		needBuild <- TRUE
+		if ( all( file.exists( c(faFile,alnFile)))) {
+			# make sure all the sample we want are present
+			fa <- loadFasta( faFile, short=T, verbose=verbose)
+			expectDesc <- paste( sampleIDset, g, sep="_")
+			if ( all( expectDesc %in% fa$desc)) needBuild <- FALSE
+		}
+		if ( needBuild) {
+			ans1 <- pipe.BAMproteins.GatherOneGene( sampleIDset, geneID=g, optionsFile=optionsFile, 
+						results.path=results.path, speciesID=speciesID, verbose=F)
+			if ( is.null(ans1)) return(NULL)
+		}
+
+		# do that compare
+		ans2 <- pipe.BAMproteins.FindDifferencesOneGene( sampleIDset, geneID=g, groupSet=groupSet, optionsFile=optionsFile, 
+						results.path=results.path, verbose=F)
+		if ( is.null(ans2)) return(NULL)
+
+		# only keep significant rows
+		ans2 <- subset( ans2, P.Value <= min.pvalue)
+		if ( ! nrow(ans2)) return(NULL)
+		cat( "\r", g, nrow(ans2))
+		return(ans2)
+	}
+
+	# accumulate results from all genes
+	bigAns <- multicore.lapply( geneIDset, gatherOneBamProteinGene)
+	bigOut <- data.frame()
+	for ( k in 1:length(geneIDset)) {
+		smlAns <- bigAns[[k]]
+		if ( is.null( smlAns)) next
+		if ( ! nrow( smlAns)) next
+		g <- geneIDset[k]
+		smlOut <- data.frame( "GENE_ID"=g, "PRODUCT"=gene2Product(g), smlAns, stringsAsFactors=F)
+		bigOut <- rbind( bigOut, smlOut)
+	}
+	cat( "\nDone.  Total significant protein AA difference sites: ", nrow(bigOut))
+
+	# lastly, sort into P value ordering
+	if ( nrow( bigOut)) {
+		ord <- order( bigOut$P.Value, bigOut$GENE_ID, bigOut$REF.POS)
+		bigOut <- bigOut[ ord, ]
+		rownames(bigOut) <- 1:nrow( bigOut)
+	}
+	return( bigOut)
 }
 
