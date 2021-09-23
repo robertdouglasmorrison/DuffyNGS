@@ -102,7 +102,7 @@
 
 	if (verbose) cat( "\nExtracting proteins from BAM consensus:  N_Genes =", length(geneIDset), "\n")
 	ans <- multicore.lapply( geneIDset, FUN=getProteinOneGene)
-	if ( exists( "MCLAPPLY_DEBUG")) rm( MCLAPPLY_DEBUG, inherits=T)
+	#if ( exists( "MCLAPPLY_DEBUG")) rm( MCLAPPLY_DEBUG, inherits=T)
 	
 	if ( length(geneIDset) > 1) {
 		allProts <- sapply( ans, function(x) if (is.null(x)) NA else x[[1]])

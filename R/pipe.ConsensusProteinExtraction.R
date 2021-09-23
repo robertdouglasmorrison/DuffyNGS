@@ -258,6 +258,7 @@
 	
 		# gather the top residual distance sites as extra info
 		keep <- which( aaDist > cutoffDist)
+		if ( ! length(keep)) return(NULL)
 		badDist <- aaDist[ keep]
 		badMotif <- aaM[ keep, 1]
 		for ( i in 1:length(keep)) {
@@ -294,8 +295,11 @@
 	finalProportions <- myProportions
 	finalDist <- myDist
 	finalAAseqs <- apply( aaM.out, MARGIN=2, FUN=function(x) paste( x, collapse=""))
-	finalNames <- c( "Consensus")
-	if (NPROT > 1) finalNames <- c( finalNames, paste( "Variant", 2:NPROT, sep=""))
+	finalNames <- rep.int( paste( sampleID, geneName, sep="_"), NPROT)
+	finalNames[1] <- paste( finalNames[1], "_Consensus", sep="")
+	if (NPROT > 1) {
+		finalNames[2:NPROT] <- paste( finalNames[2:NPROT], "_Variant", 2:NPROT, sep="")
+	}
 	finalSuffix <- paste( round( finalProportions), "%", sep="")
 	finalNames <- paste( finalNames, finalSuffix, sep="_")
 	
@@ -315,8 +319,10 @@
 	}
 	
 	ans4 <- topDistSites( aaM.out, aaDist, finalDist*2)
-	residSiteFile <- file.path( peptide.path, paste( sampleID, geneName, "FinalExtracted.ResidualSites.csv", sep="."))
-	write.table( ans4, residSiteFile, sep=",", quote=T, row.names=F)	
+	if ( ! is.null(ans4)) {
+		residSiteFile <- file.path( peptide.path, paste( sampleID, geneName, "FinalExtracted.ResidualSites.csv", sep="."))
+		write.table( ans4, residSiteFile, sep=",", quote=T, row.names=F)	
+	}
 	
 	out <- list( "AA.Fasta"=outSeqs, "Residual"=finalDist, "Problem.Sites"=ans4)
 	return( invisible(out))
