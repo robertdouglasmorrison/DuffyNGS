@@ -265,7 +265,7 @@
 	}
 
 
-	`roundRobinResults` <- function( RR_List, groupName, Ngenes=100) {
+	`roundRobinResults` <- function( RR_List, groupName, Ngenes=100, otherGroups=paste("Not",groupName,sep=".")) {
 
 		# now we have all round robin sets in one place, build the final consensus
 		cat( "\nExtracting RR DE Results for group: ", groupName)
@@ -318,7 +318,7 @@
 		rownames( out) <- 1:nrow(out)
 		nColShow <- 8
 
-		# write it out
+		# write it out, updating the value column names at the last moment
 		outfile <- paste( groupName, RR_prefix, "RR.Ratio.txt", sep=".")
 		if ( !is.null( RR_altGeneMapLabel)) outfile <- paste( groupName, RR_prefix, 
 						RR_altGeneMapLabel, "RR.Ratio.txt", sep=".")
@@ -340,7 +340,10 @@
 		}
 		nColShow <- nColShow + extraCols
 
-		write.table( out, file=outfile, sep="\t", quote=FALSE, row.names=F)
+		outText <- out
+		colnames(outText)[ colnames(outText) == "VALUE_1"] <- groupName
+		colnames(outText)[ colnames(outText) == "VALUE_2"] <- otherGroups
+		write.table( outText, file=outfile, sep="\t", quote=FALSE, row.names=F)
 		if (verbose) cat( "\nWrote RoundRobin Gene Data:  ", outfile, "\n")
 
 		# HTML too...
@@ -389,7 +392,8 @@
 			out1$VALUE_1 <- formatC( out1$VALUE_1, format="f", digits=2)
 			out1$VALUE_2 <- formatC( out1$VALUE_2, format="f", digits=2)
 			colnames(out1)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
-			colnames(out1)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",groupName), sep="")
+			colnames(out1)[ colnames(out1) == "VALUE_1"] <- groupName
+			colnames(out1)[ colnames(out1) == "VALUE_2"] <- sub( "_|\\."," ",otherGroups)
 			# write it
 			geneTableToHTMLandPlots( geneDF=out1[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, title=title1, 
 				htmlFile=htmlFile1, html.path=htmlPath, results.path=results.path, makePlots=FALSE)
@@ -411,7 +415,8 @@
 			out2$VALUE_1 <- formatC( out2$VALUE_1, format="f", digits=2)
 			out2$VALUE_2 <- formatC( out2$VALUE_2, format="f", digits=2)
 			colnames(out2)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
-			colnames(out2)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",groupName), sep="")
+			colnames(out2)[ colnames(out2) == "VALUE_1"] <- groupName
+			colnames(out2)[ colnames(out2) == "VALUE_2"] <- sub( "_|\\."," ",otherGroups)
 			# write it
 			geneTableToHTMLandPlots( geneDF=out2[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, title=title2, 
 				htmlFile=htmlFile2, html.path=htmlPath, results.path=results.path, makePlots=FALSE)
@@ -627,6 +632,8 @@
 		thisGroup <- unique_RR_groups[ig]
 		mySamples <- which( RR_GrpPtrs == ig)
 		otherSamples <- setdiff( 1:NS, mySamples)
+		otherGroups <- setdiff( unique_RR_groups, thisGroup)
+		if ( length(otherGroups) > 1) otherGroups <- paste( "Not", thisGroup, sep=".")
 			 
 		# start empty, then add all the 2-way compares
 		rrList <- empty.RR.data()
@@ -641,7 +648,7 @@
 		rrList <- finalize.RR.data( rrList)
 
 		# we have all we need for this group, summarize and write it
-		genesOneGroup <- roundRobinResults( rrList, thisGroup, Ngenes=Ngenes)
+		genesOneGroup <- roundRobinResults( rrList, thisGroup, Ngenes=Ngenes, otherGroups=otherGroups)
 
 		# clean up to save space
 		rm( rrList)

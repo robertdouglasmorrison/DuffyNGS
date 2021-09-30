@@ -249,6 +249,8 @@
 
 			mydf <- RR_List[[ k]]
 			grpName <- unique_RR_groups[k]
+			otherGroups <- setdiff( unique_RR_groups, grpName)
+			if ( length(otherGroups) > 1) otherGroups <- paste("Not",grpName,sep=".")
 
 			if (verbose) cat( "\nExtracting: ", grpName)
 
@@ -321,7 +323,10 @@
 			}
 			nColShow <- nColShow + extraCols
 
-			write.table( out, file=outfile, sep="\t", quote=FALSE, row.names=F)
+			outText <- out
+			colnames(outText)[ colnames(outText) == "VALUE_1"] <- grpName
+			colnames(outText)[ colnames(outText) == "VALUE_2"] <- otherGroups
+			write.table( outText, file=outfile, sep="\t", quote=FALSE, row.names=F)
 			if (verbose) cat( "\nWrote RoundRobin Gene Data:  ", outfile)
 
 			# HTML too...
@@ -378,7 +383,8 @@
 				out1$VALUE_1 <- formatC( out1$VALUE_1, format="f", digits=2)
 				out1$VALUE_2 <- formatC( out1$VALUE_2, format="f", digits=2)
 				colnames(out1)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
-				colnames(out1)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
+				colnames(out1)[ colnames(out1) == "VALUE_1"] <- groupName
+				colnames(out1)[ colnames(out1) == "VALUE_2"] <- sub( "_|\\."," ",otherGroups)
 				# write it
 				geneTableToHTMLandPlots( geneDF=out1[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, 
 					title=title1, 
@@ -402,7 +408,8 @@
 				out2$VALUE_1 <- formatC( out2$VALUE_1, format="f", digits=2)
 				out2$VALUE_2 <- formatC( out2$VALUE_2, format="f", digits=2)
 				colnames(out2)[3:6 + extraCols] <- c( "Log2 Fold", "Avg Pvalue", "Avg Rank", "Avg PIvalue")
-				colnames(out2)[7:8 + extraCols] <- paste( c( "", "Not "), gsub("_|\\."," ",grpName), sep="")
+				colnames(out2)[ colnames(out2) == "VALUE_1"] <- groupName
+				colnames(out2)[ colnames(out2) == "VALUE_2"] <- sub( "_|\\."," ",otherGroups)
 				# write it
 				geneTableToHTMLandPlots( geneDF=out2[ , 1:nColShow], RR_samples, RR_colors, N=Nshow, 
 					title=title2, 

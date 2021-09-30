@@ -101,9 +101,15 @@
 	for ( grp in myGrps) {
 
 		cat( "\n\nDoing MetaResults on:    ", grp)
+		otherGrps <- setdiff( myGrps, grp)
+		otherGrpsLabel <- paste( "Not", grp)
+		if ( length(otherGrps) > 1) {
+			otherGrps <- paste( "{", paste(sort(otherGrps),collapse=" + "), "}", sep="")
+		} else {
+			otherGrpsLabel <- otherGrps[1]
+		}
 
 		outUP <- outDOWN <- data.frame()
-
 		for (direction in c( "UP", "DOWN")) {
 
 		out <- metaResults( targetGroup=grp, results.path=results.path, speciesID=speciesID,
@@ -112,10 +118,9 @@
 				rank.average.FUN=average.FUN, value.average.FUN=mean, 
 				keepIntergenics=keepIntergenics, topFolder=NULL, 
 				other.DE.files=NULL, missingGenes="na", nFDRsimulations=nFDRsimulations,
-				direction=direction)
+				direction=direction, otherGroup=otherGrpsLabel)
 		if ( nrow(out) < 1) next
 
-		
 		# lastly, we may have a better ordering by using all 3 features
 		myFold <- out$LOG2FOLD
 		if ( direction == "DOWN") myFold <- -myFold
@@ -189,7 +194,6 @@
 			write.table( enrich, fout, sep=",", quote=T, row.names=F)
 		}
 			
-
 		# simplify the names?
 		fullGname <- out$GENE_ID
 		if ( geneColumnHTML != "GENE_ID") {
@@ -203,12 +207,10 @@
 		if ( speciesID %in% ORIGID_PARASITE_SPECIES) out <- addOrigIDterms( out)
 		if ( speciesID %in% BACTERIA_SPECIES) out <- addNameIDterms( out)
 
-		# special mods for altGeneMap...
 		Nshow <- Ngenes
-		otherGrps <- setdiff( myGrps, grp)
-		if ( length(otherGrps) > 1) otherGrps <- paste( "{", paste(sort(otherGrps),collapse=" + "), "}", sep="")
 		title <- paste( "MetaResults: &nbsp;  Genes most", direction, "regulated in group: &nbsp;  ", grp,
 				" &nbsp; vs &nbsp; ", otherGrps, "<br> Comparison Folder: &nbsp; ", folderName)
+		# special mods for altGeneMap...
 		if ( ! is.null( altGeneMapLabel)) {
 			title <- paste( "MetaResults: &nbsp;  ", altGeneMapLabel, 
 					"  most", direction, "regulated in group: &nbsp;  ", grp,
@@ -217,13 +219,6 @@
 			out <- addAltGeneIdentifierColumn( out)
 			fullGname <- out$GENE_ID
 			geneColumnHTML <- "GENE_ID"
-			#if ( regexpr( "vargene|vardomain", tolower(altGeneMapLabel)) > 0) {
-			#	out <- cbind( "DOMAIN_ID"=fullGname, out)
-			#	out$GENE_ID <- sub( "::.*", "", fullGname)
-			#	fullGname <- out$GENE_ID
-			#	geneColumnHTML <- "GENE_ID"
-			#	if ( "ORIG_ID" %in% colnames(out)) out$ORIG_ID <- gene2OrigID( out$GENE_ID)
-			#}
 		}
 
 		if ( direction == "UP") {
@@ -249,7 +244,7 @@
 
 	    # also make 2 new plot types that use this JOINED result type
 	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, "\nComparison Folder: ", folderName)
-	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
+	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    			label=mainText, marker.cex=0.7)
 	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.png", fileout)
 	    dev.print( png, plotfile, width=900)
@@ -258,7 +253,7 @@
 
 	    if (addCellTypes) {
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
-	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=paste( "Not", grp),
+	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering)
 	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
 	    	dev.print( png, plotfile, width=900)
