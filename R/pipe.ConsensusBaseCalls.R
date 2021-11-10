@@ -546,10 +546,11 @@
 	testStr <- base::paste( outDF$DNA, collapse="")
 	testAA <- DNAtoAA( testStr, clip=F, readingFrame=1)
 	whereStops <- gregexpr( STOP_CODON_PATTERN, testAA)[[1]]
-	nStops <- sum( whereStops > 0 & whereStops < nchar(testAA))
-	if ( nStops > 0) {
-		cat( "\nWarning: 'ConsensusBaseCalls' removing stop codons failed.. N_Stops: ", nStops)
-	}
+	# we are now allowing some internal stop codons, as in peudogenes...
+	#nStops <- sum( whereStops > 0 & whereStops < nchar(testAA))
+	#if ( nStops > 0) {
+	#	cat( "\nWarning: 'ConsensusBaseCalls' removing stop codons failed.. N_Stops: ", nStops)
+	#}
 
 	# store it
 	outDF$AA <- ""
