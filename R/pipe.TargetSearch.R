@@ -1,8 +1,9 @@
 # pipe.TargetSearch.R -- mine No Hits (or raw fASTQ) for evidence of arbitrary Target
 
 `pipe.TargetSearch` <- function( sampleIDset, targetName="Virus.Genes", fastaName=targetName, max.mismatch.per.100=5,
-				max.low.complexity=80, input.mode=c("nohits","fastq"), k.bowtie=1, 
-				annotationFile="Annotation.txt", optionsFile="Options.txt", verbose=FALSE) {
+				max.low.complexity=80, input.mode=c("nohits","fastq"), 
+				annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				k.bowtie=1, chunk.size=10000, min.reads.RPKM=10000, verbose=FALSE) {
 
 	# get options that we need
 	optT <- readOptionsTable( optionsFile)
@@ -17,6 +18,8 @@
 	descTerms <- strsplit( targetFA$desc, split=" | ", fixed=T)
 	targetIDs <- sapply( descTerms, `[`, 1)
 	targetNames <- sapply( descTerms, `[`, 2)
+	targetSizes <- sapply( targetFA$seq, nchar)
+	genomeSize <- sum( targetSizes, na.rm=T)
 	if ( any( is.na( targetNames))) cat( "\nWarning:  some Fasta headers missing ' | ' product term delimitors")
 
 	# same with the target Bowtie index
@@ -31,11 +34,17 @@
 	bigDF <- data.frame()
 	nRejectMismatch <- nRejectLowComplex <- nFound <- 0
 
+	# detecting multiple alignments is based on assumptions about adjacent records in the BAM file.
+	# make sure we can see those
+	if ( k.bowtie > (chunk.size/1000)) stop( "Increase 'chunk.size' for searching BAM file. Must be bigger than 'k.size' * 1000")
+
 	for (sid in sampleIDset) {
 
 		cat( "\n\nStarting '", targetName, "' Search for Sample:    ", sid, 
 			"\n  Max base mismatches per 100bp:  ", max.mismatch.per.100, 
-			"\n  Max low complexity base %:      ", max.low.complexity, sep="")
+			"\n  Max low complexity base %:      ", max.low.complexity, 
+			"\n  Max alignments per read 'K':    ", k.bowtie, 
+			"\n  Min reads for RPKM calculation: ", min.reads.RPKM, sep="")
 	
 		# get the file of noHit reads, as target reads should still be in there
 		input.mode <- match.arg( input.mode)
@@ -74,10 +83,10 @@
 		cat( "  Scan for high quality hits..")
 		reader <- bamReader( bamFile)
 		refData <- getRefData( reader)
-		targetHits <- targetWts <- vector()
+		targetHits <- targetWtsM <- targetWtsU <- vector()
 		nSeen <- 0
 		repeat {
-			chunk <- getNextChunk( reader, n=10000, alignedOnly=T)
+			chunk <- getNextChunk( reader, n=chunk.size, alignedOnly=T)
 			nReads <- size( chunk)
 			if ( nReads < 1) break
 			nSeen <- nSeen + nReads
@@ -102,9 +111,14 @@
 			} else {
 				# we need to calc the wts
 				readIDs <- readID( chunk)
-				readWts <- rep.int( 1, nReads)
-				tapply( 1:nReads, factor(readIDs), function(x) { readWts[x] <<- (1/length(x)); return(NULL)})
-				targetWts <- c( targetWts, readWts[goodHits])
+				readWtsM <- readWtsU <- rep.int( 1, nReads)
+				tapply( 1:nReads, factor(readIDs), function(x) { 
+					readWtsM[x] <<- (1/length(x)); 
+					readWtsU[x] <<- if ( length(x) > 1) 0 else 1
+					return(NULL)
+				})
+				targetWtsM <- c( targetWtsM, readWtsM[goodHits])
+				targetWtsU <- c( targetWtsU, readWtsU[goodHits])
 			}
 
 			nFound <- nFound + length(goodHits)
@@ -119,24 +133,42 @@
 		}
 
 		# now tablify
-		hitTbl <- table( targetHits)
-		if ( k.bowtie > 1) hitTbl <- tapply( targetWts, factor( targetHits), sum, na.rm=T)
-		hitCnts <- round( as.numeric( hitTbl))
-		pctHits <- round( hitCnts * 100 / sum(hitCnts), digits=2)
-		perMil <- round( hitCnts / (nReadsIn/1000000), digits=4)
-		where <- match( names(hitTbl), targetIDs)
+		if ( k.bowtie > 1) {
+			hitTblM <- tapply( targetWtsM, factor( targetHits), sum, na.rm=T)
+			hitTblU <- tapply( targetWtsU, factor( targetHits), sum, na.rm=T)
+		} else {
+			hitTblM <- table( targetHits)
+			hitTblU <- rep.int( 0, length(hitTblM))
+		}
+		hitCntsM <- round( as.numeric( hitTblM))
+		hitCntsU <- round( as.numeric( hitTblU))
+		pctHitsM <- round( hitCntsM * 100 / sum(hitCntsM), digits=2)
+		pctHitsU <- round( hitCntsU * 100 / sum(hitCntsU), digits=2)
+		where <- match( names(hitTblM), targetIDs)
 		products <- targetNames[where]
+		# make a RPKM and TPM call too, both use gene lengths
+		hitLens <- targetSizes[where]
+		hitLens[ is.na( hitLens)] <- 100
+		totalReadsM <- sum( hitCntsM, na.rm=T)
+		totalReadsU <- sum( hitCntsU, na.rm=T)
+		totalReadsForRPKMm <- max( totalReadsM, min.reads.RPKM)
+		totalReadsForRPKMu <- max( totalReadsU, min.reads.RPKM)
+		hitsRPKM_M <- round( calculateRPKM( hitCntsM, exonBases=hitLens, totalReads=totalReadsForRPKMm), digits=2)
+		hitsRPKM_U <- round( calculateRPKM( hitCntsU, exonBases=hitLens, totalReads=totalReadsForRPKMu), digits=2)
+		hitsTPM_M <- round( tpm( readCount=hitCntsM, geneLen=hitLens, readLen=100, minReadsPerSpecies=min.reads.RPKM), digits=2)
+		hitsTPM_U <- round( tpm( readCount=hitCntsU, geneLen=hitLens, readLen=100, minReadsPerSpecies=min.reads.RPKM), digits=2)
 
-		smlDF <- data.frame( "SampleID"=sid, "TargetID"=names(hitTbl), "Product"=products, 
-				"Percent.Sample"=pctHits, "N_Hits"=hitCnts, "PerMillion"=perMil, 
+		smlDF <- data.frame( "SampleID"=sid, "TargetID"=names(hitTblM), "Product"=products, 
+				"READS_M"=hitCntsM, "PCT_M"=pctHitsM, "RPKM_M"=hitsRPKM_M, "TPM_M"=hitsTPM_M, 
+				"READS_U"=hitCntsU, "PCT_U"=pctHitsU, "RPKM_U"=hitsRPKM_U, "TPM_U"=hitsTPM_U,
 				stringsAsFactors=F)
-		ord <- order( hitCnts, decreasing=T)
+		ord <- order( hitCntsM, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
 		outfile <- file.path( bam.path, paste( sid, targetName, "Summary.csv", sep="."))
 		write.table( smlDF, outfile, sep=",", quote=T, row.names=F)
 
-		cat( "\nDone.  N_Aligned: ", nSeen, "  N_Good_Hits: ", sum(hitTbl), "\n")
+		cat( "\nDone.  N_Aligned: ", nSeen, "  N_Good_Hits: ", sum(hitTblM >= 1), "\n")
 		print( head( smlDF, 3))
 
 		# accumulate the results
@@ -145,7 +177,7 @@
 	if ( ! nrow(bigDF)) return( bigDF)
 
 	# final ordering is...
-	ord <- order( bigDF$N_Hits, decreasing=T)
+	ord <- order( bigDF$READS_M, decreasing=T)
 	bigDF <- bigDF[ ord, ]
 	rownames(bigDF) <- 1:nrow(bigDF)
 
