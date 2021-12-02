@@ -60,11 +60,13 @@
 				infile <- notgenomicfile
 			}
 			nNoHits <- getFileLineCount( infile, sid) / 4
+			cat( "\n  Searching the 'No Hits' bin of unaligned reads")
 		} else {
 			# use the raw FASTQ files instead of the NoHits
 			rawFastq <- getRawFastqFileNames( sid, annotationFile, optionsFile, verbose=FALSE)
 			infile <- rawFastq$files
 			nNoHits <- getFileLineCount( infile[1], sid) / 4
+			cat( "\n  Searching the FASTQ file(s) of all raw reads")
 		}
 		if ( ! all( file.exists( infile))) {
 			cat( "\nFASTQ file not found:  ", infile)

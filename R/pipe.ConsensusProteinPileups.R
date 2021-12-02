@@ -441,7 +441,7 @@
 }
 
 
-`realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", 
+`realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName=geneID, 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", annotationFile="Annotation.txt", results.path=NULL,
 				exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
@@ -609,7 +609,7 @@
 }
 
 
-`acceptRealignedConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", optionsFile="Options.txt", 
+`acceptRealignedConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName=geneID, optionsFile="Options.txt", 
 				results.path=NULL) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
