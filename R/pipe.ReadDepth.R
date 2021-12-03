@@ -1,7 +1,7 @@
 # pipe.ReadDepth.R --  inspect the WIGGLE depth to find depth metrics per gene
 
-`pipe.ReadDepth` <- function( sampleID, speciesID=getCurrentSpecies(), annotationFile="Annotation.txt", 
-				optionsFile="Options.txt", results.path=NULL, 
+`pipe.ReadDepth` <- function( sampleID, geneIDset=NULL, speciesID=getCurrentSpecies(), 
+				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL, 
 				strandSpecific=FALSE, exonsOnly=FALSE) {
 				
 	# get needed paths, etc. from the options file
@@ -34,7 +34,13 @@
 
 	# we will visit every real gene
 	geneMap <- subset( getCurrentGeneMap(), REAL_G == TRUE)
-	if (exonsOnly) exonMap <- getCurrentExonMap()
+	if ( ! is.null( geneIDset)) {
+		geneMap <- subset( geneMap, GENE_ID %in% geneIDset)
+	}
+	if (exonsOnly) {
+		exonMap <- getCurrentExonMap()
+		exonMap <- subset( exonMap, GENE_ID %in% geneIDset)
+	}
 	gids <- geneMap$GENE_ID
 	sids <- geneMap$SEQ_ID
 	curSeqID <- skipSeqID <- ""
