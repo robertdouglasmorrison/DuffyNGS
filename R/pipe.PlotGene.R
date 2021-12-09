@@ -9,10 +9,15 @@
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
 	if( is.null( targetID)) targetID <- getOptionValue( optT, "targetID", notfound="HsPf", verbose=F)
+	
+	# make sure we leave the species ID as we found it
+	incomingSpecies <- getCurrentSpecies()
+	on.exit( setCurrentSpecies( incomingSpecies))
+
+	# get the full set of species IDs we may be given
 	setCurrentTarget( targetID)
 	speciesSet <- getCurrentTargetSpecies()
 	curSpecies <- getCurrentSpecies()
-	on.exit( setCurrentSpecies( curSpecies))
 
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
