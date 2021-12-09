@@ -1,7 +1,7 @@
 # pipe.IsoformExpression.R -- compare splice junction detection depths
 
 `pipe.IsoformExpression` <- function( sampleIDset, geneIDset=NULL, results.path=NULL, speciesID=getCurrentSpecies(), 
-				annotationFile="Annotation.txt", optionsFile="Options.txt", 
+				annotationFile="Annotation.txt", optionsFile="Options.txt", visualize=F,
 				verbose=TRUE) {
 
 	# get options that we need
@@ -141,7 +141,7 @@
 		sid <- sampleIDset[i]
 		smlDF <- getSpliceCountsOneSample( sid, geneIDset)
 		out[[i]] <- smlDF
-		cat( "\n", i, sid, sum( smlDF$ALT_RATIO >= 1))
+		if (verbose) cat( "\n", i, sid, sum( smlDF$ALT_RATIO >= 1))
 	}
 
 	# if doing a single sample, return the result as it is
@@ -149,6 +149,11 @@
 		tmp <- out[[i]]
 		prod <- gene2Product( tmp$GENE_ID)
 		out <- data.frame( "GENE_ID"=tmp$GENE_ID, "PRODUCT"=prod, tmp[,2:ncol(tmp)], stringsAsFactors=F)
+
+		# allow showing the splice counts visually
+		if ( visualize && length(sampleIDset) == 1 && length(geneIDset) == 1) {
+			plotSpliceAlignmentCounts( sampleIDset[1], geneIDset[1], spliceCounts=out, plotPileups=T)
+		}
 		return( out)
 	}
 
@@ -193,3 +198,54 @@
 	return( out)
 }
 
+
+`plotSpliceAlignmentCounts` <- function( sampleID, geneID, spliceCounts=NULL, plotPileups=TRUE, 
+					splice.col=1, pileup.col=2, ...) {
+
+	# visualize counts of standard and alternate splices
+	if (plotPileups) pipe.PlotGene( sampleID, geneID, pileup.col=pileup.col, addStrands=T, legend.cex=0, ...)
+
+	# either calculate the splice counts or use what was given
+	if ( is.null( spliceCounts)) spliceCounts <- pipe.IsoformExpression( sampleID, geneID, verbose=F)
+
+	# show the counts, using the splice locations on the chromosome
+	emap <- getCurrentExonMap()
+	keep <- which( shortGeneName( emap$GENE_ID,keep=1) == shortGeneName(geneID,keep=1))
+	emap <- emap[ keep, ]
+	emap$MID_PT <- (emap$POSITION + emap$END) / 2
+	
+	# the splice info uses names like "E1_E2", so extract that to know where each splice belongs on the plot
+	spliceExonLeft <- as.numeric( sub( "(^.+:E)([0-9]+)(_E.+)", "\\2", spliceCounts$SPLICE_ID))
+	spliceExonRight <- as.numeric( sub( "(^.+_E)([0-9]+$)", "\\2", spliceCounts$SPLICE_ID))
+
+	# use those to assign a location for each splice
+	spliceCounts$LeftPt <- emap$MID_PT[ spliceExonLeft]
+	spliceCounts$RightPt <- emap$MID_PT[ spliceExonRight]
+
+	# show the standard splices first, when it has counts
+	MIN_COUNT <- 1
+	if ( (BigCount <- max( c( spliceCounts$STD_COUNT, spliceCounts$ALT_COUNT), na.rm=T)) > 100) MIN_COUNT <- BigCount * 0.01
+	isStd <- which( abs( spliceExonLeft - spliceExonRight) == 1)
+	hasCnts <- which( spliceCounts$STD_COUNT >= MIN_COUNT)
+	toShow <- intersect( isStd, hasCnts)
+	if ( length( toShow)) {
+		for ( k in toShow) lines( c(spliceCounts$LeftPt[k], spliceCounts$RightPt[k]), rep.int( spliceCounts$STD_COUNT[k],2),
+						col=splice.col, lwd=2, lty=1)
+	}
+	isAlt2 <- which( abs( spliceExonLeft - spliceExonRight) == 2)
+	hasCnts <- which( spliceCounts$ALT_COUNT >= MIN_COUNT)
+	toShow <- intersect( isAlt2, hasCnts)
+	if ( length( toShow)) {
+		for ( k in toShow) lines( c(spliceCounts$LeftPt[k], spliceCounts$RightPt[k]), rep.int( spliceCounts$ALT_COUNT[k],2),
+						col=splice.col, lwd=3, lty=2)
+	}
+	isAlt3 <- which( abs( spliceExonLeft - spliceExonRight) == 3)
+	toShow <- intersect( isAlt3, hasCnts)
+	if ( length( toShow)) {
+		for ( k in toShow) lines( c(spliceCounts$LeftPt[k], spliceCounts$RightPt[k]), rep.int( spliceCounts$ALT_COUNT[k],2),
+						col=splice.col, lwd=4, lty=3)
+	}
+	legend( 'topright', c( "Standard", "Skip 1 Exon", "Skip 2 Exons"), lwd=c(2,3,4), lty=c(1,2,3), col=splice.col, 
+		bg='white', title="Splice Junction Counts")
+	dev.flush()
+}
