@@ -39,9 +39,24 @@
 		# step 1: call the Consensus Pileups tool
 		consensusFile <- paste( sampleID, thisName, "ConsensusProteinSummary.txt", sep=".")
 		consensusFile <- file.path( consensusProteins.path, consensusFile)
+
+		# the HLA name may have used "_" instead of "-" in the past.  Try to catch and allow
+		thisNameIn <- thisName
+		if ( ! file.exists( consensusFile)) {
+			thisNameIn <- sub( "\\-", "_", thisNameIn)
+			consensusFile2 <- paste( sampleID, thisNameIn, "ConsensusProteinSummary.txt", sep=".")
+			consensusFile2 <- file.path( consensusProteins.path, consensusFile2)
+			if ( file.exists( consensusFile2)) {
+				consensusFile <- consensusFile2
+				cat( "\nUsing older results for: ", thisNameIn)
+			} else {
+				thisNameIn <- thisName
+			}
+		}
+
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
-			pipe.ConsensusProteinPileups( sampleID, thisGene, thisName, results.path=results.path,
+			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=80, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
 						showFrameShiftPeptides=F)
 		}
@@ -54,7 +69,7 @@
 		# step 2:  Extract up to 2 proteins from this one result
 		#proteins <- top2proteins( consensusFile, min.heterozygousPct=min.heterozygousPct)
 		cat( "\n\nExtracting 'Consensus Protein Pileups' sequences..  ", sampleID, " ", thisName)
-		ans <- pipe.ConsensusProteinExtraction( sampleID, thisGene, thisName, results.path=results.path,
+		ans <- pipe.ConsensusProteinExtraction( sampleID, thisGene, thisNameIn, results.path=results.path,
 						min.minor.pct=min.minor.pct, max.proteins=2, verbose=FALSE)
 		proteins <- ans$AA.Fasta$seq
 		if ( is.null( proteins) || !length(proteins)) next
@@ -130,6 +145,61 @@
 		lastWanted <- thisAns[ max.suffix]
 		out[i] <- substr( out[i], 1, lastWanted - 1)
 	}
+	out
+}
+
+
+`pipe.HLA.CallsOverview` <- function( sampleIDset, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL, max.suffix=2) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls")
+
+	# visit every sample, and gather up all the HLA calls
+	N <- length( sampleIDset)
+	hlaTbl <- data.frame()
+	for ( i in 1:N) {
+		sid <- sampleIDset[i]
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "HLA.Calls.csv", sep="."))
+		if ( ! file.exists( my.file)) {
+			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
+			next
+		}
+		smlTbl <- read.csv( my.file, as.is=T)
+		if ( ! nrow(smlTbl)) next
+		hlaTbl <- rbind( hlaTbl, smlTbl)
+	}
+
+	# Ok, now summmarize each HLA gene by what alleles were seen.
+	geneFac <- factor( hlaTbl$Locus)
+	hlaGenes <- levels(geneFac)
+	NG <- length( hlaGenes)
+
+	mOut <- matrix( "", nrow=N, ncol=NG)
+	colnames(mOut) <- hlaGenes
+	rownames(mOut) <- sampleIDset
+
+	for ( i in 1:N) {
+		mySID <- sampleIDset[i]
+		smlTbl <- subset( hlaTbl, SampleID == mySID)
+		if ( ! nrow(smlTbl)) next
+		for (j in 1:NG) {
+			myGID <- hlaGenes[j]
+			tiny <- subset( smlTbl, Locus == myGID)
+			if ( ! nrow(tiny)) next
+			imgtNames <- tiny$IMGT_Name
+			# remove the HLA prefix?...
+			imgtNames <- sub( "^HLA\\-", "", imgtNames)
+			imgtNames <- cropHLAsuffix( imgtNames, max.suffix=max.suffix)
+			mOut[ i, j] <- paste( unique( imgtNames), collapse="/")
+		}
+	}
+		
+	out <- data.frame( "SampleID"=sampleIDset, mOut, stringsAsFactors=F)
+	rownames(out) <- 1:nrow(out)
 	out
 }
 

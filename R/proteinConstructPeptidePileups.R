@@ -398,6 +398,18 @@
 		cat( "\nReading Gene peptides file: ", alignedReadsFile)
 		vgTbl <- read.delim( alignedReadsFile, as.is=T)
 		cat( "\nDone.  \tN_Peptides:  ", nrow(vgTbl), "\n")
+		# we can cap how many we keep, based on protein length, since we can only pile up so deep...
+		avgPepLen <- round( mean( nchar( vgTbl$Peptide)))
+		maxPeptidesNeeded <- nAA * max.depth * 1.5
+		minPeptideCount <- 0
+		while ( nrow(vgTbl) > maxPeptidesNeeded) {
+			minPeptideCount <- minPeptideCount + 1
+			drops <- which( vgTbl$Count <= minPeptideCount)
+			if ( length(drops)) {
+				vgTbl <- vgTbl[ -drops, ]
+				cat( "  Dropping Peptides with Count at/below", minPeptideCount, " N_Peptides now: ", nrow(vgTbl), "\n")
+			}
+		}
 		addPeptidePileups( vgTbl$Peptide, wt=vgTbl$Count, chunk.size=chunkSize, 
 				txt.col=1, maxUseDepth=alignedReadsDepth, 
 				max.drawnPerSite=max.drawnPerSite, source="aligned.read")
