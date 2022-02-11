@@ -2,50 +2,100 @@
 
 # turn RNA-seq data into a profile of Vargene constructs & expression
 
-`pipe.VargeneContigProfile` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, kmerSize=73, doVelvet=TRUE, doBlast=TRUE, 
-				blastDB="Plasmodium/Pf_12.0/Pf_12.0_genomicDNA", verbose=TRUE) {
+`pipe.VargeneContigProfile` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL, kmerSize=55, doVelvet=FALSE, velvet.path=dirname(Sys.which("velveth")), 
+				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
+				min.aa.length=200, min.score.per.aa=2, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
 
-	# path for all results
-	velvet.path <- file.path( results.path, "VelvetContigs", sampleID, "Vargenes")
-	contigFile <- file.path( velvet.path, "contigs.fa")
-	blastOutfile <- file.path( velvet.path, "Pf.BlastOut.txt")
-	finalHitsFile <- file.path( velvet.path, "Pf.BestBlastHit.csv")
+	# make sure the reference file of var genes is readable
+	if ( ! file.exists( vargeneFastaFile)) {
+		cat( "\nError: 'vargeneFastaFile' of reference proteins not found: ", vargeneFastaFile)
+		return(NULL)
+	}
 
+	# path for all results
+	velvet.output.path <- file.path( results.path, "VelvetContigs", sampleID, "PfEMP1")
+	contigFile <- file.path( velvet.output.path, "contigs.fa")
+	peptidesFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
+	proteinsFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Proteins.txt", sep="."))
+	
+	# remove any files we know we will remake
+	if (doVelvet) file.delete( c( contigFile, peptidesFile, proteinsFile))
+
+	# get the universe of PfEMP1 var genes
 	vargeneDomainMap <- getVargeneDomainMap()
 	vargenes <- sort( unique( vargeneDomainMap$GENE_NAME))
+	alignedReadsFile <- file.path( results.path, "fastq", paste( sampleID, "PfEMP1.Hits.fastq.gz", sep="."))
+	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 
-	didVelvet <- FALSE
+	min.dna.length <- (min.aa.length - 1) * 3
 	if ( doVelvet || !file.exists(contigFile)) {
 
 		# step 1:   gather all aligned reads that land in/near the vargene loci
-		velvetFiles <- "noHits"
-		cat( "\nGathering Var Gene aligned reads..\n")
-		pipe.GatherGeneAlignments( sampleID, genes=vargenes, asFASTQ=TRUE, 
-					fastq.keyword="vargeneHits")
-		velvetFiles <- c( "vargeneHits", velvetFiles)
+		if ( ! file.exists( alignedReadsFile)) {
+			cat( "\nGathering Var Gene aligned reads..\n")
+			pipe.GatherGeneAlignments( sampleID, genes=vargenes, asFASTQ=TRUE, 
+						fastq.keyword="PfEMP1.Hits")
+		}
+
+		# in most cases call cutadapt to trim off primer ends
+		# if we are doing the Cutadapt pass, check for those files, and call it if we need.
+		velvetFiles <- c( "PfEMP1.Hits", "noHits")
+		if (doCutadapt) {
+			inputFastqFiles <- c( alignedReadsFile, nohitReadsFile)
+			filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=FALSE, forceMatePairs=FALSE,
+						cutadaptProgram=cutadaptProgram, kmer.size=kmerSize, verbose=verbose)
+			velvetFiles <- paste( velvetFiles, "trimmed", sep=".")
+		}
 	
 		# step 2:  create contigs of anything that may be var gene reads
-		pipe.VelvetContigs( sampleID, kmerSize=kmerSize, fastqSource=velvetFiles, folderName="Vargenes", 
-					makePep=T)
-		didVelvet <- TRUE
+		pipe.VelvetContigs( sampleID, kmerSize=kmerSize, fastqSource=velvetFiles, folderName="PfEMP1", keyword=keyword,
+					velvet.path=velvet.path, minLength=min.dna.length, makePep=T)
+
+		# cleanup Velvet temp files
+		tempFiles <- file.path( velvet.output.path, c( "Roadmaps", "Sequences", "Graph", "Graph2", "PreGraph", "LastGraph"))
+		file.delete( tempFiles)
 	}
 
-	# step 3:  Throw those contigs at Blast
-	if (didVelvet || doBlast || !file.exists(blastOutfile)) {
-		cat( "\n\nSearching Contigs for Var Gene constructs..")
-		blastInfile <- contigFile
-		callBlastn( blastInfile, blastOutfile, db=blastDB, wordsize=11, evalue=0.001, threads=4)
+	# because of reading frame and stop codon trimming, we may have peptides that are now shorter than the minimun we want.
+	pepFA <- loadFasta( peptidesFile, short=F)
+	len <- nchar( pepFA$seq)
+	drops <- which( len < min.aa.length)
+	if ( length( drops)) {
+		pepFA <- as.Fasta( pepFA$desc[-drops], pepFA$seq[-drops])
+		writeFasta( pepFA, peptidesFile, line=100)
 	}
+	NPEP <- length( pepFA$desc)
 
-	tbl <- readBlastOutput( blastOutfile, nKeep=1)
-	ord <- order( tbl$SCORE, decreasing=T)
-	tbl <- tbl[ ord, ]
-	write.table( tbl, finalHitsFile, sep=",", quote=T, row.names=F)
-	return( tbl)
+	# step 3:  Throw those contigs as peptides against the given set of proteins
+	cat( "\n\nSearching Contigs for PfEMP1 constructs..")
+	ans <- bestVelvetProteins( sampleID, outpath=velvet.output.path, proteinFastaFile=vargeneFastaFile,
+				keyword=keyword, verbose=verbose)
+	drops <- which( ans$ScorePerAA < min.score.per.aa)
+	if ( length( drops)) ans <- ans[ -drops, ]
+
+	# step 4:  find the var gene domains for each
+	cat( "\n\nFinding Domains..\n")
+	domainString <- unlist( multicore.lapply( 1:NPEP, function(x) {
+				i <- x
+				mySeq <- pepFA$seq[i]
+				myDesc <- pepFA$desc[i]
+				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
+				myDomStr <- if ( nrow(domAns)) paste( domAns$DOMAIN_ID, collapse="-") else "none"
+				cat( "\r", i, myDesc, myDomStr, "  ")
+				return( myDomStr)
+			}))
+
+	# place these where they belong in the final output, and reformat a bit
+	# note the the output may be less rows, due to low ScorePerAA, so match accordingly
+	where <- match( ans$ContigID, pepFA$desc)
+	ansDomStr <- domainString[ where]
+	out <- cbind( ans[,1:2], "Domain.Architecture"=ansDomStr, ans[,3:ncol(ans)], stringsAsFactors=F)
+	write.table( out, proteinsFile, sep="\t", quote=F, row.names=F)
+	return( invisible( out))
 }
 
 

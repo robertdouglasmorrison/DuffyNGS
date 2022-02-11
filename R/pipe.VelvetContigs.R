@@ -6,7 +6,7 @@
 		results.path=NULL, velvet.path="~/bin",
 		minLength=200, minCoverage=3, buildHash=TRUE, buildContigs=TRUE, 
 		velveth.args="", velvetg.args="", folderName=NULL, pairedEnd=NULL,
-		kmer.subfolder=FALSE, makePeptides=TRUE, verbose=TRUE) {
+		kmer.subfolder=FALSE, makePeptides=TRUE, keyword="Velvet", verbose=TRUE) {
 
 	require( Biostrings)
 
@@ -55,7 +55,7 @@
 			doPairedEnd=doPairedEnd, verbose=verbose)
 
 	if ( makePeptides) {
-		avgPepLen <- makeVelvetPeptides( sampleID, outpath=outpath, verbose=verbose)
+		avgPepLen <- makeVelvetPeptides( sampleID, outpath=outpath, keyword=keyword, verbose=verbose)
 		ans$AvgPeptide <- round(avgPepLen)
 	}
 

@@ -399,7 +399,7 @@ MAX_KMERS <- 250000000
 
 `pipe.KmerNovelContigs` <- function( kmerTbl, group, folder.keyword=group, min.count=5, min.kmers=100, 
 				max.copies.out=5,
-				velvet.path="~/NGS/bin", velveth.args="", velvetg.args="", 
+				velvet.path=dirname(Sys.which("velveth")),  velveth.args="", velvetg.args="", 
 				min.contig.length=100, proteinsFastaFile=NULL, 
 				min.score=100, verbose=FALSE) {
 
