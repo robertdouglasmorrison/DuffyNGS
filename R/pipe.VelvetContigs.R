@@ -20,12 +20,15 @@
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=FALSE)
 	}
 
+	# note that kmerSize might be a triplet...
+	kmerFolder <- max( kmerSize, na.rm=T)
+
 	# velvet wants a folder for writing all its results
 	outpath <- file.path( results.path, "VelvetContigs", sampleID)
 	if ( ! is.null( folderName)) {
 		outpath <- file.path( results.path, "VelvetContigs", sampleID, folderName)
 	}
-	if (kmer.subfolder) outpath <- file.path( outpath, paste( "Kmer", kmerSize, sep="_"))
+	if (kmer.subfolder) outpath <- file.path( outpath, paste( "Kmer", kmerFolder, sep="_"))
 	if ( ! file.exists( outpath)) dir.create( outpath, recursive=T)
 
 	# what fastq files go into the tool?

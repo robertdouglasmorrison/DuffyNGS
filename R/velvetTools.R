@@ -29,8 +29,15 @@
 			fastaFile <- paste( fastaFile, collapse="  ")
 		}
 
+		if ( length(kmerSize) == 1) {
+			kmerString <- as.character(kmerSize) 
+		} else {
+			if ( length(kmerSize) != 3) stop( "velveth 'hash_length' expected a 'min,max,step' triplet")
+			kmerString <- paste( kmerSize, collapse=",")
+		}
+
 		# put those args together
-		cmdline <- paste( file.path( velvet.path, "velveth"), outpath, kmerSize, format, 
+		cmdline <- paste( file.path( velvet.path, "velveth"), outpath, kmerString, format, 
 				pairedEndArgs, fastaFile, velveth.args, sep=" ")
 		cat( "\n\nCalling VelvetH to build kmer hash table...\n")
 		if (verbose) cat( "\nCommand Line: ", cmdline, "\n")
@@ -47,7 +54,8 @@
 	velvetMetrics <- NULL
 	graphFile <- file.path( outpath, "Graph2")
 
-	if ( velvetg.args == "") velvetg.args <- " -exp_cov auto "
+	# if ( velvetg.args == "") velvetg.args <- " -exp_cov auto "
+	if ( velvetg.args == "") velvetg.args <- " -exp_cov auto  -cov_cutoff auto "
 
 	if (buildContigs || !file.exists(graphFile)) {
 		cmdline <- paste( file.path( velvet.path, "velvetg"), outpath, velvetg.args)

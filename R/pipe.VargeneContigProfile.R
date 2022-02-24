@@ -5,7 +5,7 @@
 `pipe.VargeneContigProfile` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, kmerSize=55, doVelvet=FALSE, velvet.path=dirname(Sys.which("velveth")), 
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
-				min.aa.length=200, min.score.per.aa=2, verbose=TRUE) {
+				min.aa.length=200, min.score.per.aa=2, minCoverage=3, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
@@ -31,6 +31,9 @@
 	alignedReadsFile <- file.path( results.path, "fastq", paste( sampleID, "PfEMP1.Hits.fastq.gz", sep="."))
 	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 
+	# note the the kmerSize can be a triplet or a single value
+	kmerSizeCutadapt <- max( kmerSize, na.rm=T)
+
 	min.dna.length <- (min.aa.length - 1) * 3
 	if ( doVelvet || !file.exists(contigFile)) {
 
@@ -47,13 +50,13 @@
 		if (doCutadapt) {
 			inputFastqFiles <- c( alignedReadsFile, nohitReadsFile)
 			filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=FALSE, forceMatePairs=FALSE,
-						cutadaptProgram=cutadaptProgram, kmer.size=kmerSize, verbose=verbose)
+						cutadaptProgram=cutadaptProgram, kmer.size=kmerSizeCutadapt, verbose=verbose)
 			velvetFiles <- paste( velvetFiles, "trimmed", sep=".")
 		}
 	
 		# step 2:  create contigs of anything that may be var gene reads
 		pipe.VelvetContigs( sampleID, kmerSize=kmerSize, fastqSource=velvetFiles, folderName="PfEMP1", keyword=keyword,
-					velvet.path=velvet.path, minLength=min.dna.length, makePep=T)
+					velvet.path=velvet.path, minCoverage=minCoverage, minLength=min.dna.length, makePep=T)
 
 		# cleanup Velvet temp files
 		tempFiles <- file.path( velvet.output.path, c( "Roadmaps", "Sequences", "Graph", "Graph2", "PreGraph", "LastGraph"))
