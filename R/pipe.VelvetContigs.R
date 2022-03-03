@@ -1,9 +1,8 @@
 # pipe.VelvetContigs.R
 
-
-`pipe.VelvetContigs` <- function( sampleID, kmerSize, fastqSource=NULL,
+`pipe.VelvetContigs` <- function( sampleID, fastqSource=NULL, kmerSize=45, 
 		annotationFile="Annotation.txt", optionsFile="Options.txt", 
-		results.path=NULL, velvet.path="~/bin",
+		results.path=NULL, velvet.path=dirname(Sys.which("velveth")),
 		minLength=200, minCoverage=3, buildHash=TRUE, buildContigs=TRUE, 
 		velveth.args="", velvetg.args="", folderName=NULL, pairedEnd=NULL,
 		kmer.subfolder=FALSE, makePeptides=TRUE, keyword="Velvet", verbose=TRUE) {
@@ -32,7 +31,7 @@
 	if ( ! file.exists( outpath)) dir.create( outpath, recursive=T)
 
 	# what fastq files go into the tool?
-	# deafault is the full raw fastq data before any alignments are done
+	# default is the full raw fastq data before any alignments are done
 	if ( is.null( fastqSource)) {
 		fastqPath <- getOptionValue( optT, "fastqData.path", verbose=FALSE)
 		fastqFile <- getAnnotationValue( annT, key=sampleID, columnArg="Filename", verbose=FALSE)
@@ -49,6 +48,13 @@
 		if (verbose) {
 			cat( "\nUsing Fastq files:", fastqFile, sep="\n")
 		}
+	}
+	# make sure those files exist
+	fqExist <- file.exists( fastqFile)
+	if ( ! all( fqExist)) {
+		cat( "\nError:  some FASTQ files not found:\n")
+		cat( fastqFile[ ! fqExist], "\n")
+		return(NULL)
 	}
 
 	ans <- makeVelvetContigs( fastqFile, outpath=outpath, velvet.path=velvet.path, 
@@ -68,7 +74,7 @@
 
 `pipe.VelvetContigSurvey` <- function( sampleID, kmerSizes, fastqSource=NULL,
 		annotationFile="Annotation.txt", optionsFile="Options.txt", 
-		results.path=NULL, velvet.path="~/bin",
+		results.path=NULL, velvet.path=dirname(Sys.which("velveth")),
 		buildHash=TRUE, buildContigs=TRUE, makePeptides=FALSE) {
 
 	NK <- length( kmerSizes)
@@ -181,7 +187,7 @@ graphVelvetContigSurvey <- function( tbl, path, lwd=4, label="", legend.cex=1.2)
 }
 
 
-cleanupVelvetFiles <- function( path="results/VelvetContigs") {
+cleanupVelvetFiles <- function( path="results/VelvetContigs", verbose=T) {
 
 	# delete any large unneeded files left behind by Velvet...
 	filePatterns <- c( "^Roadmaps$", "^Sequences$", "^Graph$", "^Graph2$", "^LastGraph$", "PreGraph")
@@ -195,11 +201,12 @@ cleanupVelvetFiles <- function( path="results/VelvetContigs") {
 		for ( f in files) {
 			bytes <- file.info( f)$size
 			nfiles <- nfiles + 1
-			cat( "\r", nfiles, "  Size: ", bytes, "  File: ", f)
+			if (verbose) cat( "\r", nfiles, "  Size: ", bytes, "  File: ", f)
 			totalBytes <- totalBytes + bytes
 			file.delete( f)
 		}
-		cat( "\n")
+		if (verbose) cat( "\n")
 	}
-	cat( "\nDeleted_Files: ", nfiles, "\tDeleted Bytes: ", prettyNum( totalBytes, big.mark=","), "\n")
+	if (verbose) cat( "\nDeleted_Files: ", nfiles, "\tDeleted Bytes: ", prettyNum( totalBytes, big.mark=","), "\n")
 }
+

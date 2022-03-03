@@ -115,6 +115,11 @@
 					keepIntergenics=keepIntergenics, verbose=F)
 		# get the other facts we will need, in matrix row order
 		whereRef <- match( rownames(intenM), refTrans$GENE_ID)
+		if ( any( is.na(whereRef))) {
+			cat( "\nUnexpected Error:  Found some gene IDs not present in the first transcxriptome file.")
+			cat( "\nUnable to to Round Robin in Matrix mode..")
+			stop()
+		}
 		refGeneIDs <- refTrans$GENE_ID[ whereRef]
 		refProds <- refTrans$PRODUCT[ whereRef]
 		refExonBases <- refTrans$N_EXON_BASES[ whereRef]
@@ -232,7 +237,7 @@
 
 		# the RR addeer function will do the ordering again, so don't bother here
 		return( smlDF)
-}
+	}
 
 
 	`roundRobinAddData` <- function( RR_List, thisDE) {

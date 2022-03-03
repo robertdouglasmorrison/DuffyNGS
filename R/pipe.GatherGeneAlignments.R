@@ -3,7 +3,7 @@
 
 `pipe.GatherGeneAlignments` <- function( sampleID, genes, optionsFile="Options.txt", 
 				results.path=NULL, tail.width=0, 
-				stages=c("genomic", "splice"), 
+				stages=c("genomic", "splice"), mode=c("all","best.one"), 
 				asFASTQ=FALSE, fastq.keyword="Genes", verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
@@ -30,6 +30,9 @@
 		cat( "\nAllowed pipeline stages: ", Stages)
 		stop()
 	}
+
+	# decide if we want all reads or just best one from each location
+	mode <- match.arg( mode)
 
 	bamFiles <- vector()
 	if ( "riboClear" %in% stages) {
@@ -98,6 +101,23 @@
 				if ( length(dups) > 0) {
 					smallDF <- smallDF[ -dups, ]
 				}
+			}
+
+			if ( nrow(smallDF) && mode == "best.one") {
+				# for tools like denovo assembly, limit the read depth by keeping just one copy per
+				# location.  Use count if possible, else random
+				posFac <- factor( smallDF$position)
+				keep <- tapply( 1:nrow(smallDF), posFac, function(x) {
+						if ( length(x) == 1) return(x)
+						seqTbl <- sort( table( smallDF$seq[x]), decreasing=T)
+						bestCnt <- seqTbl[1]
+						isBest <- which( seqTbl == bestCnt)
+						if ( length(isBest) > 1) isBest <- sample( isBest, size=1)
+						# return the first row that has this chosen sequence
+						bestHit <- match( names(seqTbl)[isBest], smallDF$seq[x])
+						return( x[bestHit])
+					})
+				smallDF <- smallDF[ keep, ]
 			}
 
 			if ( verbose) cat( "\n", sml$GENE_ID, "\tN_Alignments: ", nrow(smallDF))

@@ -2,13 +2,124 @@
 
 # turn RNA-seq data into a profile of Vargene constructs & expression
 
-`pipe.VargeneContigProfile` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
+# giving 2 tools to do the task:  Velvet or SPAdes
+
+
+`pipe.VargeneContigProfile.Spades` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=TRUE,
+				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
+				min.aa.length=200, min.score.per.aa=2, verbose=TRUE) {
+
+	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
+				notfound=".", verbose=F)
+
+	# verify we see the denovo tool executable location
+	if ( spades.path == "") {
+		cat( "\nError:  path to SPAdes executable program not found..")
+		return(NULL)
+	}
+
+	# make sure the reference file of var genes is readable
+	if ( ! file.exists( vargeneFastaFile)) {
+		cat( "\nError: 'vargeneFastaFile' of reference proteins not found: ", vargeneFastaFile)
+		return(NULL)
+	}
+
+	# path for all results
+	spades.output.path <- file.path( results.path, "SpadesContigs", sampleID, "PfEMP1")
+	contigFile <- file.path( spades.output.path, "contigs.fasta")
+	peptidesFile <- file.path( spades.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
+	domainsFile <- file.path( spades.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
+	
+	# remove any files we know we will remake
+	if (doSpades) file.delete( c( contigFile, peptidesFile, domainsFile))
+
+	# get the universe of PfEMP1 var genes
+	vargeneDomainMap <- getVargeneDomainMap()
+	vargenes <- sort( unique( vargeneDomainMap$GENE_NAME))
+	alignedReadsFile <- file.path( results.path, "fastq", paste( sampleID, "PfEMP1.Hits.fastq.gz", sep="."))
+	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
+
+	min.dna.length <- (min.aa.length - 1) * 3
+	if ( doSpades || !file.exists(contigFile)) {
+
+		# step 1:   gather all aligned reads that land in/near the vargene loci
+		if ( ! file.exists( alignedReadsFile)) {
+			cat( "\nGathering Var Gene aligned reads..\n")
+			pipe.GatherGeneAlignments( sampleID, genes=vargenes, asFASTQ=TRUE, mode="best.one",
+						fastq.keyword="PfEMP1.Hits")
+		}
+
+		# in most cases call cutadapt to trim off primer ends
+		# if we are doing the Cutadapt pass, check for those files, and call it if we need.
+		fastqFiles <- c( "PfEMP1.Hits", "noHits")
+		if (doCutadapt) {
+			inputFastqFiles <- c( alignedReadsFile, nohitReadsFile)
+			filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=FALSE, forceMatePairs=FALSE,
+						cutadaptProgram=cutadaptProgram, kmer.size=45, verbose=verbose)
+			fastqFiles <- paste( fastqFiles, "trimmed", sep=".")
+		}
+	
+		# step 2:  create contigs of anything that may be var gene reads
+		pipe.SpadesContigs( sampleID, fastqSource=fastqFiles, folderName="PfEMP1", keyword=keyword,
+					spades.path=spades.path, makePep=T)
+
+		# cleanup SPAdes temp files
+		cleanupSpadesFiles( path=spades.output.path, verbose=F)
+	}
+
+	# because of reading frame and stop codon trimming, we may have peptides that are now shorter than the minimun we want.
+	pepFA <- loadFasta( peptidesFile, short=F)
+	len <- nchar( pepFA$seq)
+	drops <- which( len < min.aa.length)
+	if ( length( drops)) {
+		pepFA <- as.Fasta( pepFA$desc[-drops], pepFA$seq[-drops])
+		writeFasta( pepFA, peptidesFile, line=100)
+	}
+	NPEP <- length( pepFA$desc)
+
+	# step 3:  Throw those contigs as peptides against the given set of proteins
+	cat( "\n\nSearching Contigs for PfEMP1 constructs..")
+	ans <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=vargeneFastaFile,
+				keyword=keyword, verbose=verbose)
+	drops <- which( ans$ScorePerAA < min.score.per.aa)
+	if ( length( drops)) ans <- ans[ -drops, ]
+
+	# step 4:  find the var gene domains for each
+	cat( "\n\nFinding PfEMP1 Domains..\n")
+	domainString <- unlist( multicore.lapply( 1:NPEP, function(x) {
+				i <- x
+				mySeq <- pepFA$seq[i]
+				myDesc <- pepFA$desc[i]
+				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
+				myDomStr <- if ( nrow(domAns)) paste( domAns$DOMAIN_ID, collapse="-") else "none"
+				cat( "\r", i, myDesc, myDomStr, "  ")
+				return( myDomStr)
+			}))
+
+	# place these where they belong in the final output, and reformat a bit
+	# note the the output may be less rows, due to low ScorePerAA, so match accordingly
+	where <- match( ans$ContigID, pepFA$desc)
+	ansDomStr <- domainString[ where]
+	out <- cbind( ans[,1:2], "Domain.Architecture"=ansDomStr, ans[,3:ncol(ans)], stringsAsFactors=F)
+	write.table( out, domainsFile, sep="\t", quote=F, row.names=F)
+	return( invisible( out))
+}
+
+
+`pipe.VargeneContigProfile.Velvet` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, kmerSize=55, doVelvet=FALSE, velvet.path=dirname(Sys.which("velveth")), 
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
 				min.aa.length=200, min.score.per.aa=2, minCoverage=3, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
+
+	# verify we see the denovo tool executable location
+	if ( velvet.path == "") {
+		cat( "\nError:  path to Velvet executable program not found..")
+		return(NULL)
+	}
 
 	# make sure the reference file of var genes is readable
 	if ( ! file.exists( vargeneFastaFile)) {
@@ -20,10 +131,10 @@
 	velvet.output.path <- file.path( results.path, "VelvetContigs", sampleID, "PfEMP1")
 	contigFile <- file.path( velvet.output.path, "contigs.fa")
 	peptidesFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
-	proteinsFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Proteins.txt", sep="."))
+	domainsFile <- file.path( velvet.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
 	
 	# remove any files we know we will remake
-	if (doVelvet) file.delete( c( contigFile, peptidesFile, proteinsFile))
+	if (doVelvet) file.delete( c( contigFile, peptidesFile, domainsFile))
 
 	# get the universe of PfEMP1 var genes
 	vargeneDomainMap <- getVargeneDomainMap()
@@ -40,22 +151,22 @@
 		# step 1:   gather all aligned reads that land in/near the vargene loci
 		if ( ! file.exists( alignedReadsFile)) {
 			cat( "\nGathering Var Gene aligned reads..\n")
-			pipe.GatherGeneAlignments( sampleID, genes=vargenes, asFASTQ=TRUE, 
+			pipe.GatherGeneAlignments( sampleID, genes=vargenes, asFASTQ=TRUE, mode="best.one",
 						fastq.keyword="PfEMP1.Hits")
 		}
 
 		# in most cases call cutadapt to trim off primer ends
 		# if we are doing the Cutadapt pass, check for those files, and call it if we need.
-		velvetFiles <- c( "PfEMP1.Hits", "noHits")
+		fastqFiles <- c( "PfEMP1.Hits", "noHits")
 		if (doCutadapt) {
 			inputFastqFiles <- c( alignedReadsFile, nohitReadsFile)
 			filesToDo <- checkOrCallCutadapt( inputFastqFiles, asMatePairs=FALSE, forceMatePairs=FALSE,
 						cutadaptProgram=cutadaptProgram, kmer.size=kmerSizeCutadapt, verbose=verbose)
-			velvetFiles <- paste( velvetFiles, "trimmed", sep=".")
+			fastqFiles <- paste( fastqFiles, "trimmed", sep=".")
 		}
 	
 		# step 2:  create contigs of anything that may be var gene reads
-		pipe.VelvetContigs( sampleID, kmerSize=kmerSize, fastqSource=velvetFiles, folderName="PfEMP1", keyword=keyword,
+		pipe.VelvetContigs( sampleID, fastqSource=fastqFiles, kmerSize=kmerSize, folderName="PfEMP1", keyword=keyword,
 					velvet.path=velvet.path, minCoverage=minCoverage, minLength=min.dna.length, makePep=T)
 
 		# cleanup Velvet temp files
@@ -81,7 +192,7 @@
 	if ( length( drops)) ans <- ans[ -drops, ]
 
 	# step 4:  find the var gene domains for each
-	cat( "\n\nFinding Domains..\n")
+	cat( "\n\nFinding PfEMP1 Domains..\n")
 	domainString <- unlist( multicore.lapply( 1:NPEP, function(x) {
 				i <- x
 				mySeq <- pepFA$seq[i]
@@ -97,10 +208,9 @@
 	where <- match( ans$ContigID, pepFA$desc)
 	ansDomStr <- domainString[ where]
 	out <- cbind( ans[,1:2], "Domain.Architecture"=ansDomStr, ans[,3:ncol(ans)], stringsAsFactors=F)
-	write.table( out, proteinsFile, sep="\t", quote=F, row.names=F)
+	write.table( out, domainsFile, sep="\t", quote=F, row.names=F)
 	return( invisible( out))
 }
-
 
 
 `genePlotWithContigs` <- function( sampleID, geneID, tail=2500, pileup.col=2, text.col=3, cex=1.65, pos=NULL, 

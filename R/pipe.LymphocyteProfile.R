@@ -39,7 +39,7 @@
 	
 		# step 2:  create contigs of anything that may be lymphocyte reads
 		#		only rebuild the data structures that are missing...
-		pipe.VelvetContigs( sampleID, kmerSize=kmerSize, velvetFiles, folderName="Lymphocytes", 
+		pipe.VelvetContigs( sampleID, fastqSource=velvetFiles, kmerSize=kmerSize, folderName="Lymphocytes", 
 					buildHash=buildHash, buildContigs=buildContigs, makePep=T)
 		didVelvet <- TRUE
 	}

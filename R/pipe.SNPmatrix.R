@@ -977,12 +977,10 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	f <- paste( sampleID, prefix, "SNP.MOIcall.txt", sep=".")
 	f <- file.path( results.path, "VariantCalls", sampleID, f)
-	if ( ! file.exists( f)) {
-		cat( "\nMOI calls file not found:  ", f)
-		cat( "\nCalling function 'pipe.SNP.MOIcall()'...")
-		pipe.SNP.MOIcall( sampleID, optionsFile=optionsFile, results.path=results.path)
-		if ( ! file.exists( f)) stop( "Call failed..  Build MOIcall results first...")
-	}
+	# always rebuild the MOI calls..  not that slow..
+	if (verbose) cat( "\nCalling function 'pipe.SNP.MOIcall()'...")
+	pipe.SNP.MOIcall( sampleID, optionsFile=optionsFile, results.path=results.path)
+	if ( ! file.exists( f)) stop( "Call failed..  Perhaps run 'pipe.SNP.BaseDepth()' first..")
 
 	moiTbl <- read.delim( f, as.is=T)
 	if (verbose) {
