@@ -69,7 +69,7 @@
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
 	# we may have peptides that are now shorter than the minimun we want.
-	pepFA <- loadFasta( peptidesFile, short=F)
+	pepFA <- loadFasta( peptidesFile, short=F, verbose=F)
 	len <- nchar( pepFA$seq)
 	drops <- which( len < min.aa.length)
 	if ( length( drops)) {
@@ -105,7 +105,7 @@
 				myCassStr <- if ( nrow(domAns)) paste( domAns$CASSETTE, collapse="-") else "none"
 				cat( "\r", i, myDesc, myDomStr, "  ")
 				domStrs[x] <<- myDomStr
-				cassStrs[x] <<- myCasStr
+				cassStrs[x] <<- myCassStr
 				# attach the contig name to the domain ans
 				domAns <- data.frame( "CONTIG_ID"=myDesc, domAns, stringsAsFactors=F)
 				return( domAns)

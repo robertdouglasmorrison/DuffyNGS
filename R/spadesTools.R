@@ -92,7 +92,7 @@
 	# grab the set of peptides from the Velvet run
 	peptideFile <- file.path( outpath, paste( sampleID, keyword, "Peptides.fasta", sep="."))
 	if ( ! file.exists( peptideFile)) {
-		cat( "\nVelvet 'peptides' file not found:  ", peptideFile)
+		cat( "\nSpades 'peptides' file not found:  ", peptideFile)
 		return(NULL)
 	}
 	if ( ! file.exists( proteinFastaFile)) {
@@ -105,8 +105,7 @@
 	seqs <- peptides$seq
 	N <- length( desc)
 	if ( N < 1) return(NULL)
-	cat( "\nFinding best Proteins:  ", basename(peptideFile),
-		"\nN_Peptides: ", N, "\n")
+	if (verbose) cat( "\nFinding best Proteins:  ", basename(peptideFile), "\nN_Peptides: ", N, "\n")
 
 	# map peptides to proteins
 	ans <- peptide2BestProtein( seqs, proteinFastaFile, substitutionMatrix=PAM70,
