@@ -6,7 +6,7 @@
 
 
 `pipe.VargeneContigProfile.Spades` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=TRUE,
+				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=FALSE,
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
 				min.aa.length=200, min.score.per.aa=2, verbose=TRUE) {
 
@@ -40,7 +40,6 @@
 	alignedReadsFile <- file.path( results.path, "fastq", paste( sampleID, "PfEMP1.Hits.fastq.gz", sep="."))
 	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 
-	min.dna.length <- (min.aa.length - 1) * 3
 	if ( doSpades || !file.exists(contigFile)) {
 
 		# step 1:   gather all aligned reads that land in/near the vargene loci
@@ -68,7 +67,8 @@
 		cleanupSpadesFiles( path=spades.output.path, verbose=F)
 	}
 
-	# because of reading frame and stop codon trimming, we may have peptides that are now shorter than the minimun we want.
+	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
+	# we may have peptides that are now shorter than the minimun we want.
 	pepFA <- loadFasta( peptidesFile, short=F)
 	len <- nchar( pepFA$seq)
 	drops <- which( len < min.aa.length)
@@ -80,30 +80,55 @@
 
 	# step 3:  Throw those contigs as peptides against the given set of proteins
 	cat( "\n\nSearching Contigs for PfEMP1 constructs..")
-	ans <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=vargeneFastaFile,
+	proteinAns <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=vargeneFastaFile,
 				keyword=keyword, verbose=verbose)
-	drops <- which( ans$ScorePerAA < min.score.per.aa)
-	if ( length( drops)) ans <- ans[ -drops, ]
+	drops <- which( proteinAns$ScorePerAA < min.score.per.aa)
+	if ( length( drops)) {
+		proteinAns <- proteinAns[ -drops, ]
+		# if we dropped some here, also remove those from the Peptides to search for domains
+		keep <- which( pepFA$desc %in% proteinAns$ContigID)
+		pepFA <- as.Fasta( pepFA$desc[keep], pepFA$seq[keep])
+		NPEP <- length( keep)
+	}
 
 	# step 4:  find the var gene domains for each
 	cat( "\n\nFinding PfEMP1 Domains..\n")
-	domainString <- unlist( multicore.lapply( 1:NPEP, function(x) {
-				i <- x
-				mySeq <- pepFA$seq[i]
-				myDesc <- pepFA$desc[i]
+	domStrs <- cassStrs <- rep.int( "", NPEP)
+	domainAns <- multicore.lapply( 1:NPEP, function(x) {
+				mySeq <- pepFA$seq[x]
+				myDesc <- pepFA$desc[x]
 				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
+				# drop the domain columns we do not need
+				domAns <- domAns[ , -grep("^REF_",colnames(domAns))]
+				# make the stirngs about the architecture
 				myDomStr <- if ( nrow(domAns)) paste( domAns$DOMAIN_ID, collapse="-") else "none"
+				myCassStr <- if ( nrow(domAns)) paste( domAns$CASSETTE, collapse="-") else "none"
 				cat( "\r", i, myDesc, myDomStr, "  ")
-				return( myDomStr)
-			}))
+				domStrs[x] <<- myDomStr
+				cassStrs[x] <<- myCasStr
+				# attach the contig name to the domain ans
+				domAns <- data.frame( "CONTIG_ID"=myDesc, domAns, stringsAsFactors=F)
+				return( domAns)
+			})
 
-	# place these where they belong in the final output, and reformat a bit
-	# note the the output may be less rows, due to low ScorePerAA, so match accordingly
-	where <- match( ans$ContigID, pepFA$desc)
-	ansDomStr <- domainString[ where]
-	out <- cbind( ans[,1:2], "Domain.Architecture"=ansDomStr, ans[,3:ncol(ans)], stringsAsFactors=F)
-	write.table( out, domainsFile, sep="\t", quote=F, row.names=F)
-	return( invisible( out))
+	# organize the results.  Merge all the domain details, and give the archtecture details to the proteins file
+	out2 <- data.frame()
+	for ( j in 1:length(domainAns)) {
+		sml <- domainAns[[j]]
+		out2 <- rbind( out2, sml)
+	}
+	proteinAns$Domain.Architecture <- ""
+	proteinAns$Cassette.Architecture <- ""
+	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
+	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
+	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
+	out1 <- proteinAns
+
+	# write out the file of domain details, and rewrite the proteins file with the new extra architecture info
+	write.table( out2, domainsFile, sep="\t", quote=F, row.names=F)
+	proteinsFile <- sub( "DomainDetails.txt$", "BestProteinHits.txt", domainsFile)
+	write.table( out1, proteinsFile, sep="\t", quote=F, row.names=F)
+	return( invisible( out1))
 }
 
 

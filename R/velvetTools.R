@@ -280,7 +280,7 @@
 		rownames(out) <- 1:nrow(out)
 	}
 
-	outfile <- paste( sampleID, keyword, "Proteins.txt", sep=".")
+	outfile <- paste( sampleID, keyword, "BestProteinHits.txt", sep=".")
 	outfile <- file.path( outpath, outfile)
 	write.table( out, file=outfile, sep="\t", quote=F, row.names=F)
 	if (verbose) cat( "\nWrote Proteins file: ", basename(outfile))
