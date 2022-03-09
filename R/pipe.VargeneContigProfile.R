@@ -104,7 +104,7 @@
 				# make the stirngs about the architecture
 				myDomStr <- paste( domAns$DOMAIN_ID, collapse="-")
 				myCassStr <- paste( domAns$CASSETTE, collapse="-")
-				cat( "\r", i, myDesc, myDomStr, "  ")
+				if (verbose) cat( "\r", x, myDesc, myDomStr, "  ")
 				# attach the contig name to the domain ans
 				domAns <- data.frame( "CONTIG_ID"=myDesc, domAns, 
 						"Domain.Architecture"=myDomStr, "Cassette.Architecture"=myCassStr, 
@@ -126,8 +126,6 @@
 	proteinAns$Domain.Architecture <- ""
 	proteinAns$Cassette.Architecture <- ""
 	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
-	cat( "\nDebug 1: ", head( proteinAns$ContigID), "|", head( pepFA$desc), "|", head( whereProtein))
-	cat( "\nDebug 2: ", head( domStrs[ whereProtein]), "|", head( cassStrs[whereProtein]))
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
 	out1 <- proteinAns
