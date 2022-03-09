@@ -105,10 +105,10 @@
 				myDomStr <- paste( domAns$DOMAIN_ID, collapse="-")
 				myCassStr <- paste( domAns$CASSETTE, collapse="-")
 				cat( "\r", i, myDesc, myDomStr, "  ")
-				domStrs[x] <<- myDomStr
-				cassStrs[x] <<- myCassStr
 				# attach the contig name to the domain ans
-				domAns <- data.frame( "CONTIG_ID"=myDesc, domAns, stringsAsFactors=F)
+				domAns <- data.frame( "CONTIG_ID"=myDesc, domAns, 
+						"Domain.Architecture"=myDomStr, "Cassette.Architecture"=myCassStr, 
+						stringsAsFactors=F)
 				return( domAns)
 			})
 
@@ -117,6 +117,10 @@
 	for ( j in 1:length(domainAns)) {
 		sml <- domainAns[[j]]
 		if ( ! nrow(sml)) next
+		# extract the architecture strings and remove them
+		domStrs[j] <- sml$Domain.Architecture[1]
+		cassStrs[j] <- sml$Cassette.Architecture[1]
+		sml <- sml[ , -grep( "Architecture",colnames(sml))]
 		out2 <- rbind( out2, sml)
 	}
 	proteinAns$Domain.Architecture <- ""
