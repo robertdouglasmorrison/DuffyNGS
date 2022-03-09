@@ -115,11 +115,13 @@
 	out2 <- data.frame()
 	for ( j in 1:length(domainAns)) {
 		sml <- domainAns[[j]]
+		if ( ! nrow(sml)) next
 		out2 <- rbind( out2, sml)
 	}
 	proteinAns$Domain.Architecture <- ""
 	proteinAns$Cassette.Architecture <- ""
 	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
+	cat( "\nDebug: ", head( proteinAns$ContigID), "|", head( pepFA$desc), "|", head( whereProtein))
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
 	out1 <- proteinAns
