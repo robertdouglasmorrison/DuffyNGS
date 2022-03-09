@@ -98,6 +98,7 @@
 				mySeq <- pepFA$seq[x]
 				myDesc <- pepFA$desc[x]
 				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
+				if ( ! nrow(domAns)) return(domAns)
 				# drop the domain columns we do not need
 				domAns <- domAns[ , -grep("^REF_",colnames(domAns))]
 				# make the stirngs about the architecture
