@@ -127,7 +127,7 @@
 	proteinAns$Cassette.Architecture <- ""
 	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
 	cat( "\nDebug 1: ", head( proteinAns$ContigID), "|", head( pepFA$desc), "|", head( whereProtein))
-	cat( "\nDebug 2: ", head( donStrs[ whereProtein]), "|", head( cassStrs[whereProtein]))
+	cat( "\nDebug 2: ", head( domStrs[ whereProtein]), "|", head( cassStrs[whereProtein]))
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
 	out1 <- proteinAns
