@@ -102,8 +102,8 @@
 				# drop the domain columns we do not need
 				domAns <- domAns[ , -grep("^REF_",colnames(domAns))]
 				# make the stirngs about the architecture
-				myDomStr <- if ( nrow(domAns)) paste( domAns$DOMAIN_ID, collapse="-") else "none"
-				myCassStr <- if ( nrow(domAns)) paste( domAns$CASSETTE, collapse="-") else "none"
+				myDomStr <- paste( domAns$DOMAIN_ID, collapse="-")
+				myCassStr <- paste( domAns$CASSETTE, collapse="-")
 				cat( "\r", i, myDesc, myDomStr, "  ")
 				domStrs[x] <<- myDomStr
 				cassStrs[x] <<- myCassStr
@@ -122,7 +122,8 @@
 	proteinAns$Domain.Architecture <- ""
 	proteinAns$Cassette.Architecture <- ""
 	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
-	cat( "\nDebug: ", head( proteinAns$ContigID), "|", head( pepFA$desc), "|", head( whereProtein))
+	cat( "\nDebug 1: ", head( proteinAns$ContigID), "|", head( pepFA$desc), "|", head( whereProtein))
+	cat( "\nDebug 2: ", head( donStrs[ whereProtein]), "|", head( cassStrs[whereProtein]))
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
 	out1 <- proteinAns
