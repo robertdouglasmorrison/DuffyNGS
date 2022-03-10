@@ -30,6 +30,7 @@
 	contigFile <- file.path( spades.output.path, "contigs.fasta")
 	peptidesFile <- file.path( spades.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
 	domainsFile <- file.path( spades.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
+	proteinsFile <- sub( "DomainDetails.txt$", "BestProteinHits.txt", domainsFile)
 	
 	# remove any files we know we will remake
 	if (doSpades) file.delete( c( contigFile, peptidesFile, domainsFile))
@@ -78,7 +79,7 @@
 	}
 	NPEP <- length( pepFA$desc)
 
-	# step 3:  Throw those contigs as peptides against the given set of proteins
+	# step 3:  Throw those contigs as peptides against the given set of var gene proteins
 	cat( "\n\nSearching Contigs for PfEMP1 constructs..")
 	proteinAns <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=vargeneFastaFile,
 				keyword=keyword, verbose=verbose)
@@ -91,17 +92,19 @@
 		NPEP <- length( keep)
 	}
 
+	# at this point, we have a small chance that none look like var genes
+	out1 <- proteinAns
+	if ( ! NPEP) {
+		write.table( out1, proteinsFile, sep="\t", quote=F, row.names=F)
+		return( invisible( out1))
+	}
+
 	# step 4:  find the var gene domains for each
 	cat( "\n\nFinding PfEMP1 Domains..\n")
 	domStrs <- cassStrs <- rep.int( "", NPEP)
 	domainAns <- multicore.lapply( 1:NPEP, function(x) {
 				mySeq <- pepFA$seq[x]
 				myDesc <- pepFA$desc[x]
-				# getting rare bug, double check and report
-				if ( is.na(mySeq) || nchar( mySeq) < 10) {
-					cat( "\n\nBad sequence?  who=", x, "  is NA=", is.na(mySeq), "  nChar=", nchar(mySeq), 
-						"  seq=", substr( mySeq,1,20))
-				}
 				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
 				if ( ! nrow(domAns)) return(domAns)
 				# drop the domain columns we do not need
@@ -117,7 +120,7 @@
 				return( domAns)
 			})
 
-	# organize the results.  Merge all the domain details, and give the archtecture details to the proteins file
+	# organize the results.  Merge all the domain details, and append the archtecture details to the proteins file
 	out2 <- data.frame()
 	for ( j in 1:length(domainAns)) {
 		sml <- domainAns[[j]]
@@ -137,7 +140,6 @@
 
 	# write out the file of domain details, and rewrite the proteins file with the new extra architecture info
 	write.table( out2, domainsFile, sep="\t", quote=F, row.names=F)
-	proteinsFile <- sub( "DomainDetails.txt$", "BestProteinHits.txt", domainsFile)
 	write.table( out1, proteinsFile, sep="\t", quote=F, row.names=F)
 	return( invisible( out1))
 }
