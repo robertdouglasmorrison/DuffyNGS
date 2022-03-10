@@ -69,7 +69,7 @@
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
 	# we may have peptides that are now shorter than the minimun we want.
-	pepFA <- loadFasta( peptidesFile, short=F, verbose=F)
+	pepFA <- loadFasta( peptidesFile, short=T, verbose=F)
 	len <- nchar( pepFA$seq)
 	drops <- which( len < min.aa.length)
 	if ( length( drops)) {
@@ -97,6 +97,11 @@
 	domainAns <- multicore.lapply( 1:NPEP, function(x) {
 				mySeq <- pepFA$seq[x]
 				myDesc <- pepFA$desc[x]
+				# getting rare bug, double check and report
+				if ( is.na(mySeq) || nchar( mySeq) < 10) {
+					cat( "\n\nBad sequence?  who=", x, "  is NA=", is.na(mySeq), "  nChar=", nchar(mySeq), 
+						"  seq=", substr( mySeq,1,20))
+				}
 				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
 				if ( ! nrow(domAns)) return(domAns)
 				# drop the domain columns we do not need
