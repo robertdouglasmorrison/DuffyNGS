@@ -74,6 +74,7 @@
 		cleanupSpadesFiles( path=spades.output.path, verbose=F)
 	} else {
 		cat( "\n\nUsing previously calculated Spades contigs..\n\n")
+	}
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
 	# we may have peptides that are now shorter than the minimun we want.
