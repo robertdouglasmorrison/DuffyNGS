@@ -7,8 +7,9 @@
 
 `pipe.VargeneContigProfile.Spades` <- function( sampleID, vargeneFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=FALSE,
+				spades.mode=c("isolate","rna","meta"), kmerSizes=NULL, spades.args="", 
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="PfEMP1", 
-				min.aa.length=200, min.score.per.aa=2, verbose=TRUE) {
+				min.aa.length=100, min.score.per.aa=2, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
@@ -27,13 +28,16 @@
 
 	# path for all results
 	spades.output.path <- file.path( results.path, "SpadesContigs", sampleID, "PfEMP1")
-	contigFile <- file.path( spades.output.path, "contigs.fasta")
-	peptidesFile <- file.path( spades.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
-	domainsFile <- file.path( spades.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
-	proteinsFile <- sub( "DomainDetails.txt$", "BestProteinHits.txt", domainsFile)
+	contigsFastaFile <- file.path( spades.output.path, "contigs.fasta")
+	peptidesFastaFile <- file.path( spades.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
+	domainsFastaFile <- file.path( spades.output.path, paste( sampleID, keyword, "Domains.fasta", sep="."))
+	proteinsFastaFile <- sub( "Domains.fasta$", "Proteins.fasta", domainsFastaFile)
+	domainsTextFile <- file.path( spades.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
+	proteinsTextFile <- sub( "DomainDetails.txt$", "BestProteinHits.txt", domainsTextFile)
 	
 	# remove any files we know we will remake
-	if (doSpades) file.delete( c( contigFile, peptidesFile, domainsFile))
+	if (doSpades) file.delete( c( contigsFastaFile, peptidesFastaFile, domainsTextFile, domainsFastaFile,
+					proteinsFastaFile, proteinsTextFile))
 
 	# get the universe of PfEMP1 var genes
 	vargeneDomainMap <- getVargeneDomainMap()
@@ -41,7 +45,7 @@
 	alignedReadsFile <- file.path( results.path, "fastq", paste( sampleID, "PfEMP1.Hits.fastq.gz", sep="."))
 	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 
-	if ( doSpades || !file.exists(contigFile)) {
+	if ( doSpades || !file.exists(contigsFastaFile)) {
 
 		# step 1:   gather all aligned reads that land in/near the vargene loci
 		if ( ! file.exists( alignedReadsFile)) {
@@ -61,8 +65,10 @@
 		}
 	
 		# step 2:  create contigs of anything that may be var gene reads
-		pipe.SpadesContigs( sampleID, fastqSource=fastqFiles, folderName="PfEMP1", keyword=keyword,
-					spades.path=spades.path, makePep=T)
+		spades.mode <- match.arg( spades.mode)
+		pipe.SpadesContigs( sampleID, fastqSource=fastqFiles, folderName="PfEMP1", 
+				spades.mode=spades.mode, kmerSizes=kmerSizes, spades.args=spades.args, 
+				spades.path=spades.path, keyword=keyword, makePep=T)
 
 		# cleanup SPAdes temp files
 		cleanupSpadesFiles( path=spades.output.path, verbose=F)
@@ -70,41 +76,53 @@
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
 	# we may have peptides that are now shorter than the minimun we want.
-	pepFA <- loadFasta( peptidesFile, short=T, verbose=F)
+	pepFA <- loadFasta( peptidesFastaFile, short=T, verbose=F)
 	len <- nchar( pepFA$seq)
 	drops <- which( len < min.aa.length)
 	if ( length( drops)) {
 		pepFA <- as.Fasta( pepFA$desc[-drops], pepFA$seq[-drops])
-		writeFasta( pepFA, peptidesFile, line=100)
+		writeFasta( pepFA, peptidesFastaFile, line=100)
 	}
 	NPEP <- length( pepFA$desc)
 
-	# step 3:  Throw those contigs as peptides against the given set of var gene proteins
+	# step 3:  Throw those contigs as peptides against the given set of full length var gene proteins
 	cat( "\n\nSearching Contigs for PfEMP1 constructs..")
 	proteinAns <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=vargeneFastaFile,
 				keyword=keyword, verbose=verbose)
-	drops <- which( proteinAns$ScorePerAA < min.score.per.aa)
-	if ( length( drops)) {
-		proteinAns <- proteinAns[ -drops, ]
-		# if we dropped some here, also remove those from the Peptides to search for domains
-		keep <- which( pepFA$desc %in% proteinAns$ContigID)
-		pepFA <- as.Fasta( pepFA$desc[keep], pepFA$seq[keep])
-		NPEP <- length( keep)
+	# visit each peptide's best match explicitly, and either drop, keep, and maybe trim
+	protDesc <- protSeq <- vector()
+	NPROT <- 0
+	for ( i in 1:nrow(proteinAns)) {
+		thisScore <- proteinAns$ScorePerAA[i]
+		if ( thisScore < min.score.per.aa) next
+		thisID <- proteinAns$ContigID[i]
+		where <- match( thisID, pepFA$desc, nomatch=0)
+		if ( ! where) next
+		NPROT <- NPROT + 1
+		protDesc[NPROT] <- thisID
+		protSeq[NPROT] <- pepFA$seq[where]
+		# see if we should trim any untranslated UTR from the peptide
+		thisProtStart <- proteinAns$ProteinStart[i]
+		if ( thisProtStart < 1) protSeq[NPROT] <- substring( protSeq[NPROT], abs(thisProtStart)+1)
+	}
+	if (NPROT) {
+		protFA <- as.Fasta( protDesc, protSeq)
+		writeFasta( protFA, proteinsFastaFile, line=100)
 	}
 
 	# at this point, we have a small chance that none look like var genes
 	out1 <- proteinAns
-	if ( ! NPEP) {
-		write.table( out1, proteinsFile, sep="\t", quote=F, row.names=F)
+	if ( ! NPROT) {
+		write.table( out1, proteinsTextFile, sep="\t", quote=F, row.names=F)
 		return( invisible( out1))
 	}
 
 	# step 4:  find the var gene domains for each
 	cat( "\n\nFinding PfEMP1 Domains..\n")
-	domStrs <- cassStrs <- rep.int( "", NPEP)
-	domainAns <- multicore.lapply( 1:NPEP, function(x) {
-				mySeq <- pepFA$seq[x]
-				myDesc <- pepFA$desc[x]
+	domStrs <- cassStrs <- rep.int( "", NPROT)
+	domainAns <- multicore.lapply( 1:NPROT, function(x) {
+				mySeq <- protFA$seq[x]
+				myDesc <- protFA$desc[x]
 				domAns <- findVsaDomains( mySeq, keepVSApattern="3D7|DD2|HB3|IGH|IT4")
 				if ( ! nrow(domAns)) return(domAns)
 				# drop the domain columns we do not need
@@ -133,14 +151,21 @@
 	}
 	proteinAns$Domain.Architecture <- ""
 	proteinAns$Cassette.Architecture <- ""
-	whereProtein <- match( proteinAns$ContigID, pepFA$desc, nomatch=0)
+	whereProtein <- match( proteinAns$ContigID, protFA$desc, nomatch=0)
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
 	out1 <- proteinAns
 
-	# write out the file of domain details, and rewrite the proteins file with the new extra architecture info
-	write.table( out2, domainsFile, sep="\t", quote=F, row.names=F)
-	write.table( out1, proteinsFile, sep="\t", quote=F, row.names=F)
+	# rewrite the proteins file with the new extra architecture info
+	write.table( out1, proteinsTextFile, sep="\t", quote=F, row.names=F)
+	# write out the file of domain details, and also write the domains as fasta too
+	if ( nrow(out2)) {
+		write.table( out2, domainsTextFile, sep="\t", quote=F, row.names=F)
+		domDesc <- paste( out2$CONTIG_ID, out2$DOMAIN_ID, sep="_")
+		domSeq <- out2$QUERY_SEQ
+		domFA <- as.Fasta( domDesc, domSeq)
+		writeFasta( domFA, domainsFastaFile, line=100)
+	}
 	return( invisible( out1))
 }
 
@@ -167,12 +192,12 @@
 
 	# path for all results
 	velvet.output.path <- file.path( results.path, "VelvetContigs", sampleID, "PfEMP1")
-	contigFile <- file.path( velvet.output.path, "contigs.fa")
-	peptidesFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
-	domainsFile <- file.path( velvet.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
+	contigsFastaFile <- file.path( velvet.output.path, "contigs.fa")
+	peptidesFastaFile <- file.path( velvet.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
+	domainsTextFile <- file.path( velvet.output.path, paste( sampleID, keyword, "DomainDetails.txt", sep="."))
 	
 	# remove any files we know we will remake
-	if (doVelvet) file.delete( c( contigFile, peptidesFile, domainsFile))
+	if (doVelvet) file.delete( c( contigsFastaFile, peptidesFastaFile, domainsTextFile))
 
 	# get the universe of PfEMP1 var genes
 	vargeneDomainMap <- getVargeneDomainMap()
@@ -184,7 +209,7 @@
 	kmerSizeCutadapt <- max( kmerSize, na.rm=T)
 
 	min.dna.length <- (min.aa.length - 1) * 3
-	if ( doVelvet || !file.exists(contigFile)) {
+	if ( doVelvet || !file.exists(contigsFastaFile)) {
 
 		# step 1:   gather all aligned reads that land in/near the vargene loci
 		if ( ! file.exists( alignedReadsFile)) {
@@ -213,12 +238,12 @@
 	}
 
 	# because of reading frame and stop codon trimming, we may have peptides that are now shorter than the minimun we want.
-	pepFA <- loadFasta( peptidesFile, short=F)
+	pepFA <- loadFasta( peptidesFastaFile, short=F)
 	len <- nchar( pepFA$seq)
 	drops <- which( len < min.aa.length)
 	if ( length( drops)) {
 		pepFA <- as.Fasta( pepFA$desc[-drops], pepFA$seq[-drops])
-		writeFasta( pepFA, peptidesFile, line=100)
+		writeFasta( pepFA, peptidesFastaFile, line=100)
 	}
 	NPEP <- length( pepFA$desc)
 
@@ -246,7 +271,7 @@
 	where <- match( ans$ContigID, pepFA$desc)
 	ansDomStr <- domainString[ where]
 	out <- cbind( ans[,1:2], "Domain.Architecture"=ansDomStr, ans[,3:ncol(ans)], stringsAsFactors=F)
-	write.table( out, domainsFile, sep="\t", quote=F, row.names=F)
+	write.table( out, domainsTextFile, sep="\t", quote=F, row.names=F)
 	return( invisible( out))
 }
 
@@ -264,7 +289,7 @@
 		contigSubfolder="Vargenes", cex=1.0, col=3, pos=NULL, min.length=200) {
 
 	velvetPath <- file.path( results.path, "VelvetContigs", sampleID, contigSubfolder)
-	contigFile <- file.path( velvetPath, "contigs.fa")
+	contigsFastaFile <- file.path( velvetPath, "contigs.fa")
 	bestHitFile <- file.path( velvetPath, "Pf.BestBlastHit.csv")
 	hits <- read.csv( bestHitFile, as.is=T)
 
@@ -295,7 +320,7 @@
 	who <- 1:nrow(hits)
 
 	# got at least one, so load the contigs
-	fa <- loadFasta( contigFile)
+	fa <- loadFasta( contigsFastaFile)
 
 	# keep track of how 'deep' we have contigs on the plot
 	topdepth <- rep.int( 0, NX)
@@ -417,12 +442,12 @@
 `interestingContigs` <- function( sampleID, results.path=file.path( resultsPath, "VelvetContigs"), min.bases=5) {
 
 	velvetPath <- file.path( results.path, sampleID)
-	contigFile <- file.path( velvetPath, "contigs.fa")
+	contigsFastaFile <- file.path( velvetPath, "contigs.fa")
 	bestHitFile <- file.path( velvetPath, "Pf.BestBlastHit.csv")
 	hits <- read.csv( bestHitFile, as.is=T)
 
 	# load the contigs
-	fa <- loadFasta( contigFile)
+	fa <- loadFasta( contigsFastaFile)
 	contigLens <- nchar( fa$seq)
 
 	# visit each, and see if there is some fragment of the contig that Blast couldn't align well
