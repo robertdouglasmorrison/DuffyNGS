@@ -72,7 +72,8 @@
 
 		# cleanup SPAdes temp files
 		cleanupSpadesFiles( path=spades.output.path, verbose=F)
-	}
+	} else {
+		cat( "\n\nUsing previously calculated Spades contigs..\n\n")
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
 	# we may have peptides that are now shorter than the minimun we want.
@@ -103,11 +104,12 @@
 		protSeq[NPROT] <- pepFA$seq[where]
 		# see if we should trim any untranslated UTR from the peptide
 		thisProtStart <- proteinAns$ProteinStart[i]
-		if ( thisProtStart < 1) protSeq[NPROT] <- substring( protSeq[NPROT], abs(thisProtStart)+1)
+		if ( thisProtStart < 1) protSeq[NPROT] <- substring( protSeq[NPROT], abs(thisProtStart)+2)
 	}
 	if (NPROT) {
 		protFA <- as.Fasta( protDesc, protSeq)
 		writeFasta( protFA, proteinsFastaFile, line=100)
+		cat( "\nWrote", NPROT, "PfEMP1 proteins as FASTA to: ", basename(proteinsFastaFile))
 	}
 
 	# at this point, we have a small chance that none look like var genes
@@ -118,7 +120,7 @@
 	}
 
 	# step 4:  find the var gene domains for each
-	cat( "\n\nFinding PfEMP1 Domains..\n")
+	cat( "\n\nSearching for PfEMP1 Domains..\n")
 	domStrs <- cassStrs <- rep.int( "", NPROT)
 	domainAns <- multicore.lapply( 1:NPROT, function(x) {
 				mySeq <- protFA$seq[x]
