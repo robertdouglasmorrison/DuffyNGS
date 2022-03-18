@@ -73,7 +73,7 @@
 		# cleanup SPAdes temp files
 		cleanupSpadesFiles( path=spades.output.path, verbose=F)
 	} else {
-		cat( "\n\nUsing previously calculated Spades contigs..\n\n")
+		cat( "\n\nUsing previously calculated Spades contigs..\n")
 	}
 
 	# because of reading frame and stop codon trimming, and that SPAdes has no length cutoff,
@@ -184,7 +184,7 @@
 	N <- length( sampleIDset)
 	cat( "\nChecking", N, "folders of Spades results..")
 
-	domainTextFiles <- domainFastFiles <- proteinTextFiles <- proteinFastaFiles <- vector()
+	domainTextFiles <- domainFastaFiles <- proteinTextFiles <- proteinFastaFiles <- vector()
 	for ( i in 1:N) {
 		thisSID <- sampleIDset[i]
 		this.path <- file.path( spades.path, thisSID, keyword)
