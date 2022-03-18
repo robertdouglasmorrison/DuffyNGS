@@ -226,7 +226,7 @@
 
 	cat( "\nGathering Protein FASTA..\n")
 	desc <- seq <- vector()
-	proteinFile <- "VargeneContigs.PfEMP1.Protein.fasta"
+	proteinFile <- "VargeneContigs.PfEMP1.Proteins.fasta"
 	for ( f in proteinFastaFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
@@ -241,7 +241,7 @@
 
 	cat( "\nGathering Domain FASTA..\n")
 	desc <- seq <- vector()
-	domainFile <- "VargeneContigs.PfEMP1.Protein.fasta"
+	domainFile <- "VargeneContigs.PfEMP1.Domains.fasta"
 	for ( f in domainFastaFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
