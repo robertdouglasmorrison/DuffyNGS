@@ -229,7 +229,7 @@
 	for ( f in proteinFastaFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
-		sml <- loadFasta( f, short=F)
+		sml <- loadFasta( f, short=F, verbose=F)
 		cat( "\r", basename(f), " ", length(sml$desc))
 		if ( ! length(sml$desc)) next
 		desc <- c( desc, sml$desc)
@@ -244,7 +244,7 @@
 	for ( f in domainFastaFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
-		sml <- loadFasta( f, short=F)
+		sml <- loadFasta( f, short=F, verbose=F)
 		cat( "\r", basename(f), " ", length(sml$desc))
 		if ( ! length(sml$desc)) next
 		desc <- c( desc, sml$desc)
