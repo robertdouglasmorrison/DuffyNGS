@@ -14,12 +14,6 @@
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
 
-	# verify we see the denovo tool executable location
-	if ( spades.path == "") {
-		cat( "\nError:  path to SPAdes executable program not found..")
-		return(NULL)
-	}
-
 	# make sure the reference file of var genes is readable
 	if ( ! file.exists( vargeneFastaFile)) {
 		cat( "\nError: 'vargeneFastaFile' of reference proteins not found: ", vargeneFastaFile)
@@ -46,6 +40,12 @@
 	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
 
 	if ( doSpades || !file.exists(contigsFastaFile)) {
+
+		# verify we see the denovo tool executable location
+		if ( spades.path == "") {
+			cat( "\nError:  path to SPAdes executable program not found..")
+			return(NULL)
+		}
 
 		# step 1:   gather all aligned reads that land in/near the vargene loci
 		if ( ! file.exists( alignedReadsFile)) {
@@ -170,6 +170,59 @@
 		writeFasta( domFA, domainsFastaFile, line=100)
 	}
 	return( invisible( out1))
+}
+
+
+`pipe.VargeneContigSummary.Spades` <- function( sampleIDset, optionsFile="Options.txt", 
+						results.path=NULL, keyword="PfEMP1") {
+
+	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
+				notfound=".", verbose=F)
+
+	# gather up all the vargene contig files for the named samples
+	spades.path <- file.path( results.path, "SpadesContigs")
+	N <- length( sampleIDset)
+	cat( "\nChecking", N, "folders of Spades results..")
+
+	domainTextFiles <- domainFastFiles <- proteinTextFiles <- proteinFastaFiles <- vector()
+	for ( i in 1:N) {
+		thisSID <- sampleIDset[i]
+		this.path <- file.path( spades.path, thisSID, keyword)
+		if ( ! file.exists(this.path)) next
+		domainTextFiles[i] <- file.path( this.path, paste( thisSID, keyword, "DomainDetails.txt", sep="."))
+		proteinTextFiles[i] <- file.path( this.path, paste( thisSID, keyword, "BestProteinHits.txt", sep="."))
+		domainFastaFiles[i] <- file.path( this.path, paste( thisSID, keyword, "Domains.fasta", sep="."))
+		proteinFastaFiles[i] <- file.path( this.path, paste( thisSID, keyword, "Proteins.fasta", sep="."))
+	}
+
+	cat( "\nGathering Best Protein Hits..\n")
+	protDF <- data.frame()
+	proteinFile <- "VargeneContigs_BestProteinHits.txt"
+	for ( f in proteinTextFiles) {
+		if ( is.na(f)) next
+		if ( ! file.exists(f)) next
+		sml <- read.delim( f, as.is=T)
+		cat( "\r", basename(f), " ", nrow(sml))
+		if ( ! nrow(sml)) next
+		protDF <- rbind( protDF, sml)
+	}
+	write.table( protDF, proteinFile, sep="\t", quote=F, row.names=F)
+	cat( "\nWrote: ", proteinFile, " \tN_Protein_Hits: ", nrow(protDF))
+
+	cat( "\nGathering Domain Details..\n")
+	domDF <- data.frame()
+	domainFile <- "VargeneContigs_DomainDetails.txt"
+	for ( f in domainTextFiles) {
+		if ( is.na(f)) next
+		if ( ! file.exists(f)) next
+		sml <- read.delim( f, as.is=T)
+		cat( "\r", basename(f), " ", nrow(sml))
+		if ( ! nrow(sml)) next
+		domDF <- rbind( domDF, sml)
+	}
+	write.table( domDF, domainFile, sep="\t", quote=F, row.names=F)
+	cat( "\nWrote: ", domainFile, " \tN_Domain_Hits: ", nrow(domDF))
+
 }
 
 
