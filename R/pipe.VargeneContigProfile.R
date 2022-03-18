@@ -114,10 +114,11 @@
 	}
 
 	# at this point, we have a small chance that none look like var genes
-	out1 <- proteinAns
 	if ( ! NPROT) {
-		write.table( out1, proteinsTextFile, sep="\t", quote=F, row.names=F)
-		return( invisible( out1))
+		proteinAns$Domain.Architecture <- ""
+		proteinAns$Cassette.Architecture <- ""
+		write.table( proteinAns, proteinsTextFile, sep="\t", quote=F, row.names=F)
+		return( invisible( proteinAns))
 	}
 
 	# step 4:  find the var gene domains for each
@@ -157,10 +158,9 @@
 	whereProtein <- match( proteinAns$ContigID, protFA$desc, nomatch=0)
 	proteinAns$Domain.Architecture[ whereProtein > 0] <- domStrs[ whereProtein]
 	proteinAns$Cassette.Architecture[ whereProtein > 0] <- cassStrs[ whereProtein]
-	out1 <- proteinAns
 
 	# rewrite the proteins file with the new extra architecture info
-	write.table( out1, proteinsTextFile, sep="\t", quote=F, row.names=F)
+	write.table( proteinAns, proteinsTextFile, sep="\t", quote=F, row.names=F)
 	# write out the file of domain details, and also write the domains as fasta too
 	if ( nrow(out2)) {
 		write.table( out2, domainsTextFile, sep="\t", quote=F, row.names=F)
@@ -169,7 +169,7 @@
 		domFA <- as.Fasta( domDesc, domSeq)
 		writeFasta( domFA, domainsFastaFile, line=100)
 	}
-	return( invisible( out1))
+	return( invisible( proteinAns))
 }
 
 
