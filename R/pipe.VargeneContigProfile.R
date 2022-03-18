@@ -115,6 +115,7 @@
 
 	# at this point, we have a small chance that none look like var genes
 	if ( ! NPROT) {
+		cat( "\nNo peptides look like PfEMP1 proteins..")
 		proteinAns$Domain.Architecture <- ""
 		proteinAns$Cassette.Architecture <- ""
 		write.table( proteinAns, proteinsTextFile, sep="\t", quote=F, row.names=F)
