@@ -197,7 +197,7 @@
 
 	cat( "\nGathering Best Protein Hits..\n")
 	protDF <- data.frame()
-	proteinFile <- "VargeneContigs_BestProteinHits.txt"
+	proteinFile <- "VargeneContigs.PfEMP1.BestProteinHits.txt"
 	for ( f in proteinTextFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
@@ -211,7 +211,7 @@
 
 	cat( "\nGathering Domain Details..\n")
 	domDF <- data.frame()
-	domainFile <- "VargeneContigs_DomainDetails.txt"
+	domainFile <- "VargeneContigs.PfEMP1.DomainDetails.txt"
 	for ( f in domainTextFiles) {
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
@@ -223,6 +223,37 @@
 	write.table( domDF, domainFile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote: ", domainFile, " \tN_Domain_Hits: ", nrow(domDF))
 
+	cat( "\nGathering Protein FASTA..\n")
+	desc <- seq <- vector()
+	proteinFile <- "VargeneContigs.PfEMP1.Protein.fasta"
+	for ( f in proteinFastaFiles) {
+		if ( is.na(f)) next
+		if ( ! file.exists(f)) next
+		sml <- loadFasta( f, short=F)
+		cat( "\r", basename(f), " ", length(sml$desc))
+		if ( ! length(sml$desc)) next
+		desc <- c( desc, sml$desc)
+		seq <- c( seq, sml$seq)
+	}
+	writeFasta( as.Fasta( desc, seq), proteinFile, line=100)
+	cat( "\nWrote: ", proteinFile, " \tN_Proteins: ", length(desc))
+
+	cat( "\nGathering Domain FASTA..\n")
+	desc <- seq <- vector()
+	domainFile <- "VargeneContigs.PfEMP1.Protein.fasta"
+	for ( f in domainFastaFiles) {
+		if ( is.na(f)) next
+		if ( ! file.exists(f)) next
+		sml <- loadFasta( f, short=F)
+		cat( "\r", basename(f), " ", length(sml$desc))
+		if ( ! length(sml$desc)) next
+		desc <- c( desc, sml$desc)
+		seq <- c( seq, sml$seq)
+	}
+	writeFasta( as.Fasta( desc, seq), domainFile, line=100)
+	cat( "\nWrote: ", domainFile, " \tN_Domains: ", length(desc))
+
+	return( N)
 }
 
 
