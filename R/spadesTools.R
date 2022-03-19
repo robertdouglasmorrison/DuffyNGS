@@ -137,7 +137,7 @@
 
 	out <- data.frame( "ContigID"=peptides$desc, "AA.Length"=nchar(peptides$seq), "Best.Match.ProteinID"=gid, "Score"=score, 
 			"ScorePerAA"=round(scorepaa,digits=3), "ProteinStart"=starts, "ProteinStop"=stops, 
-			"EditDistance"=editdist, "Weight"=weight, stringsAsFactors=F)
+			"EditDistance"=editdist, "Weight"=round(weight,digits=3), stringsAsFactors=F)
 	drops <- which( is.na( out$Score))
 	if ( length(drops)) out <- out[ -drops, ]
 
