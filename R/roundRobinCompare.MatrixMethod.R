@@ -496,6 +496,15 @@
 				return()
 			})
 
+		# note that TPM units by definition should sum to 1 million.  Averaging can distort that,
+		# so restore that by hand
+		if ( grepl( "TPM", toupper(units))) {
+			for ( i in 1:ngrps) {
+				v <- grpM[ , i]
+				grpM[ , i] <- v * 1000000 / sum(v,na.rm=T)
+			}
+		}
+
 		# Write out the average transcript for each group
 		for ( i in 1:ngrps) {
 			smlDF <- data.frame( "GENE_ID"=refGeneIDs, "PRODUCT"=refProds, "RPKM"=round(grpM[,i],digits=4), 
