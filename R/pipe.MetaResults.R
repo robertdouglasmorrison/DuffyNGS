@@ -135,7 +135,7 @@
 		out$AVG_RANK <- round( out$AVG_RANK, digits=2)
 
 		if (addCellTypes) {
-			cellType <- gene2CellType( out$GENE_ID)
+			cellType <- gene2CellType( out$GENE_ID, max.types=5)
 			out <- cbind( out[,1:2], "CellType"=cellType, out[,3:ncol(out)], stringsAsFactors=F)
 		} else if (addLifeCycle) {
 			lifeCycle <- gene2LifeCycle( out$GENE_ID)

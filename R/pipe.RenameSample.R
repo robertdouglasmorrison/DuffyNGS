@@ -31,7 +31,7 @@
 			"transcript", "wig", "AlignStats", "USR", "VariantCalls", 
 			"VelvetContigs", "VelvetPeptides", "CR", "HLA.typing", "HLA.ProteinCalls", 
 			"ConsensusProteins", "CellTypeProportions", "BarcodeMotifs", "SieveAnalysis", 
-			"Viral.BAMS", "LineageCalls")
+			"TargetSearch", "Viral.BAMS", "LineageCalls", "SpadesContigs")
 	dataType <- getAnnotationValue( annotationFile, key=sampleID, columnArg="DataType", notfound="RNA-seq")
 	if ( dataType == "ChIP-seq") subfolders <- c( subfolders, "ChIPpeaks")
 
