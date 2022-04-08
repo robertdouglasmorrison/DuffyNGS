@@ -240,7 +240,6 @@
 	    fileout <- file.path( metaPath, fileout)
 	    outDF <- rbind( outUP, outDOWN)
 	    write.table( outDF, fileout, sep="\t", quote=F, row.names=F)
-	    rm( outDF)
 
 	    # also make 2 new plot types that use this JOINED result type
 	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, "\nComparison Folder: ", folderName)
@@ -260,8 +259,9 @@
 	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
 	    	dev.print( pdf, plotfile, width=12)
 		# perhaps write some extra content about the volcaco cell clusters
-		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout)
+		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF)
 	    }
+	    rm( outDF)
 	}  # for the groups
 
 	# copy all the gene plots to this new results location
