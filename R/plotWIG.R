@@ -1501,8 +1501,8 @@ dashedLine <- function( xb, xe, y, ...) {
 		# make sure its a safe name
 		file <- file.cleanSpecialCharactersFromFileName( file)
 		f <- file.path( path, file)
-		png( filename=f, width=1000, height=700, bg="white")
-
+		# plot type decided by new options.txt based setttings, here is now generic
+		openPlot( f, bg="white")
 		if ( is.null( PLOT.FUN)) {
 			plotWIGgene( WIG, gene=g, tailWidth=tailWidth, plotType=plotType, label=label, minYmax=minYmax,
 				useLog=useLog, altGeneMap=altGeneMap, ...)
@@ -1570,8 +1570,8 @@ dashedLine <- function( xb, xe, y, ...) {
 		# make sure its a safe name
 		file <- file.cleanSpecialCharactersFromFileName( file)
 		f <- file.path( path, file)
-		png( filename=f, width=1000, height=700, bg="white")
-
+		# plot type decided by new options.txt based setttings, here is now generic
+		openPlot( f, bg="white")
 		if ( ! is.null( PLOT.FUN)) {
 			PLOT.FUN(g)
 		} else {

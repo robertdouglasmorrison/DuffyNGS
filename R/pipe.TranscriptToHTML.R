@@ -37,6 +37,10 @@
 		resultsPath <- results.path
 	}
 
+	# get plot type
+	dev.type <- getPlotDeviceType( optT)
+	dev.exg <- paste( ".", dev.type, sep="")
+
 	# get the Wiggle data
 	fileWIG <- paste( sampleID, speciesPrefix, "WIG.rda", sep=".")
 	fileWIG <- file.path( resultsPath, "wig", fileWIG)
@@ -66,10 +70,10 @@
 	theseGenes <- thisTrans$GENE_ID[ 1:NtoShow]
 
 	# make a subfolder for the plots
-	pngFolder <- linkPngFolder <- paste( sampleID, speciesPrefix, "png_Plots", sep=".")
+	pngFolder <- linkPngFolder <- paste( sampleID, speciesPrefix, "pngPlots", sep=".")
 	if ( ! is.null(altGeneMap)) {
 		pngFolder <- linkPngFolder <- paste( sampleID, speciesPrefix, altGeneMapLabel, 
-							"png_Plots", sep=".")
+							"pngPlots", sep=".")
 	}
 	pngFolder <- file.path( resultsPath, "html", pngFolder)
 	if ( ! file.exists( pngFolder)) dir.create( pngFolder, recursive=TRUE, showWarnings=FALSE)
@@ -89,13 +93,14 @@
 	colnames(thisTrans)[firstCol:NC] <- gsub( "_", " ", colnames(thisTrans)[firstCol:NC], fixed=T)
 	colnames(thisTrans)[firstCol:NC] <- gsub( ".", " ", colnames(thisTrans)[firstCol:NC], fixed=T)
 			
-	table2html( thisTrans[ 1:NtoShow, ], fileout=htmlFile, title=title, linkPaths=linkPngFolder)
+	table2html( thisTrans[ 1:NtoShow, ], fileout=htmlFile, title=title, linkPaths=linkPngFolder,
+			linkExtensions=dev.ext)
 
 	# nom make those individual plots
 	cat( "\nMaking gene plots of top ", NtoShow, " genes.")
 	makeAllWIGgenePlots( thisWIG, geneSet=theseGenes, path=pngFolder, tailWidth=tailWidth,  
 			plotType=plotType, minYmax=minYmax, useLog=useLog, label=label, 
-			altGeneMap=altGeneMap, pause=pause, PLOT.FUN=PLOT.FUN, ...)
+			altGeneMap=altGeneMap, pause=pause, fileExtension=dev.type, PLOT.FUN=PLOT.FUN, ...)
 	
 	} # end of all speciesIDs...
 

@@ -46,7 +46,7 @@
 
 		makeAllMultiWIGgenePlots( WIGlist, colorset, genes, path=pngFolder, tailWidth=tailWidth, 
 				label=label, geneNameColumn=geneNameColumn, useLog=useLog, minYmax=minYmax,
-				PLOT.FUN=PLOT.FUN, ...)
+				fileExtension=dev.type, PLOT.FUN=PLOT.FUN, ...)
 
 		# now save some global data for adding extra gene plots later...
 		GPLOT_WIGlist <<- WIGlist
