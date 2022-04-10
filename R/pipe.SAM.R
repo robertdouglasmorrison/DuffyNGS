@@ -108,7 +108,7 @@
 
 	# ready to do the SAM...
 	genesToPlot <- vector()
-	dev.type <- getPlotDeviceType( opt)
+	dev.type <- getPlotDeviceType( optT)
 
 	if (doDE) {
 	    cat( "\n\nLoading Transcriptomes..")
