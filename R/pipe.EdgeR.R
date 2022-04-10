@@ -296,7 +296,7 @@
 		if ( is.null( RP_altGeneMapLabel)) {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName,
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-			plotFile <- file.path( RP_path, paste( RP_prefix,"Cluster",funcName[i], dev.type, ,sep="."))
+			plotFile <- file.path( RP_path, paste( RP_prefix,"Cluster",funcName[i], dev.type, sep="."))
 		} else {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName, 
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
