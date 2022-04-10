@@ -341,7 +341,7 @@
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 
 		cat( "\nMaking cluster plot: ", plotFile)
-		openPlot( plotFile)
+		openPlot( plotFile, bg='white')
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 		dev.off()
 	    }
@@ -351,7 +351,7 @@
 				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 		plotFile <- file.path( RP_path, paste( RP_prefix,"PCA", dev.type, sep="."))
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
-		openPlot( plotFile)
+		openPlot( plotFile, bg='white')
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
 		dev.off()
 
