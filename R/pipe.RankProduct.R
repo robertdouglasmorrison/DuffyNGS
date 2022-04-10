@@ -118,6 +118,7 @@
 	# ready to do the Rank Product...
 	genesToPlot <- vector()
 	htmlPath <- RP_path
+	dev.type <- getPlotDeviceType( optT)
 
 	if (doDE) {
 
@@ -327,20 +328,20 @@
 		if ( is.null( RP_altGeneMapLabel)) {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName,
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-			pngFile <- file.path( RP_path, paste( RP_prefix,"Cluster",funcName[i],"png",sep="."))
+			plotFile <- file.path( RP_path, paste( RP_prefix,"Cluster",funcName[i], dev.type, sep="."))
 		} else {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName, 
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 					"    using geneMap:  ", RP_altGeneMapLabel)
-			pngFile <- file.path( RP_path, paste( RP_prefix, RP_altGeneMapLabel, 
-					"Cluster", funcName[i], "png", sep="."))
+			plotFile <- file.path( RP_path, paste( RP_prefix, RP_altGeneMapLabel, 
+					"Cluster", funcName[i], dev.type, sep="."))
 		}
 
 		clusterAns <- expressionCluster( tm, useLog=TRUE, FUN=func[[i]])
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 
-		cat( "\nMaking cluster plot: ", pngFile)
-		png( filename=pngFile, width=1000, height=700, bg="white")
+		cat( "\nMaking cluster plot: ", plotFile)
+		openPlot( plotFile)
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 		dev.off()
 	    }
@@ -348,9 +349,9 @@
 	    # PCA plot too...
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
 				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-		pngFile <- file.path( RP_path, paste( RP_prefix,"PCA.png",sep="."))
+		plotFile <- file.path( RP_path, paste( RP_prefix,"PCA", dev.type, sep="."))
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
-		png( filename=pngFile, width=800, height=800, bg="white")
+		openPlot( plotFile)
 		matrix.PCAplot( tm, main=pltText, col=RP_colors)
 		dev.off()
 

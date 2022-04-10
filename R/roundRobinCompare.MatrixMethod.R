@@ -127,7 +127,8 @@
 
 	# and grow the list of genes that were DE enough to get plotted for the HTML results
 	genesToPlot <- vector()
-
+	dev.type <- getPlotDeviceType( optionsFile)
+	dev.ext <- paste( ".", dev.type, sep="")
 
 
 	# local functions to do the Round Robin...
@@ -557,18 +558,18 @@
 				if ( is.null( RR_altGeneMapLabel)) {
 					pltText <- paste( "Transcriptome Clustering:   ", folderName,
 							"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-					pngFile <- file.path( RR_path, paste( RR_prefix,"Cluster",funcName[i],"png",sep="."))
+					plotFile <- file.path( RR_path, paste( RR_prefix,"Cluster",funcName[i], dev.type, sep="."))
 				} else {
 					pltText <- paste( "Transcriptome Clustering:   ", folderName, 
 							"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 							"    using geneMap:  ", RR_altGeneMapLabel)
-					pngFile <- file.path( RR_path, paste( RR_prefix, RR_altGeneMapLabel, 
-							"Cluster", funcName[i], "png", sep="."))
+					plotFile <- file.path( RR_path, paste( RR_prefix, RR_altGeneMapLabel, 
+							"Cluster", funcName[i], dev.type, sep="."))
 				}
 				clusterAns <- expressionCluster( tm, useLog=TRUE, FUN=func[[i]])
 				plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
-				cat( "\nMaking cluster plot: ", pngFile)
-				png( filename=pngFile, width=1000, height=700, bg="white")
+				cat( "\nMaking cluster plot: ", plotFile)
+				openPlot( plotFile, bg="white")
 				plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 				dev.off()
 	    		}
@@ -582,9 +583,9 @@
 			pcaColors[ wh > 0] <- annT[[colorColumn]][wh]
 			pltText <- paste( "Transcriptome PCA:   ", folderName,
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-			pngFile <- file.path( RR_path, paste( RR_prefix,"PCA.png",sep="."))
+			plotFile <- file.path( RR_path, paste( RR_prefix, "PCA", dev.type, sep="."))
 			matrix.PCAplot( tm, main=pltText, col=pcaColors)
-			png( filename=pngFile, width=800, height=800, bg="white")
+			openPlot( plotFile, bg="white")
 			matrix.PCAplot( tm, main=pltText, col=pcaColors)
 			dev.off()
 		} else {

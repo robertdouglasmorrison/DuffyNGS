@@ -276,12 +276,11 @@
 					significance.scaling=significance.scaling, ...)
 
 	# if we did plot, decide what to call it...
+	dev.type <- getPlotDeviceType( optT)
 	levelString <- paste( levels, collapse=".v.")
 	if ( length(levels) > 3) levelString <- paste( paste( levels[1:3], collapse=".v."), ".v.etc", sep="")
-	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.png", sep="")
-	dev.print( png, file.path( celltype.path, plotFile), width=900)
-	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.pdf", sep="")
-	dev.print( pdf, file.path( celltype.path, plotFile), width=12)
+	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.", dev.type, sep="")
+	printPlot( file.path( celltype.path, plotFile))
 
 	# package up the final details
 	out <- vector( mode="list")

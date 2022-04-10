@@ -24,6 +24,10 @@
 	pngFolder <- file.path( html.path, pngFolder)
 	if ( ! file.exists( pngFolder)) dir.create( pngFolder, recursive=T, showWarnings=F)
 
+	# new plot printing
+	dev.type <- getPlotDeviceType()
+	dev.ext <- paste( ".", dev.type, sep="")
+
 	if ( ! is.null( geneDF)) {
 
 		# limit the HTML table and plots to the top N genes
@@ -33,7 +37,7 @@
 	
 		# OK make the HTML file
 		htmlFile <- file.path( html.path, htmlFile)
-		table2html( geneDF, fileout=htmlFile, title=title, linkPaths=linkPngFolder)
+		table2html( geneDF, fileout=htmlFile, title=title, linkPaths=linkPngFolder, linkExtensions=dev.ext)
 	}
 
 	# now make those individual plots
@@ -68,7 +72,9 @@
 
 	# we can skip over plots that are already done, to save a bit of time
 	nIn <- length( genesToPlot)
-	doneGenes <- sub( ".png", "", dir( GPLOT_path), fixed=T)
+	dev.type <- getPlotDeviceType()
+	dev.ext.patt <- paste( ".", dev.type, "$", sep="")
+	doneGenes <- sub( dev.ext.patt, "", dir( GPLOT_path), fixed=T)
 	genesToPlot <- sort( setdiff( genesToPlot, doneGenes))
 	nNow <- length( genesToPlot)
 	cat( "     skipping ", (nIn-nNow), "already made...")

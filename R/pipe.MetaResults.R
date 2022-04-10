@@ -94,6 +94,8 @@
 	metaPath <- file.path( results.path, "MetaResults", paste( prefix, folderName, sep="."))
 	if ( ! file.exists( metaPath)) dir.create( metaPath, recursive=TRUE)
 	pngPath <- "./pngPlots"
+	dev.type <- getPlotDeviceType( optT)
+	dev.ext <- paste( ".", dev.type, sep="")
 
 	flatSamples <- sort( unique( unlist( sampleIDset)))
 	annT2 <- subset( annT, SampleID %in% flatSamples)
@@ -228,7 +230,8 @@
 		}
 		N <- min( nrow( out), Ngenes)
 		htmlout <- sub( ".txt$", ".html", fileout)
-		metaResultsToHTML( out, htmlout, title, maxRows=N, linkColumnName="GENE_ID", linkPaths=pngPath)
+		metaResultsToHTML( out, htmlout, title, maxRows=N, linkColumnName="GENE_ID", linkPaths=pngPath,
+					linkExtensions=dev.ext)
 		rm( out)
 	    }  # for direction
 
@@ -245,19 +248,15 @@
 	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, "\nComparison Folder: ", folderName)
 	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    			label=mainText, marker.cex=0.7)
-	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.png", fileout)
-	    dev.print( png, plotfile, width=900)
-	    plotfile <- sub( "JOINED.txt$", "Gene.VolcanoPlot.pdf", fileout)
-	    dev.print( pdf, plotfile, width=12)
+	    plotfile <- sub( "JOINED.txt$", paste("Gene.VolcanoPlot",dev.ext,sep=""), fileout)
+	    printPlot( plotfile)
 
 	    if (addCellTypes) {
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering)
-	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.png", fileout)
-	    	dev.print( png, plotfile, width=900)
-	    	plotfile <- sub( "JOINED.txt$", "CellTypeCluster.VolcanoPlot.pdf", fileout)
-	    	dev.print( pdf, plotfile, width=12)
+	    	plotfile <- sub( "JOINED.txt$", paste("CellTypeCluster.VolcanoPlot",dev.ext,sep=""), fileout)
+	    	printPlot( plotfile)
 		# perhaps write some extra content about the volcaco cell clusters
 		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF)
 	    }
@@ -280,7 +279,7 @@
 			if (folder %in% c( "EdgeR", "DESeq")) next
 
 			pathFrom <- file.path( results.path, folder, paste( prefix, folderName, sep="."))
-			fset <- dir( pathFrom, pattern="(Cluster|PCA).+png$", full.name=T)
+			fset <- dir( pathFrom, pattern="(Cluster|PCA).+(png|psf)$", full.name=T)
 			if ( length(fset)) {
 				fout <- file.path( metaPath, basename(fset))
 				file.copy( fset, fout, overwrite=T)

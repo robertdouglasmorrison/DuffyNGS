@@ -108,6 +108,7 @@
 
 	# ready to do the SAM...
 	genesToPlot <- vector()
+	dev.type <- getPlotDeviceType( opt)
 
 	if (doDE) {
 	    cat( "\n\nLoading Transcriptomes..")
@@ -289,20 +290,20 @@
 		if ( is.null( SAM_altGeneMapLabel)) {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName,
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-			pngFile <- file.path( SAM_path, paste( SAM_prefix,"Cluster",funcName[i],"png",sep="."))
+			plotFile <- file.path( SAM_path, paste( SAM_prefix,"Cluster",funcName[i], dev.type, sep="."))
 		} else {
 			pltText <- paste( "Transcriptome Clustering:   ", folderName, 
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn,
 					"    using geneMap:  ", SAM_altGeneMapLabel)
-			pngFile <- file.path( SAM_path, paste( SAM_prefix, SAM_altGeneMapLabel, 
-					"Cluster", funcName[i], "png", sep="."))
+			plotFile <- file.path( SAM_path, paste( SAM_prefix, SAM_altGeneMapLabel, 
+					"Cluster", funcName[i], dev.type, sep="."))
 		}
 
 		clusterAns <- expressionCluster( tm, useLog=TRUE, FUN=func[[i]])
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 
-		cat( "\nMaking cluster plot: ", pngFile)
-		png( filename=pngFile, width=1000, height=700, bg="white")
+		cat( "\nMaking cluster plot: ", plotFile)
+		openPlot( plotFile)
 		plot( clusterAns, which=2, main=pltText, sub=subtitle[i], font=2)
 		dev.off()
 	    }
@@ -310,9 +311,9 @@
 	    # PCA plot too...
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
 				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
-		pngFile <- file.path( SAM_path, paste( SAM_prefix,"PCA.png",sep="."))
+		plotFile <- file.path( SAM_path, paste( SAM_prefix,"PCA", dev.type, sep="."))
 		matrix.PCAplot( tm, main=pltText, col=SAM_colors)
-		png( filename=pngFile, width=800, height=800, bg="white")
+		openPlot( plotFile)
 		matrix.PCAplot( tm, main=pltText, col=SAM_colors)
 		dev.off()
 
