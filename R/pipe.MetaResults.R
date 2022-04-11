@@ -245,6 +245,8 @@
 	    write.table( outDF, fileout, sep="\t", quote=F, row.names=F)
 
 	    # also make 2 new plot types that use this JOINED result type
+	    saveMAI <- par( 'mai')
+	    par( mai=c(1,1,0.8,0.4))
 	    mainText <- paste( "MetaResults:  Genes UP in group ", grp, "\nComparison Folder: ", folderName)
 	    plotFoldChange( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    			label=mainText, marker.cex=0.7)
@@ -260,6 +262,9 @@
 		# perhaps write some extra content about the volcaco cell clusters
 		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF)
 	    }
+	    par( mai=saveMAI)
+
+	    # clean up.  Done for this group.
 	    rm( outDF)
 	}  # for the groups
 
