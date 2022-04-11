@@ -9,7 +9,8 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=!interactive(), 
-				nSimulations=100, label="", doDE=TRUE, PLOT.FUN=NULL, forceMulticore=FALSE, ...)
+				nSimulations=100, label="", doDE=TRUE, PLOT.FUN=NULL, 
+				targetGroups=NULL, forceMulticore=FALSE, ...)
 {
 
 	if (verbose) {
@@ -267,6 +268,7 @@
 	
 	    # either do all the groups in a for loop, or parallel
 	    allGroups <- sort( unique( RP_groups))
+	    if ( ! is.null( targetGroups)) allGroups <- targetGroups
 	    if ( forceMulticore) {
 		mcAns <- multicore.lapply( allGroups, processOneRankProductGroup)
 		genesToPlot <- unlist( mcAns)
