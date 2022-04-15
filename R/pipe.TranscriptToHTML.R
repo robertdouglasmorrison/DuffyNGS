@@ -39,7 +39,7 @@
 
 	# get plot type
 	dev.type <- getPlotDeviceType( optT)
-	dev.exg <- paste( ".", dev.type, sep="")
+	dev.ext <- paste( ".", dev.type, sep="")
 
 	# get the Wiggle data
 	fileWIG <- paste( sampleID, speciesPrefix, "WIG.rda", sep=".")
