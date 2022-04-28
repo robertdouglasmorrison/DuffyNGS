@@ -10,7 +10,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
-				nFDRsimulations=0, gene.pct.clustering=2,
+				nFDRsimulations=0, gene.pct.clustering=1,
 				addCellTypes=(speciesID %in% MAMMAL_SPECIES), 
 				addLifeCycle=(speciesID %in% PARASITE_SPECIES), PLOT.FUN=NULL, ...)
 {
