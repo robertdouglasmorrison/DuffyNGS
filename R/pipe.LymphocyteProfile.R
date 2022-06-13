@@ -49,9 +49,9 @@
 	if (didVelvet || doIGBlast) {
 		cat( "\n\nSearching Contigs for B cell constructs..")
 		callIgBlast( fastafile=contigFile, outfile=blastOutFile, db="IG", organism="human", 
-					path="~/IgBlast", outfmt=7)
+					igblast.path="~/IgBlast", outfmt=19)
 	}
-	tbl <- readIgBlastOutput( infile=blastOutFile, m=7, min.blast.score=100)
+	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19, min.v.score=100)
 	summaryFile <- file.path( velvet.path, "IgBlast.IG.Summary.txt")
 	write.table( tbl, summaryFile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote IG Summary file: ", summaryFile)
@@ -68,9 +68,9 @@
 	if (didVelvet || doIGBlast) {
 		cat( "\n\nSearching Contigs for T cell constructs..")
 		callIgBlast( fastafile=contigFile, outfile=blastOutFile, db="TR", organism="human", 
-					path="~/IgBlast", outfmt=7)
+					igblast.path="~/IgBlast", outfmt=19)
 	}
-	tbl <- readIgBlastOutput( infile=blastOutFile, m=7, min.blast.score=100)
+	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19, min.v.score=100)
 	summaryFile <- file.path( velvet.path, "IgBlast.TCR.Summary.txt")
 	write.table( tbl, summaryFile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote TCR Summary file: ", summaryFile)
