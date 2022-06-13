@@ -46,14 +46,15 @@
 	}
 
 	# allow multi-threading
-	coresText <- if (is.null(cores)) "" else paste( "--cores", as.character(cores))
+	#coresText <- if (is.null(cores)) "" else paste( "--cores", as.character(cores))
 
 	# make that command line
 	if ( isPaired) {
-		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, coresText,
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, #coresText,
 				"-o", outfile1, "-p", outfile2, minLenTrimText, cutadaptArgs, file1, file2, sep=" ")
 	} else {
-		cmdLine <- paste( cutadaptProgram, "-a", adapt1, coresText, "-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, #coresText, 
+				"-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
 	}
 	catch.system( cmdLine)
 
