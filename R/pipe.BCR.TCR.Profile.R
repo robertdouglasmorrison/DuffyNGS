@@ -7,7 +7,7 @@
 				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=FALSE,
 				spades.mode=c("isolate","rna","meta"), kmerSizes=NULL, spades.args="", 
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="BCR.TCR", 
-				min.aa.length=90, max.aa.length=250, min.v.score=100, verbose=TRUE) {
+				min.aa.length=90, max.aa.length=250, min.score.per.aa=2, min.v.score=100, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
@@ -90,7 +90,7 @@
 	NPEP <- length( pepFA$desc)
 
 	# step 3:  Throw those contigs as peptides against the given set of full length TCR gene proteins
-	if ( ! is.null( bcrtcrFastaFile)) {
+	if ( ! is.null( bcrtcrFastaFile) && ! file.exists( proteinsTextFile)) {
 		cat( "\n\nSearching Contigs for BCR/TCR constructs..")
 		proteinAns <- bestSpadesProteins( sampleID, outpath=spades.output.path, proteinFastaFile=bcrtcrFastaFile,
 					keyword=keyword, verbose=verbose)
@@ -122,37 +122,49 @@
 			write.table( proteinAns, proteinsTextFile, sep="\t", quote=F, row.names=F)
 			return( invisible( proteinAns))
 		}
+	} else {
+		if ( file.exists( proteinsTextFile)) {
+			proteinAns <- read.delim( proteinsTextFile, as.is=T)
+			NPROT <- nrow( proteinAns)
+			protFA <- loadFasta( proteinsFastaFile)
+		}
 	}
 
 	# step 4:  call IgBlast
 	# at this point, we know which contigs are at least the correct length range, and perhap which look like example BCR/TCR,
 	# so we can narrow down the raw contigs to those most likely to be true BCR/TCR constructs
-	igblastOutputFile1 <- file.path( spades.output.path, "IgBlast.BCR.Results.txt")
-	igblastOutputFile2 <- file.path( spades.output.path, "IgBlast.TCR.Results.txt")
-	resultFile1 <- file.path( spades.output.path, paste( sampleID, "Final.BCR.Results.txt", sep="."))
-	resultFile2 <- file.path( spades.output.path, paste( sampleID, "Final.TCR.Results.txt", sep="."))
+	igblastOutputFile1 <- file.path( spades.output.path, "IgBlast.BCR.Output.txt")
+	igblastOutputFile2 <- file.path( spades.output.path, "IgBlast.TCR.Output.txt")
+	resultFile1 <- file.path( spades.output.path, paste( sampleID, "IgBlast.BCR.Final.Results.txt", sep="."))
+	resultFile2 <- file.path( spades.output.path, paste( sampleID, "IgBlast.TCR.Final.Results.txt", sep="."))
 
 	usableContigIDs <- pepFA$desc
-	if ( exists( proteinAns) && NPROT) usableContigIDs <- protFA$desc
-	usableContigIDs <- sub( "_FR[1:6]$", "", usableContigs)
-	contigsFA <- loadFasta( contigFastaFile)
-	keep <- which( contigFA$desc %in% usableContigIDs)
+	if ( exists( "proteinAns") && NPROT) usableContigIDs <- protFA$desc
+	usableContigIDs <- sub( "_FR[1:6]$", "", usableContigIDs)
+	contigsFA <- loadFasta( contigsFastaFile)
+	keep <- which( contigsFA$desc %in% usableContigIDs)
+	if ( ! length(keep)) {
+		# small chance that the descriptor lines have different suffixes, strip down and retest
+		contigDesc <- sub( "(NODE_[0-9]+)(_.+)", "\\1", contigsFA$desc)
+		usableContigIDs <- sub( "(.+_)(NODE_[0-9]+)(_.+)", "\\2", usableContigIDs)
+		keep <- which( contigDesc %in% usableContigIDs)
+	}
 	if ( ! length(keep)) {
 		cat( "\n  Warning: no contigs look like BCR/TCR sequences. Not calling IgBlast.")
 		file.delete( c( resultFile1, resultFile2))
 		return(NULL)
 	}
-	igblastFA <- as.Fasta( contigFA$desc[keep], contigFA$seq[keep])
+	igblastFA <- as.Fasta( contigsFA$desc[keep], contigsFA$seq[keep])
 	igblastContigsFile <- file.path( spades.output.path, "IgBlast.Contigs.fasta")
 	writeFasta( igblastFA, igblastContigsFile, line=100)
 
 	# look for both TCR and BCR by calling the IgBlast tool
 	callIgBlast( igblastContigsFile, outfile=igblastOutputFile1, db="IG")
-	ansIG <- readIgBlastOutput( igblaseOutputFile1)
+	ansIG <- readIgBlastOutput( igblastOutputFile1)
 	ansIG <- subset( ansIG, V_SCORE >= min.v.score)
 	cat( "\n  N_IG Constructs:  ", nrow(ansIG))
-	callIgBlast( igblastContigsFile, outfile=igblastOutputFile2, db="TCR")
-	ansTCR <- readIgBlastOutput( igblaseOutputFile2)
+	callIgBlast( igblastContigsFile, outfile=igblastOutputFile2, db="TR")
+	ansTCR <- readIgBlastOutput( igblastOutputFile2)
 	ansTCR <- subset( ansTCR, V_SCORE >= min.v.score)
 	cat( "\n  N_TCR Constructs: ", nrow(ansTCR))
 
