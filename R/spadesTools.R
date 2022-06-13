@@ -43,7 +43,7 @@
 }
 
 
-`makeSpadesPeptides` <- function( sampleID, outpath, keyword="Spades", verbose=TRUE) {
+`makeSpadesPeptides` <- function( sampleID, outpath, keyword="Spades", short.desc=FALSE, verbose=TRUE) {
 
 	require( Biostrings)
 
@@ -56,14 +56,15 @@
 	contigs <- loadFasta( contigFile, verbose=verbose)
 	cat( "\nMaking Peptides from contigs..\nN_Contigs: ", length( contigs$desc))
 	if ( length( contigs$desc) < 1) return(0)
-	shortDesc <- sub( "_length.+", "", contigs$desc)
+	desc <- contigs$desc
+	if (short.desc) desc <- sub( "_length.+", "", desc)
 
 	# convert to peptides
 	#peps <- DNAtoBestPeptide( contigs$seq, clipAtStop=FALSE)
 	mcAns <- multicore.lapply( contigs$seq, FUN=DNAtoBestPeptide, clipAtStop=FALSE, preschedule=TRUE)
 	peps <- unlist( mcAns)
 	rfName <- sapply( mcAns, function(x) names(x)[1])
-	faOut <- as.Fasta( paste( sampleID, shortDesc, rfName, sep="_"), peps)
+	faOut <- as.Fasta( paste( sampleID, desc, rfName, sep="_"), peps)
 
 	outfile <- paste( sampleID, keyword, "Peptides.fasta", sep=".")
 	outfile <- file.path( outpath, outfile)

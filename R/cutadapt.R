@@ -3,7 +3,8 @@
 `cutadapt` <- function( file1, file2=NULL, 
 			adapt1=myReverseComplement("CAAGCAGAAGACGGCATACGAGCTCTTCCGATCT"), 
 			adapt2=myReverseComplement("AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT"), 
-			path=".", min.length=NULL, cutadaptArgs="", cutadaptProgram="~/bin/cutadapt") {
+			path=".", min.length=NULL, cutadaptArgs="", cutadaptProgram="~/bin/cutadapt",
+			cores=4) {
 
 	# at least one file is required, use it to deduce suffix/compression,
 	# and generate out output filename(s)
@@ -44,12 +45,15 @@
 		minLenTrimText <- paste( " --minimum-length=", as.integer(min.length), " ", sep="")
 	}
 
+	# allow multi-threading
+	coresText <- if (is.null(cores)) "" else paste( "--cores", as.character(cores))
+
 	# make that command line
 	if ( isPaired) {
-		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, 
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-A", adapt2, coreText,
 				"-o", outfile1, "-p", outfile2, minLenTrimText, cutadaptArgs, file1, file2, sep=" ")
 	} else {
-		cmdLine <- paste( cutadaptProgram, "-a", adapt1, "-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
+		cmdLine <- paste( cutadaptProgram, "-a", adapt1, coreText, "-o", outfile1, minLenTrimText, cutadaptArgs, file1, sep=" ")
 	}
 	catch.system( cmdLine)
 
