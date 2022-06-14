@@ -4,10 +4,11 @@
 
 
 `pipe.BCR.TCR.Profile` <- function( sampleID, bcrtcrFastaFile=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, spades.path=dirname(Sys.which("spades.py")), doSpades=FALSE,
+				results.path=NULL, gatherGeneAlignments.mode=c("all","best.one"),
+				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), 
+				doSpades=FALSE, spadesProgram=Sys.which("spades.py"), spades.path=dirname(spadesProgram), 
 				spades.mode=c("isolate","rna","meta"), kmerSizes=NULL, spades.args="", 
-				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), keyword="BCR.TCR", 
-				min.aa.length=90, max.aa.length=250, min.score.per.aa=2, min.v.score=100, verbose=TRUE) {
+				min.aa.length=60, max.aa.length=210, min.score.per.aa=2, min.v.score=100, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
@@ -21,7 +22,8 @@
 	}
 
 	# path for all results
-	spades.output.path <- file.path( results.path, "SpadesContigs", sampleID, "BCR.TCR")
+	keyword <- "BCR.TCR"
+	spades.output.path <- file.path( results.path, "SpadesContigs", sampleID, keyword)
 	contigsFastaFile <- file.path( spades.output.path, "contigs.fasta")
 	peptidesFastaFile <- file.path( spades.output.path, paste( sampleID, keyword, "Peptides.fasta", sep="."))
 	proteinsFastaFile <- sub( "Peptides.fasta$", "Proteins.fasta", peptidesFastaFile)
@@ -50,7 +52,8 @@
 		# step 1:   gather all aligned reads that land in/near the TCR genes loci
 		if ( ! file.exists( alignedReadsFile)) {
 			cat( "\nGathering BCR/TCR Gene aligned reads..\n")
-			pipe.GatherGeneAlignments( sampleID, genes=tcrgenes, asFASTQ=TRUE, mode="best.one",
+			gatherGeneAlignments.mode <- match.arg( gatherGeneAlignments.mode)
+			pipe.GatherGeneAlignments( sampleID, genes=tcrgenes, asFASTQ=TRUE, mode=gatherGeneAlignments.mode,
 						fastq.keyword="BCR.TCR.Hits")
 		}
 
