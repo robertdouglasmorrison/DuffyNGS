@@ -213,9 +213,12 @@
 	nGenes <- 25
 	for( s in allSpecies) {
 
+		# reset the trigger warning test for each species
+		myTriggerWarning <- triggerWarning
+
 		# do we want a strand specific check?
 		isStranded <- getAnnotationTrue( annotationFile, key=sampleID, columnArg="StrandSpecific", verbose=F)
-		if ( isStranded && is.null(triggerWarning)) {
+		if ( isStranded && is.null(myTriggerWarning)) {
 			strandAns <- pipe.StrandVerify( sampleID, annotationFile=annotationFile, optionsFile=optionsFile,
 							speciesID=s, results.path=results.path)
 			# don't treat these 2 P-values exactly as equals...
@@ -223,11 +226,11 @@
 			if ( ! is.null( strandAns)) {
 				ng.Pval <- strandAns$NonGene_Pvalue
 				if ( ! is.na( ng.Pval)) {
-					if (ng.Pval > 0.25) triggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
+					if (ng.Pval > 0.25) myTriggerWarning <- "Non-Genes among highest expressers.  Read Sense may be wrong!"
 				}
 				strandCC.Pval <- strandAns$StrandValue_Pvalue
 				if ( ! is.na( strandCC.Pval)) {
-					if (strandCC.Pval > 0.05) triggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
+					if (strandCC.Pval > 0.05) myTriggerWarning <- "Read Strand Verification failed.  Read Sense may be wrong!"
 				}
 			}
 		}
@@ -235,7 +238,7 @@
 		# now make those plots
 		pipe.TranscriptToHTML( sampleID, annotationsFile, optionsFile,
 				speciesID=s, results.path=results.path, 
-				pause=pause, N=nGenes, label=banner, triggerWarning=triggerWarning, ...)
+				pause=pause, N=nGenes, label=banner, triggerWarning=myTriggerWarning, ...)
 	}
 	return()
 }
