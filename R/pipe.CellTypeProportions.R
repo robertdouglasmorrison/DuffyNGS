@@ -152,15 +152,16 @@
 		# 7)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts7)))) {
 			cat( "\n7. Cell Type Deconvolution:  Fit Log2(RPKM) by Simulated Annealing (GenSA):\n")
-			ans7 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
-						useLog=TRUE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=F)
+			cat( "           Not numerically stable..  Skip this method for now..\n")
+			#ans7 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
+			#			useLog=TRUE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
+			#			geneUniverse=geneUniverse, verbose=F)
 			#if ( ! is.null(ans7)) pcts7 <- ans7$BestFit
-			if ( ! is.null(ans7)) {
-				pcts7 <- ans7$BestFit
-				cellWhere <- match( cellTypeNames, rownames(pcts7))
-				pcts7 <- pcts7[ cellWhere, 1]
-			}
+			#if ( ! is.null(ans7)) {
+			#	pcts7 <- ans7$BestFit
+			#	cellWhere <- match( cellTypeNames, rownames(pcts7))
+			#	pcts7 <- pcts7[ cellWhere, 1]
+			#}
 		}
 		
 		# 8)  Transcriptome Deconvolution, by Steepest Descent...
@@ -186,15 +187,19 @@
 	cellM[ ,3] <- pcts3
 	cellM[ ,4] <- pcts4
 	cellM[ ,5] <- pcts5
-	cellM[ ,6] <- pcts6
-	cellM[ ,7] <- pcts7
+	# we have decided/proven that the log2 data is unreliable
+	cellM[ ,6] <- NA;   #pcts6
+	cellM[ ,7] <- NA;   #pcts7
 	cellM[ ,8] <- pcts8
-		
+
+	# catch any that are all zero
+	isAllZero <- which( apply( cellM, 2, function(x) all( x == 0, na.rm=T)))
+	if ( length(isAllZero)) cellM[ , isAllZero] <- NA
 	cellMean <- apply( cellM, 1, mean, na.rm=T)
 	cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
 		
-	# leave out the NLS of Log2 data for now...
-	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM[,-6],digits=3), stringsAsFactors=F)
+	# leave out the NLS and GenSA of Log2 data for now...
+	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM[,-c(6:7)],digits=3), stringsAsFactors=F)
 	write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
 
 	out <- data.frame( "SampleID"=sampleID, cellAns, stringsAsFactors=F)
