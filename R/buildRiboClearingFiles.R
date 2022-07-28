@@ -123,6 +123,8 @@
 		gBegin <- rrnaMap$POSITION[ig]
 		gEnd <- rrnaMap$END[ig]
 		gGroup <- rrnaMap$GROUP[ig]
+		# since the gene group will be in the FASTA descriptor, make sure it will always parse correctly
+		gGroup <- gsub( " ", ".", gGroup)
 		geneDNA <- as.character( base::substr( curSeqDNA, (gBegin-tailSize), (gEnd+tailSize)))
 
 		# add it to the set
