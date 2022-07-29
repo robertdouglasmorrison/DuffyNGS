@@ -21,6 +21,15 @@
 	stop <- geneMap$END[ig]
 	nBases <- max( geneMap$N_EXON_BASES[ig], 100)
 
+	# allow a graceful exit if we have no wiggle data...
+	if ( is.null( wiggleChunk)) {
+		out <- list( "rawReads"=0, "sigma"=0, "rpkm"=0, "strandness"=0, 
+			"rawReads.Multi"=0, "sigma.Multi"=0, 
+			"rpkm.Multi"=0, "strandness.Multi"=0, 
+			"nBases"=nBases) 
+		return( out)
+	}
+
 	# get the read counts for this region
 	if ( exonsOnly) {
 		exonMap <- getCurrentExonMap()
