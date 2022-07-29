@@ -51,11 +51,11 @@
 		callIgBlast( fastafile=contigFile, outfile=blastOutFile, db="IG", organism="human", 
 					igblast.path="~/IgBlast", outfmt=19)
 	}
-	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19, min.v.score=100)
+	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19)
 	summaryFile <- file.path( velvet.path, "IgBlast.IG.Summary.txt")
 	write.table( tbl, summaryFile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote IG Summary file: ", summaryFile)
-	ans <- profileIgBlastCoverage( tbl, min.blast.score=100)
+	ans <- profileIgBlastCoverage( tbl, min.v.score=100)
 	profile <- ans$profile
 	pctIdent <- ans$identity
 	colnames(pctIdent) <- paste( "Ident", colnames(pctIdent), sep="_")
@@ -70,11 +70,11 @@
 		callIgBlast( fastafile=contigFile, outfile=blastOutFile, db="TR", organism="human", 
 					igblast.path="~/IgBlast", outfmt=19)
 	}
-	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19, min.v.score=100)
+	tbl <- readIgBlastOutput( infile=blastOutFile, outfmt=19)
 	summaryFile <- file.path( velvet.path, "IgBlast.TCR.Summary.txt")
 	write.table( tbl, summaryFile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote TCR Summary file: ", summaryFile)
-	ans <- profileIgBlastCoverage( tbl, min.blast.score=100)
+	ans <- profileIgBlastCoverage( tbl, min.v.score=100)
 	profile <- ans$profile
 	pctIdent <- ans$identity
 	colnames(pctIdent) <- paste( "Ident", colnames(pctIdent), sep="_")
