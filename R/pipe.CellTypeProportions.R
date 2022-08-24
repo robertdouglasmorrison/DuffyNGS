@@ -41,6 +41,7 @@
 
 	# name for the file of results
 	celltypeDetailsFile <- file.path( celltype.path, paste( sampleID, prefix, "CellTypeProportions.csv", sep="."))
+	celltypePlotFile <- file.path( celltype.path, paste( sampleID, prefix, "CellTypeProportions.Final.pdf", sep="."))
 	cellAns <- NULL
 	pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- pcts7 <- pcts8 <- rep.int( NA, N_CellTypes)
 	names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- names(pcts7) <-  names(pcts8) <- cellTypeNames
@@ -201,6 +202,15 @@
 	# leave out the NLS and GenSA of Log2 data for now...
 	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM[,-c(6:7)],digits=3), stringsAsFactors=F)
 	write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
+
+	# make a plot image of the final average
+	if ( makePlots != "none") {
+		tmpM <- matrix( cellMean, nrow=nrow(cellM), ncol=1)
+		rownames(tmpM) <- cellTypeNames
+		colnames(tmpM) <- sampleID
+		plotTranscriptProportions( tmpM, col=cellTypeColors, label="Final average of all methods")
+		printPlot( celltypePlotFile, width=12, height=9)
+	}
 
 	out <- data.frame( "SampleID"=sampleID, cellAns, stringsAsFactors=F)
 	return( invisible( out))

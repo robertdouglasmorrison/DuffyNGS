@@ -835,8 +835,8 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 
 `pipe.SNP.MOIcall` <- function( sampleID, optionsFile="Options.txt", 
-				results.path=NULL, min.total.depth=15, min.allele.freq=0.15, 
-				ignore.vargenes=TRUE, ignore.rifins=TRUE, ignore.introns=TRUE) {
+				results.path=NULL, min.total.depth=50, min.allele.freq=0.10, 
+				drop.genes=NULL, ignore.introns=TRUE, verbose=TRUE) {
 
 	BASES <- c("A","C","G","T")
 	N_BASES <- 4
@@ -852,9 +852,9 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	snpfile <- paste( sampleID, prefix, "SNP.BaseDepth.txt", sep=".")
 	snpfile <- file.path( results.path, "VariantCalls", sampleID, snpfile)
-	cat( "\nReading SNP BaseDepth table..")
+	if (verbose) cat( "\nReading SNP BaseDepth table..")
 	snpTbl <- as.matrix( read.delim( snpfile, as.is=T))
-	cat( "\nTotal SNP sites: ", nrow(snpTbl))
+	if (verbose) cat( "\nTotal SNP sites: ", nrow(snpTbl))
 
 	moifile <- paste( sampleID, prefix, "SNP.MOIcall.txt", sep=".")
 	moifile <- file.path( results.path, "VariantCalls", sampleID, moifile)
@@ -863,7 +863,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	drops <- which( is.na( snpTbl[ ,1]))
 	if ( length(drops)) {
 		snpTbl <- snpTbl[ -drops, ]
-		cat( "\nDropped for no read data: ", length(drops))
+		if (verbose) cat( "\nDropped for no read data: ", length(drops))
 	}
 
 	# drop any with not enough reads
@@ -872,39 +872,23 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	if ( length(drops)) {
 		snpTbl <- snpTbl[ -drops, ]
 		totalReads <- totalReads[ -drops]
-		cat( "\nDropped for insufficient depth ( <",min.total.depth,"): ", length(drops))
+		if (verbose) cat( "\nDropped for insufficient depth ( <",min.total.depth,"): ", length(drops))
 	}
 
 	snpSeq <- sub( ":.+:[0-9]+$", "", rownames(snpTbl))
-	snpBase <- as.integer( sub( "(^.+:)([0-9]+$)", "\\2", rownames(snpTbl)))
+	snpBase <- suppressWarnings( as.integer( sub( "(^.+:)([0-9]+$)", "\\2", rownames(snpTbl))))
 	snpGene <- sub( "(^.+:)(.+)(:[0-9]+$)", "\\2", rownames(snpTbl))
 
-	# do we ignore the var genes?
-	if ( ignore.vargenes) {
-		vmap <- getVargeneDomainMap()
-		vgenes <- sort( unique( vmap$GENE_NAME))
-		drops <- which( snpGene %in% vgenes)
+	# do we ignore any genes?
+	if ( ! is.null( drop.genes)) {
+		drops <- which( snpGene %in% drop.genes)
 		if ( length(drops)) {
 			snpTbl <- snpTbl[ -drops, ]
 			totalReads <- totalReads[ -drops]
 			snpSeq <- snpSeq[ -drops]
 			snpBase <- snpBase[ -drops]
 			snpGene <- snpGene[ -drops]
-			cat( "\nDropped as VarGene loci:   ", length(drops))
-		}
-	}
-	# do we ignore the rifin genes?
-	if ( ignore.rifins) {
-		gmap <- getCurrentGeneMap()
-		rifgenes <- gmap$GENE_ID[ grep( "rifin|RIF", gmap$PRODUCT)]
-		drops <- which( snpGene %in% rifgenes)
-		if ( length(drops)) {
-			snpTbl <- snpTbl[ -drops, ]
-			totalReads <- totalReads[ -drops]
-			snpSeq <- snpSeq[ -drops]
-			snpBase <- snpBase[ -drops]
-			snpGene <- snpGene[ -drops]
-			cat( "\nDropped as Rifin loci:   ", length(drops))
+			if (verbose) cat( "\nDropped as 'drop.genes' loci:   ", length(drops))
 		}
 	}
 
@@ -928,17 +912,24 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 		}
 		snpTbl <- newTbl
 		snpSeq <- sub( ":[0-9]+:.+", "", rownames(snpTbl))
-		snpBase <- as.integer( sub( "(^.+:)([0-9]+)(:.+)", "\\2", rownames(snpTbl)))
+		snpBase <- suppressWarnings( as.integer( sub( "(^.+:)([0-9]+)(:.+)", "\\2", rownames(snpTbl))))
 		totalReads <- apply( snpTbl, MARGIN=1, sum)
 		snpGene <- sub( "^.+:[0-9]+:", "", rownames(snpTbl))
-		cat( "\nDropped as Intron loci:   ", oldN - nrow(snpTbl))
+		if (verbose) cat( "\nDropped as Intron loci:   ", oldN - nrow(snpTbl))
 	}
 
 	# OK, count how many alleles are deep enough
 	nDeep <- alleles <- vector( length=nrow(snpTbl))
+	if ( is.null(snpTbl) || nrow(snpTbl) < 1) {
+		cat( "\nNo SNPs found.  Perhaps there was errors...")
+		file.delete( moifile)
+		return(NULL)
+	}
+
 	sapply( 1:nrow(snpTbl), FUN=function(x) {
 			mycut <- totalReads[x] * min.allele.freq
 			hits <- which( snpTbl[ x, ] >= mycut)
+			hits <- intersect( hits, 1:4)
 			nDeep[x] <<- length(hits)
 			alleles[x] <<- paste( BASES[hits], collapse="/")
 			return( NULL)
@@ -955,20 +946,20 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 				snpTbl, freqTbl, stringsAsFactors=F)
 	rownames(moiSNPs) <- 1:nrow(moiSNPs)
 
-	cat( "\nWriting MOI summary file:  ", moifile)
+	if (verbose) cat( "\nWriting MOI summary file:  ", moifile)
 	write.table( moiSNPs, moifile, sep="\t", quote=F, row.names=F)
-	cat( "\nN_SNPS: ", nrow(moiSNPs))
+	if (verbose) cat( "\nN_SNPS: ", nrow(moiSNPs))
 
-	cat( "\n\nTable of Allele Frequencies:\n")
-	print( tbl <- table( moiSNPs$ALLELES))
-	print( as.percent( tbl, big.value=nrow(moiSNPs), digits=2))
+	if (verbose) cat( "\n\nTable of Allele Frequencies:\n")
+	if (verbose) print( tbl <- table( moiSNPs$ALLELES))
+	if (verbose) print( as.percent( tbl, big.value=nrow(moiSNPs), digits=2))
 
 	return( invisible(moiSNPs))
 }
 
 
 `pipe.SNP.MOIscore` <- function( sampleID, optionsFile="Options.txt", 
-				results.path=NULL, falseMOIsites=NULL, verbose=TRUE) {
+				results.path=NULL, falseMOIsites=NULL, verbose=TRUE, ...) {
 
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
@@ -979,8 +970,11 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	f <- file.path( results.path, "VariantCalls", sampleID, f)
 	# always rebuild the MOI calls..  not that slow..
 	if (verbose) cat( "\nCalling function 'pipe.SNP.MOIcall()'...")
-	pipe.SNP.MOIcall( sampleID, optionsFile=optionsFile, results.path=results.path)
-	if ( ! file.exists( f)) stop( "Call failed..  Perhaps run 'pipe.SNP.BaseDepth()' first..")
+	pipe.SNP.MOIcall( sampleID, optionsFile=optionsFile, results.path=results.path, verbose=verbose, ...)
+	if ( ! file.exists( f)) {
+		cat( "\nCall failed..  Perhaps run 'pipe.SNP.BaseDepth()' first..")
+		return( list( "Score"=NA, "Counts"=NA, "Weights"=NA))
+	}
 
 	moiTbl <- read.delim( f, as.is=T)
 	if (verbose) {
