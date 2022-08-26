@@ -1003,11 +1003,24 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 	nMore <- sum( moiTbl$N_ALLELES > 3)
 	counts <- c( "1"=nSingle, "2"=nDouble, "3"=nTriple, "4"=nMore)
 	weights <- c( "1"=(nSingle*1), "2"=(nDouble*10^1), "3"=(nTriple*10^2), "4"=(nMore*10^3))
+	score <- round( sum(weights) / sum( counts), digits=2)
 
-	score <- sum(weights) / sum( counts)
-	score <- round(score,digits=2)
+	# try making a histogram of the multi-allelic site percentages
+	sml <- as.matrix( subset( moiTbl, N_ALLELES %in% 2:3)[ , c("PCT_A","PCT_C","PCT_G","PCT_T","PCT_Indel")])
+	# only use the rows that do not have any Indel component, as that distorts the relativer percentages 
+	sml <- sml[ sml[ , "PCT_Indel"] == 0, ]
+	# remove the 0's, then turn them into 5% bins
+	pctV <- as.numeric( sml) * 100
+	pctV <- round( pctV/5) * 5
+	pctV <- pctV[ pctV > 0]
+	pctHist <- sort( table( factor( as.integer(pctV), levels=seq( 5, 95, by=5))), decreasing=T)
+	names(pctHist) <- paste( names(pctHist), "%", sep="")
 
-	return( list( "Score"=score, "Counts"=counts, "Weights"=weights))
+	# make the base call percentags table
+	pctTable <- table( moiTbl$ALLELES)
+	pctTable <- round( pctTable * 100 / sum(pctTable),, digits=2)
+	return( list( "Score"=score, "Counts"=counts, "Weights"=weights, "Histogram"=pctHist, 
+			"Percentages"=pctTable))
 }
 
 
