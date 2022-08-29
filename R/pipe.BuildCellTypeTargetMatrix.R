@@ -2,7 +2,7 @@
 #
 #		This is intended to create the gene expression dataset used by all the Cell Type tools
 
-`pipe.BuildCellTypeTargetMatrix` <- function( sids, referenceName, annotationFile="Annotation.txt", optionsFile="Options.txt",
+`pipe.BuildCellTypeTargetMatrix` <- function( sids, reference, annotationFile="Annotation.txt", optionsFile="Options.txt",
 						groupColumn="Group", colorColumn="Color", results.path=NULL,
 						expressionUnits="TPM_M", min.expression=1.0, finalColumnOrder=NULL) {
 	
@@ -70,16 +70,16 @@
 	names(targetColors) <- colnames(targetM)
 
 	cat( "\nSaving files..")
-	finalFilename <- paste( prefix, referenceName, "TargetMatrix.rda", sep=".")
+	finalFilename <- paste( prefix, reference, "TargetMatrix.rda", sep=".")
 	save( targetM, targetColors, file=finalFilename)
 	write.table( targetM, sub( "rda$", "txt", finalFilename), sep="\t", quote=F, row.names=T)
 
 	# make a few images and files
 	checkX11()
 	cat( "\nPlotting cluster images..")
-	plot( expressionCluster(targetM), which=2, main=paste( "Cell Type Expression data: ", referenceName))
+	plot( expressionCluster(targetM), which=2, main=paste( "Cell Type Expression data: ", reference))
 	printPlot( sub( "TargetMatrix.rda$", "ExpresssionClustering", finalFilename))
-	plot( expressionCluster( log2(targetM+1)), which=2, main=paste( "Cell Type Log2 Expression data: ", referenceName))
+	plot( expressionCluster( log2(targetM+1)), which=2, main=paste( "Cell Type Log2 Expression data: ", reference))
 	printPlot( sub( "TargetMatrix.rda$", "Log2.ExpresssionClustering", finalFilename))
 
 	# make the correlation table too
@@ -135,7 +135,7 @@
 				}
 			}
 			cat( "\n ", destSpecies, "  N_Genes =", nrow(targetM))
-			save( targetM, targetColors, file=paste( orthoPrefix[j], referenceName, "TargetMatrix.rda", sep="."))
+			save( targetM, targetColors, file=paste( orthoPrefix[j], reference, "TargetMatrix.rda", sep="."))
 		}
 	}
 

@@ -10,9 +10,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
-				nFDRsimulations=0, gene.pct.clustering=1,
-				addCellTypes=(speciesID %in% MAMMAL_SPECIES), 
-				addLifeCycle=(speciesID %in% PARASITE_SPECIES), PLOT.FUN=NULL, ...)
+				nFDRsimulations=0, gene.pct.clustering=1, addCellTypes=TRUE, PLOT.FUN=NULL, ...)
 {
 
 	if (verbose) {
@@ -39,6 +37,9 @@
 		results.path <- getOptionValue( optT, "results.path", notfound=".")
 	}
 	
+	# make sure the cell type tools are initialized
+	if( addCellTypes) CellTypeSetup( optionsFile=optionsFile)
+
 	# first call all 5 DE tools
 
 	# plotting no longer works in multicore mode...
@@ -139,9 +140,6 @@
 		if (addCellTypes) {
 			cellType <- gene2CellType( out$GENE_ID, max.types=5)
 			out <- cbind( out[,1:2], "CellType"=cellType, out[,3:ncol(out)], stringsAsFactors=F)
-		} else if (addLifeCycle) {
-			lifeCycle <- gene2LifeCycle( out$GENE_ID)
-			out <- cbind( out[,1:2], "LifeCycle"=lifeCycle, out[,3:ncol(out)], stringsAsFactors=F)
 		}
 
 		# make the text file version
@@ -177,20 +175,6 @@
 			n5pct <- max( 5, round( nrow(out) * 0.05))
 			who <- sort( union( who, 1:n5pct))
 			enrich <- cellTypeEnrichment( out$CellType[who], mode="genes", speciesID=speciesID,
-						upOnly=F, minEnrich=1, maxPval=1, correct=T, 
-						geneUniverse=out$GENE_ID, verbose=F)
-			write.table( enrich, fout, sep=",", quote=T, row.names=F)
-		} else if (addLifeCycle) {
-			fout <- paste( grp, prefix, "Meta", direction, "GeneLifeCycleEnrichment.csv", sep=".")
-			fout <- file.path( metaPath, fout)
-			if ( direction == "UP") {
-				who <- which( out$AVG_PVALUE < 0.05 & out$LOG2FOLD > 0.20)
-			} else {
-				who <- which( out$AVG_PVALUE < 0.05 & out$LOG2FOLD < -0.20)
-			}
-			n5pct <- max( 5, round( nrow(out) * 0.05))
-			who <- sort( union( who, 1:n5pct))
-			enrich <- lifeCycleEnrichment( out$LifeCycle[who], mode="genes", speciesID=speciesID,
 						upOnly=F, minEnrich=1, maxPval=1, correct=T, 
 						geneUniverse=out$GENE_ID, verbose=F)
 			write.table( enrich, fout, sep=",", quote=T, row.names=F)

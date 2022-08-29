@@ -4,14 +4,15 @@
 #		Note that Gene to Cell Type mappings are now based on Differential Expression results,
 #		no longer on differential expression results.  They are usually the same but need not be.
 
-`pipe.BuildCellTypeGeneAssociation` <- function( de.folder, referenceName=NULL, optionsFile="Options.txt",
+`pipe.BuildCellTypeGeneAssociation` <- function( reference=NULL, folderName="", optionsFile="Options.txt",
 						results.path=NULL, min.fold=0.1, min.expression=1.0) {
 
 	speciesID <- getCurrentSpecies()
 	prefix <- getCurrentSpeciesFilePrefix()
 	
 	# use the target matrix of gene expression from the same reference as the starting data
-	verifyCellTypeSetup( referenceName=referenceName, optionsFile=optionsFile)
+	if ( is.null( reference)) stop( "'reference' argument of a cell type target matrix must be specified")
+	CellTypeSetup( reference=reference, optionsFile=optionsFile)
 	targetM <- getCellTypeMatrix()
 	cellNames <- colnames(targetM)
 	geneNames <- rownames(targetM)
@@ -22,7 +23,7 @@
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound="results", verbose=F)
 	}
-	de.path <- file.path( results.path, "MetaResults", paste( prefix, de.folder, sep="."))
+	de.path <- file.path( results.path, "MetaResults", paste( prefix, folderName, sep="."))
 	if ( ! file.exists( de.path)) {
 		cat( "\nError:  unable to find the MetaResults folder: ", de.path)
 		return(NULL)
@@ -32,7 +33,7 @@
 		cat( "\nError:  unable to find any 'Meta.UP.txt' DE results files")
 		return(NULL)
 	}
-	deNames <- sub( paste( prefix, "Meta.UP.txt", sep="."), "", basename(deFiles))
+	deNames <- sub( paste( ".", prefix, ".Meta.UP.txt", sep=""), "", basename(deFiles))
 	if ( !all( cellNames %in% deNames)) {
 		cat( "\nError:  failed to find all Cell Type names in DE results: ")
 		cat( "\n  Missing: ", setdiff( cellNames, deNames))
@@ -45,12 +46,17 @@
 
 		# Collect genes that are up-regulated, using thresholds for both DE fold and expression level
 		# extract the cell type terms from the filename
-		myCellType <- sub( paste( ".", prefix, "Meta.UP.txt", sep="."), "", basename(defile))
+		myCellType <- sub( paste( ".", prefix, ".Meta.UP.txt", sep=""), "", basename(defile))
 
 		tbl <- read.delim( defile, as.is=T)
 		myGenes <- shortGeneName( tbl$GENE_ID, keep=1)
 		fold <- tbl$LOG2FOLD
-		expres <- tbl[[ myCellType]]
+		if ( myCellType %in% colnames(tbl)) {
+			expres <- tbl[[ myCellType]]
+		} else {
+			cat( "\nError:  column of gene expression not found.  Looked for: ", myCellType)
+			stop()
+		}
 
 		# we only want those real genes that are UP and expressed high enough
 		keep <- which( fold >= min.fold)
@@ -59,7 +65,7 @@
 		keep <- sort( setdiff( intersect(keep,keep2), nonGenes))
 
 		out <- data.frame( "GENE_ID"=myGenes[keep], "CellType"=myCellType, 
-				"Expression"=expres[keep], "Fold"=round( fold[keep], digits=3), 
+				"Expression"=expres[keep], "Log2Fold"=round( fold[keep], digits=3), 
 				"Pvalue"=tbl$AVG_PVALUE[keep], "Rank"=1:length(keep), 
 				stringsAsFactors=FALSE)
 				
@@ -85,7 +91,7 @@
 		}
 		
 		smlDF <- data.frame( "GENE_ID"=hgbNames, "CellType"="RBC", 
-					"Expression"=100, "Fold"=10, 
+					"Expression"=100, "Log2Fold"=10, 
 					"Pvalue"=1e-10, "Rank"=1, 
 					stringsAsFactors=FALSE)
 		return( smlDF)
@@ -94,7 +100,7 @@
 
 
 	# OK, run the gene collector
-	cat( "\nExtracting Gene cell types..\n")
+	cat( "\nExtracting Gene cell types from DE folder: ", de.path)
 	ans <- data.frame()
 	for ( i in 1:length( deFiles)) {
 		sml <- extractGeneCellRanks( deFiles[i], min.fold=min.fold, min.expression=min.expression)
@@ -102,7 +108,7 @@
 	}
 
 	# apply manual currated fixes, like for HGB
-	if (species %in% MAMMAL_SPECIES) {
+	if (speciesID %in% MAMMAL_SPECIES) {
 		sml <- getManualGeneFixes()
 		if( nrow(sml)) ans <- rbind( ans, sml)
 	}
@@ -112,7 +118,7 @@
 	ans <- ans[ keep, ]
 
 	# now we can factor on the gene name, and find which cell type(s) is best for each gene
-	cat( "\nFactor for best cell types for each gene..")
+	cat( "\nSelecting best cell type(s) for each gene..")
 	geneFac <- factor( ans$GENE_ID)
 	ansPct <- rep.int( NA, nrow(ans))
 
@@ -129,7 +135,7 @@
 	bestAnsRows <- tapply( 1:nrow(ans), geneFac, function(x) {
 
 			myExpress <- round( ans$Expression[x], digits=1)
-			myFolds <- ans$Fold[x]
+			myFolds <- ans$Log2Fold[x]
 			myPvals <- ans$Pvalue[x]
 			myRanks <- ans$Rank[x]
 			myCells <- ans$CellType[x]
@@ -183,38 +189,15 @@
 	# give it the final object name
 	# .CSV ruins Human gene names!!
 	cat( "\nSaving gene association results..")
-	finalFile <- paste( prefix, referenceName, "GeneAssociation.txt", sep=".")
+	finalFile <- paste( prefix, reference, "GeneAssociation.txt", sep=".")
 	write.table( geneCellTypes, finalFile, sep="\t", quote=F, row.names=F)
-	save( geneCellTypes, file="Hs.CoreGeneCellTypes.rda")
-	finalFile <- paste( prefix, referenceName, "GeneAssociation.rda", sep=".")
+	finalFile <- paste( prefix, reference, "GeneAssociation.rda", sep=".")
 	save( geneCellTypes, file=finalFile)
 
 
-	# also make a "allGeneSets" gene set version that keeps all genes
-	# Refine this idea a bit, to put an upper limit on how many genes can be in each cell type
-	# and a minimum fold change to be in the gene set
-	max.genes <- nrow( subset( getCurrentGeneMap(), REAL_G == TRUE)) / NC
-	
-	allGeneSets <- tapply( 1:nrow(geneCellTypes), factor( geneCellTypes$CellType), function(x) {
-
-			#order by fold change vs other cell types
-			myFold <- geneCellTypes$Fold[x]
-			myExpress <- geneCellTypes$Expression[x]
-			myGenes <- geneCellTypes$GENE_ID[x]
-			keep <- which( myFold >= min.fold & myExpress >= min.expression)
-			myFold <- myFold[keep]
-			myExpress <- myExpress[keep]
-			myGenes <- myGenes[keep]
-			ord <- order( myFold, myExpress, decreasing=T)
-			finalGenes <- myGenes[ord]
-			if ( length(finalGenes) > max.genes) finalGenes <- finalGenes[ 1:max.genes]
-			return( unique( finalGenes))
-		})
-	save( allGeneSets, file=paste( prefix, referenceName, "GeneSets.rda", sep="."))
-
-
-	# lastly, make orthologged versions...
-	saveGeneCellTypes <- geneCellTypes
+	# also save orthologged versions for our other systems
+	saveTypes <- geneCellTypes
+	saveGenes <- geneCellTypes$GENE_ID
 	
 	orthoSpecies <- orthoPrefix <- vector()
 	if ( speciesID %in% MAMMAL_SPECIES) {
@@ -229,36 +212,128 @@
 	}
 
 	if ( length( orthoSpecies) > 0) {
-		cat( "\nOrthologging..")
+		cat( "\nOrthologging gene associations..")
 		for (j in 1:length(orthoSpecies)) {
 			destSpecies <- orthoSpecies[j]
 			if ( destSpecies == speciesID) next
-			geneCellTypes <- saveGeneCellTypes
-			destGenes <- ortholog( saveGeneCellTypes$GENE_ID, from=speciesID, to=destSpecies)
+			destGenes <- ortholog( saveGenes, from=speciesID, to=destSpecies)
 			keep <- which( destGenes != "")
 			if ( length(keep) < 10) { 
 				cat( "\n ", destSpecies, "  Too few ortholog genes..  Skip.")
 				next
 			}
-			geneCellTypes <- geneCellTypes[ keep, ]
-			geneCellTypes$GENE_ID <- destGenes[ keep]
-			
+			geneCellTypes <- saveTypes[ keep, ]
+			geneCellTypes$GENE_ID <- destGenes[keep]
 			# orthologging could induce duplicates
 			key <- paste( geneCellTypes$GENE_ID, geneCellTypes$CellType, sep=":")
-			drops <- which( duplicated( key))
-			if ( length(drops)) geneCellTypes <- geneCellTypes[ -drops, ]
-			# revert to alphabetical ordering
-			geneCellTypes <- geneCellTypes[ order( geneCellTypes$GENE_ID), ]
+			geneCellTypes <- geneCellTypes[ ! duplicated( key), ]
+			# revert to alphabetical gene ordering
+			geneCellTypes <- geneCellTypes[ order( geneCellTypes$GENE_ID, -geneCellTypes$Expression), ]
 			rownames(geneCellTypes) <- 1:nrow(geneCellTypes)
-
-			finalFile <- paste( orthoPrefix[j], referenceName, "GeneAssociation.rda", sep=".")
 			cat( "\n ", destSpecies, "  N_Genes =", length( unique( geneCellTypes$GENE_ID)))
-			save( geneCellTypes, file=finalFile)
+			save( geneCellTypes, file=paste( orthoPrefix[j], reference, "GeneAssociation.rda", sep="."))
+		}
+	}
+
+	# all done
+	geneCellTypes <- saveTypes
+	setCurrentSpecies( speciesID)
+
+
+	# also make a "allGeneSets" gene set version that keeps all genes
+	# Refine this idea a bit, to put an upper limit on how many genes can be in each cell type
+	# and a minimum fold change to be in the gene set
+	max.genes <- nrow(targetM) / NC
+	
+	# and only use the top cell type for each gene, so no gene ends up in 2+ groups
+	firstGeneRow <- which( ! duplicated( geneCellTypes$GENE_ID))
+	
+	cat( "\nMaking Gene Sets object..")
+	allGeneSets <- tapply( firstGeneRow, factor( geneCellTypes$CellType[firstGeneRow]), function(x) {
+
+			#order by fold change vs other cell types
+			myFold <- geneCellTypes$Log2Fold[x]
+			myExpress <- geneCellTypes$Expression[x]
+			myGenes <- geneCellTypes$GENE_ID[x]
+			keep <- which( myFold >= min.fold & myExpress >= min.expression)
+			myFold <- myFold[keep]
+			myExpress <- myExpress[keep]
+			myGenes <- myGenes[keep]
+			ord <- order( myFold, myExpress, decreasing=T)
+			finalGenes <- myGenes[ord]
+			if ( length(finalGenes) > max.genes) finalGenes <- finalGenes[ 1:max.genes]
+			return( unique( finalGenes))
+		})
+	save( allGeneSets, file=paste( prefix, reference, "AllGeneSets.rda", sep="."))
+
+	# and make orthologged versions of the gene sets too...
+	saveGeneSets <- allGeneSets
+	if ( length( orthoSpecies) > 0) {
+		cat( "\nOrthologging gene sets..")
+		for (j in 1:length(orthoSpecies)) {
+			destSpecies <- orthoSpecies[j]
+			if ( destSpecies == speciesID) next
+			allGeneSets <- saveGeneSets
+			for ( k in 1:length(allGeneSets)) {
+				destGenes <- ortholog( allGeneSets[[k]], from=speciesID, to=destSpecies)
+				destGenes <- setdiff( destGenes, c("", " "))
+				allGeneSets[[k]] <- destGenes
+			}
+			finalFile <- paste( orthoPrefix[j], reference, "AllGeneSets.rda", sep=".")
+			cat( "\n ", destSpecies, "  N_Genes =", length( unique( unlist( allGeneSets))))
+			save( allGeneSets, file=finalFile)
 
 		}
 	}
 
 	# when all done, restore the human answer
-	geneCellTypes <- saveGeneCellTypes
+	allGeneSets <- saveGeneSets
+	
+	
+	# last item is to make the 'Top N' gene sets, where we highlight small numbers of the most cell type specific genes
+	smallSetCounts <- if ( nrow( targetM) > 15000) c(25,50,100,250,500) else c(5,10,25,50,100)
+	if ( length( orthoSpecies) > 0) {
+		cat( "\nBuilding 'Top N' gene sets..")
+		for (j in 1:length(orthoSpecies)) {
+			thisSpecies <- orthoSpecies[j]
+			thisPrefix <- orthoPrefix[j]
+			genesFile <- paste( thisPrefix, reference, "GeneAssociation.rda", sep=".")
+			if ( ! file.exists( genesFile)) next
+			genesetFile <- paste( thisPrefix, reference, "AllGeneSets.rda", sep=".")
+			load( genesFile, envir=environment())
+			load( genesetFile, envir=environment())
+
+			# make small sets from each large set
+			smallGeneSets <- vector( mode="list")
+			nSmall <- 0
+			for ( k in 1:length(allGeneSets)) {
+				bigSet <- allGeneSets[[k]]
+				bigName <- names(allGeneSets)[k]
+				# get those genes from the gene association data
+				wh <- match( bigSet, geneCellTypes$GENE_ID)
+				bigDF <- geneCellTypes[ wh, ]
+				# use the DE ranks for ordering within the cell type
+				ord <- order( bigDF$Rank)
+				bigDF <- bigDF[ ord, ]
+				for (n in smallSetCounts) {
+					if ( n > nrow(bigDF)) next
+					gNow <- bigDF$GENE_ID[ 1:n]
+					nSmall <- nSmall + 1
+					smallGeneSets[[nSmall]] <- gNow
+					names(smallGeneSets)[nSmall] <- paste( bigName, ": top ", n, " genes", sep="")
+				}
+			}
+			allGeneSets <- smallGeneSets
+			finalFile <- paste( thisPrefix, reference, "TopGeneSets.rda", sep=".")
+			cat( "\n ", thisSpecies, "  N_Genes =", length( unique( unlist( allGeneSets))))
+			save( allGeneSets, file=finalFile)
+		}
+	}
+
+	# when all done, restore the human answer
+	geneCellTypes <- saveTypes
+	allGeneSets <- saveGeneSets
+	
+	cat( "\nDone.  \nCopy these new 'GeneAssociation.rda' and 'GeneSets.rda' files to your DuffyTools/data/ subfolder and then remake the R package.\n")
 	return( invisible( geneCellTypes))
 }
