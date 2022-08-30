@@ -1,6 +1,9 @@
 # pipe.BuildCellTypeTargetmatrx.R -- turn a set of samples into a CellType TargetMatrix 
 #
 #		This is intended to create the gene expression dataset used by all the Cell Type tools
+#		This is called the 'target matrix', a table of gene expression that defines an
+#		K-dimensional surface.
+
 
 `pipe.BuildCellTypeTargetMatrix` <- function( sids, reference, annotationFile="Annotation.txt", optionsFile="Options.txt",
 						groupColumn="Group", colorColumn="Color", results.path=NULL,

@@ -1,8 +1,8 @@
-# pipe.BuildCellTypeGeneAssociation.R -- turn a CellType TargetMatrix into gene associations
-#				thus a "cell type for each GeneID" resource
+# pipe.BuildCellTypeGeneAssociation.R -- turn a CellType TargetMatrix and a DE MetaResults result
+#					into the mapping from genes to cell types.
 #
-#		Note that Gene to Cell Type mappings are now based on Differential Expression results,
-#		no longer on differential expression results.  They are usually the same but need not be.
+#		Note that Gene to Cell Type mappings are now based on maximal Expression results,
+#		no longer on just differential expression results.  They are usually the same but need not be.
 
 `pipe.BuildCellTypeGeneAssociation` <- function( reference=NULL, folderName="", optionsFile="Options.txt",
 						results.path=NULL, min.fold=0.1, min.expression=1.0) {
