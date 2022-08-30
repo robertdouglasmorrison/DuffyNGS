@@ -49,6 +49,12 @@
 		myCellType <- sub( ".MetaGeneSets.UP.txt", "", basename(defile))
 		myCellType <- sub( paste( ".", prefix, sep=""), "", myCellType)
 	
+		# skip any that do not belong to the target
+		if ( ! (myCellType %in% cellNames)) {
+			cat( "\nWarning:  skipping DE results not in target matrix: ", myCellType)
+			return(NULL)
+		}
+
 		tbl <- read.delim( defile, as.is=T)
 		myGeneSets <- cleanGeneSetModuleNames( tbl$PathName, wrapParen=F)
 		fold <- tbl$LOG2FOLD
@@ -78,7 +84,7 @@
 	ans <- data.frame()
 	for ( i in 1:length( deFiles)) {
 		sml <- extractGeneSetCellRanks( deFiles[i], min.fold=min.fold, max.pvalue=max.pvalue)
-		if( nrow(sml)) ans <- rbind( ans, sml)
+		if( ! is.null(sml) && nrow(sml)) ans <- rbind( ans, sml)
 	}
 	
 	SAV_ANS <<- ans

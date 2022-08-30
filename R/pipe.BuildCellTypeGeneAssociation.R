@@ -48,13 +48,19 @@
 		# extract the cell type terms from the filename
 		myCellType <- sub( paste( ".", prefix, ".Meta.UP.txt", sep=""), "", basename(defile))
 
+		# skip any that do not belong to the target
+		if ( ! (myCellType %in% cellNames)) {
+			cat( "\nWarning:  skipping DE results not in target matrix: ", myCellType)
+			return(NULL)
+
 		tbl <- read.delim( defile, as.is=T)
 		myGenes <- shortGeneName( tbl$GENE_ID, keep=1)
 		fold <- tbl$LOG2FOLD
 		if ( myCellType %in% colnames(tbl)) {
 			expres <- tbl[[ myCellType]]
 		} else {
-			cat( "\nError:  column of gene expression not found.  Looked for: ", myCellType)
+			cat( "\nError:  column of gene expression not found in DE file.  Looked for: ", myCellType,
+				" in file: ", basename(defile))
 			stop()
 		}
 
@@ -104,7 +110,7 @@
 	ans <- data.frame()
 	for ( i in 1:length( deFiles)) {
 		sml <- extractGeneCellRanks( deFiles[i], min.fold=min.fold, min.expression=min.expression)
-		if( nrow(sml)) ans <- rbind( ans, sml)
+		if( ! is.null(sml) && nrow(sml)) ans <- rbind( ans, sml)
 	}
 
 	# apply manual currated fixes, like for HGB
