@@ -52,6 +52,7 @@
 		if ( ! (myCellType %in% cellNames)) {
 			cat( "\nWarning:  skipping DE results not in target matrix: ", myCellType)
 			return(NULL)
+		}
 
 		tbl <- read.delim( defile, as.is=T)
 		myGenes <- shortGeneName( tbl$GENE_ID, keep=1)

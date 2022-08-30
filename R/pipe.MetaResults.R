@@ -39,6 +39,7 @@
 	
 	# make sure the cell type tools are initialized
 	if( addCellTypes) CellTypeSetup( optionsFile=optionsFile)
+	cellReference <- getCellTypeReference()
 
 	# first call all 5 DE tools
 
@@ -165,7 +166,7 @@
 		rm( outDF)
 
 		if (addCellTypes) {
-			fout <- paste( grp, prefix, "Meta", direction, "GeneCellTypeEnrichment.csv", sep=".")
+			fout <- paste( grp, prefix, "Meta", direction, cellReference, "Enrichment.csv", sep=".")
 			fout <- file.path( metaPath, fout)
 			if ( direction == "UP") {
 				who <- which( out$AVG_PVALUE < 0.05 & out$LOG2FOLD > 0.20)
@@ -241,10 +242,10 @@
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering)
-	    	plotfile <- sub( "JOINED.txt$", paste("CellTypeCluster.VolcanoPlot",dev.ext,sep=""), fileout)
+	    	plotfile <- sub( "JOINED.txt$", paste( cellReference, ".VolcanoPlot", dev.ext, sep=""), fileout)
 	    	printPlot( plotfile)
 		# perhaps write some extra content about the volcaco cell clusters
-		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF)
+		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF, reference=cellReference)
 	    }
 	    par( mai=saveMAI)
 
