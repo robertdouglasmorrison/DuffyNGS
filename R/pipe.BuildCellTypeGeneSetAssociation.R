@@ -190,5 +190,9 @@
 	save( geneSetCellTypes, file=finalFile)
 
 	cat( "\nDone.  \nCopy this new 'GeneSetAssociation.rda' file to your DuffyTools/data/ subfolder and then remake the R package.\n")
+	cat( "\nNote:  to fully incorporate these newly created 'Top N' cell type gene sets, then next also rerun the 'pipe.MetaGeneSets()'",
+		"steps and then rerun this 'pipe.BuildCellTypeGeneSetAssociation()' tool.  This will add the new 'Top N' gene sets to the",
+		"final gene set association database.")
+
 	return( invisible( geneSetCellTypes))
 }
