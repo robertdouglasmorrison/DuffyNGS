@@ -134,7 +134,7 @@
 		# that each protein contributes to the total, see how this current consensus and percentage
 		# fits to the called data from the CPP tool
 		protPcts <- as.integer( protPcts)
-			
+
 		# visit each AA that has any minor forms, and see how distant is current from what was called
 		for ( k in useForScoring) {
 			myAA <- rep( aaM[ k, ], times=protPcts)
@@ -174,6 +174,8 @@
 					thisProportion <- lastProportion
 					thisProportion[i] <- thisProportion[i] + 1
 					thisProportion[j] <- thisProportion[j] - 1
+					# never let a proportion go to zero
+					if ( any( thisProportion < 1)) next
 					# rescore the distance
 					thisDist <- consensus.AA.Distance( aaM, thisProportion)
 					if ( thisDist < bestDist) {
@@ -279,6 +281,8 @@
 	ans1 <- optimize.Proportions( aaM, myProportions, verbose=verbose)
 	myProportions <- ans1$Proportions
 	myDist <- ans1$Distance
+	# note that the optimization may have decreased the number of proteins!...
+	NPROT <- length( myProportions)
 	
 	if ( NPROT > 1) {
 		# Step 2:  visit each minor mutation site, and see if swapping residues improves the distance scoring
