@@ -15,6 +15,7 @@
 #define	BAMTAG_MISMATCH		"MD"
 #define MAX_CIGAR_PER_ALIGN  	15
 #define MAX_MISMATCH_PER_ALIGN  40
+#define MAX_SEQ_LEN  16384
 
 
 static R_INLINE void clear_buf(char *c,unsigned n)
@@ -43,7 +44,7 @@ static R_INLINE int cigar2str(char *c,const bam1_t *align)
 		return 1;
 	}
 	uint32_t *cigar=bam1_cigar(align);
-	char buf[1024];
+	char buf[MAX_SEQ_LEN];
 
 	sprintf(buf,"%lu",(unsigned long) (cigar[0] >> BAM_CIGAR_SHIFT));
 	strcpy(c,buf);
@@ -927,7 +928,7 @@ SEXP bam_range_get_align_df(SEXP pRange)
 	// seq+cigar storage
 	unsigned char *raw_seq;
 	int32_t seq_len;
-	int buf_size=4096;
+	int buf_size=MAX_SEQ_LEN;
 	char *buf=(char*) calloc(buf_size,sizeof(char));
 	uint8_t *quals;
 
@@ -1357,7 +1358,7 @@ SEXP bam_range_get_tag(SEXP pRange, SEXP tag)
 
 	// create one vector
 	const bam1_t *align;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *buf = (char*) calloc( buf_len, sizeof(char));
 	int nRows=(l->size);
 	int i;
@@ -1395,7 +1396,7 @@ SEXP bam_range_get_all_tags(SEXP pRange, SEXP sep)
 
 	// create one vector
 	const bam1_t *align;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *buf = (char*) calloc( buf_len, sizeof(char));
 	int nRows=(l->size);
 	int i;
@@ -1439,7 +1440,7 @@ SEXP bam_range_set_tag(SEXP pRange, SEXP tag, SEXP value)
 	int nRows=(l->size);
 	int nVal = LENGTH( value);
 	int i, lval;
-	char buf[4096];
+	char buf[MAX_SEQ_LEN];
 
 	if ( nRows != nVal) 
 		error( "[bam_range_set_tag] length of values not equal to size of range!");
@@ -1493,7 +1494,7 @@ SEXP bam_range_get_read_sequence(SEXP pRange)
 	// create one vector
 	const bam1_t *align;
 	unsigned char *raw_seq;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *seq= (char*) calloc(buf_len,sizeof(char));
 	char *seq2= (char*) calloc(buf_len,sizeof(char));
 	int nRows=(l->size);
@@ -1539,7 +1540,7 @@ SEXP bam_range_get_align_sequence(SEXP pRange)
 	// create one vector
 	const bam1_t *align;
 	unsigned char *raw_seq;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *seq= (char*) calloc(buf_len,sizeof(char));
 	int nRows=(l->size);
 	int32_t i,j,seq_len;
@@ -1579,7 +1580,7 @@ SEXP bam_range_get_align_qualities(SEXP pRange)
 	// create one vector
 	const bam1_t *align;
 	unsigned char *raw_qual;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *qual= (char*) calloc(buf_len,sizeof(char));
 	int nRows=(l->size);
 	int32_t i,j,qual_len;
@@ -1619,7 +1620,7 @@ SEXP bam_range_get_read_qualities(SEXP pRange)
 	// create one vector
 	const bam1_t *align;
 	unsigned char *raw_qual;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *qual= (char*) calloc(buf_len,sizeof(char));
 	char *qual2= (char*) calloc(buf_len,sizeof(char));
 	int nRows=(l->size);
@@ -1666,7 +1667,7 @@ SEXP bam_range_get_read_phredScores(SEXP pRange)
 	// create one vector
 	const bam1_t *align;
 	unsigned char *raw_qual;
-	int buf_len = 4096;
+	int buf_len = MAX_SEQ_LEN;
 	char *qual= (char*) calloc(buf_len,sizeof(char));
 	char *qual2= (char*) calloc(buf_len,sizeof(char));
 	int nRows=(l->size);
@@ -1948,7 +1949,7 @@ SEXP bam_range_get_cigar_string(SEXP pRange)
 	SEXP cigarAns;
 	PROTECT(cigarAns=allocVector(STRSXP,nRows));
 
-	int buf_size=1024;
+	int buf_size=MAX_SEQ_LEN;
 	char *buf=(char*) calloc(buf_size,sizeof(char));
 
 	for(i=0;i<nRows;++i)
@@ -2356,21 +2357,21 @@ SEXP bam_range_modify(SEXP pRange, SEXP RefID, SEXP Pos, SEXP MateRefID, SEXP Ma
 		// variable fields need more work...
 		if ( haveNew) {
 			int lqname=oldAlign->core.l_qname;
-			char qname[4096];
+			char qname[MAX_SEQ_LEN];
 			memcpy( qname, bam1_qname(oldAlign), lqname);
 			int lcigar=oldAlign->core.n_cigar;
 			int lcigar_bytes = lcigar*4;
-			char cigar[4096];
+			char cigar[MAX_SEQ_LEN];
 			memcpy( cigar, bam1_cigar(oldAlign), lcigar_bytes);
 			int lqseq=oldAlign->core.l_qseq;
 			int lqseq_bytes = (lqseq+1)/2;
-			char qseq[4096];
+			char qseq[MAX_SEQ_LEN];
 			memcpy( qseq, bam1_seq(oldAlign), lqseq_bytes);
 			int lqual=oldAlign->core.l_qseq;
-			char qual[4096];
+			char qual[MAX_SEQ_LEN];
 			memcpy( qual, bam1_qual(oldAlign), lqseq);
 			int laux=oldAlign->l_aux;
-			char aux[8192];
+			char aux[MAX_SEQ_LEN*2];
 			memcpy( aux, bam1_aux(oldAlign), laux);
 	
 			// now see what we were passed
@@ -2379,7 +2380,7 @@ SEXP bam_range_modify(SEXP pRange, SEXP RefID, SEXP Pos, SEXP MateRefID, SEXP Ma
 				lqname=strlen(qname) + 1;
 			}
 			if ( TYPEOF(Seq) == STRSXP) {
-				char qseqtmp[4096];
+				char qseqtmp[MAX_SEQ_LEN];
 				strcpy( qseqtmp, CHAR( STRING_ELT(Seq,i)));
 				lqseq=strlen(qseqtmp);
 				memset( qseq, 0, lqseq);
@@ -2481,9 +2482,9 @@ SEXP bam_range_get_mismatch_df(SEXP pRange, SEXP readUnits)
 
 	int i,k;
 	const bam1_t *align;
-	char seq[4096];
-	char mmbuf[8192];
-	char refbase[4096], readbase[4096];
+	char seq[MAX_SEQ_LEN];
+	char mmbuf[MAX_SEQ_LEN*2];
+	char refbase[MAX_SEQ_LEN], readbase[MAX_SEQ_LEN];
 	int thisCIGlen, curCIGpos, thisMMlen, curMMpos, outpos;
 	char thisCIGchar, thisMMchar, thisType;
 	int needCIG, needMM;
@@ -2894,21 +2895,21 @@ SEXP bam_align_modify(SEXP pAlign, SEXP RefID, SEXP Pos, SEXP MateRefID, SEXP Ma
 
 	if ( haveNew) {
 		int lqname=oldAlign->core.l_qname;
-		char qname[4096];
+		char qname[MAX_SEQ_LEN];
 		memcpy( qname, bam1_qname(oldAlign), lqname);
 		int lcigar=oldAlign->core.n_cigar;
 		int lcigar_bytes = lcigar*4;
-		char cigar[4096];
+		char cigar[MAX_SEQ_LEN];
 		memcpy( cigar, bam1_cigar(oldAlign), lcigar_bytes);
 		int lqseq=oldAlign->core.l_qseq;
 		int lqseq_bytes = (lqseq+1)/2;
-		char qseq[4096];
+		char qseq[MAX_SEQ_LEN];
 		memcpy( qseq, bam1_seq(oldAlign), lqseq_bytes);
 		int lqual=oldAlign->core.l_qseq;
-		char qual[4096];
+		char qual[MAX_SEQ_LEN];
 		memcpy( qual, bam1_qual(oldAlign), lqseq);
 		int laux=oldAlign->l_aux;
-		char aux[8192];
+		char aux[MAX_SEQ_LEN*2];
 		memcpy( aux, bam1_aux(oldAlign), laux);
 
 		// now see what we were passed
@@ -2917,7 +2918,7 @@ SEXP bam_align_modify(SEXP pAlign, SEXP RefID, SEXP Pos, SEXP MateRefID, SEXP Ma
 			lqname=strlen(qname) + 1;
 		}
 		if ( TYPEOF(Seq) == STRSXP) {
-			char qseqtmp[4096];
+			char qseqtmp[MAX_SEQ_LEN];
 			strcpy( qseqtmp, CHAR( STRING_ELT(Seq,0)));
 			lqseq=strlen(qseqtmp);
 			memset( qseq, 0, lqseq);
@@ -3165,7 +3166,7 @@ SEXP bam_align_get_mismatch_df(SEXP pAlign, SEXP readUnits)
 	// we need to track both the CIGAR
 	uint32_t *cigar=bam1_cigar(align);
 	// and the MD tag at the same time
-	char mmbuf[8192];
+	char mmbuf[MAX_SEQ_LEN*2];
 	strcpy( mmbuf, bam_aux_format1( bam_aux_get( align, BAMTAG_MISMATCH)));
 	int mmlength = strlen( mmbuf);
 	// and the aligned sequence
@@ -3179,7 +3180,7 @@ SEXP bam_align_get_mismatch_df(SEXP pAlign, SEXP readUnits)
 	//reversecomplement( rcseq, seq);
 	_Bool doRC = (useReadUnits && bam1_strand(align));
 	//if (doRC) strcpy( seq, rcseq);
-	char refbase[4096], readbase[4096];
+	char refbase[MAX_SEQ_LEN], readbase[MAX_SEQ_LEN];
 
 	// ready to run along all at once...
 	int thisCIGlen, curCIGpos, thisMMlen, curMMpos, outpos;
@@ -3543,7 +3544,7 @@ SEXP bam_align_get_tag(SEXP pAlign, SEXP tag)
 	bam1_t *align= (bam1_t*) (R_ExternalPtrAddr(pAlign));
 	const char *tg = CHAR( STRING_ELT( tag, 0));
 
-	char *buf = (char*) calloc( 4096, sizeof(char));
+	char *buf = (char*) calloc( MAX_SEQ_LEN, sizeof(char));
 	strcpy( buf, bam_aux_format1( bam_aux_get( align, tg)));
 
 	SEXP ans;
@@ -3564,7 +3565,7 @@ SEXP bam_align_get_all_tags(SEXP pAlign, SEXP sep)
 	bam1_t *align= (bam1_t*) (R_ExternalPtrAddr(pAlign));
 	const char *separator = CHAR( STRING_ELT( sep, 0));
 
-	char *buf = (char*) calloc( 8192, sizeof(char));
+	char *buf = (char*) calloc( MAX_SEQ_LEN*2, sizeof(char));
 	strcpy( buf, bam_aux_formatAll( align, separator));
 
 	//uint8_t *s = bam1_aux(align);
@@ -3590,7 +3591,7 @@ SEXP bam_align_set_tag(SEXP pAlign, SEXP tag, SEXP value)
 	bam1_t *align= (bam1_t*) (R_ExternalPtrAddr(pAlign));
 	const char *tg = CHAR( STRING_ELT( tag, 0));
 	const char *val = CHAR( STRING_ELT( value, 0));
-	char buf[4096];
+	char buf[MAX_SEQ_LEN];
 	int lval = strlen(val);
 	memcpy( buf, val, lval);
 	buf[lval] = 0;
@@ -3740,7 +3741,7 @@ SEXP bam_align_get_cigar_string(SEXP pAlign)
 		error("[bam_align_get_cigar_string] No external pointer!");
 	bam1_t *align= (bam1_t*)(R_ExternalPtrAddr(pAlign));
 
-	int buf_size=1024;
+	int buf_size=MAX_SEQ_LEN;
 	char *buf=(char*) calloc(buf_size,sizeof(char));
 
 	SEXP ans;
