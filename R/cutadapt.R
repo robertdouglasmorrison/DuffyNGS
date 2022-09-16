@@ -3,7 +3,7 @@
 `cutadapt` <- function( file1, file2=NULL, 
 			adapt1=myReverseComplement("CAAGCAGAAGACGGCATACGAGCTCTTCCGATCT"), 
 			adapt2=myReverseComplement("AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT"), 
-			path=".", min.length=NULL, cutadaptArgs="", cutadaptProgram="~/bin/cutadapt",
+			path=".", min.length=NULL, cutadaptArgs="", cutadaptProgram=Sys.which("cutadapt"),
 			cores=4) {
 
 	# at least one file is required, use it to deduce suffix/compression,
