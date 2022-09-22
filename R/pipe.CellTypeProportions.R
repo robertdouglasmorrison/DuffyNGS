@@ -34,7 +34,7 @@
 	}
 	
 	# set up if needed
-	verifyCellTypeSetup()
+	CellTypeSetup()
 	cellTypeColors <- getCellTypeColors()
 	cellTypeNames <- names(cellTypeColors)
 	N_CellTypes <- length( cellTypeColors)
@@ -243,7 +243,7 @@
 	}
 
 	# set up if needed
-	verifyCellTypeSetup()
+	CellTypeSetup()
 	cellTypeColors <- getCellTypeColors()
 	N_CellTypes <- length( cellTypeColors)
 
