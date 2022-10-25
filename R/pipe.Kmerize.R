@@ -155,6 +155,7 @@ MAX_KMERS <- 250000000
 			cat( "  drop:", length(lowCnts))
 			myKmers <- myKmers[ -lowCnts]
 			myCounts <- myCounts[ -lowCnts]
+			nNow <- length( myKmers)
 		}
 		if ( ! length( myKmers)) next
 
@@ -237,7 +238,7 @@ MAX_KMERS <- 250000000
 	}
 	cat( "\nDone loading.\n")
 	
-	if ( min.count > 1 && min.samples > 1) {
+	if ( min.count > 1 || min.samples > 1) {
 		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
 		nGood <- apply( kmerTbl, 1, function(x) sum( x >= min.count))
 		drops <- which( nGood < min.samples)
