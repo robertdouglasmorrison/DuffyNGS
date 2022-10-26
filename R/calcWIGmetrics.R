@@ -26,6 +26,7 @@
 
 	nGenes1deep <- nGenes10deep <- nGenes100deep <- 0
 	readLength <- WIG$Info$ReadLength
+	if ( is.na(readLength) || readLength < 32) readLength <- 32
 	
 	for( ig in 1:nrow( geneMap)) {
 		if ( ("REAL_G" %in% colnames( geneMap)) && geneMap$REAL_G[ig] == FALSE) {
@@ -99,29 +100,29 @@
 	Nwrong <- round( Nwrong)
 	total <- Nright + Nwrong
 	options( digits=4)
-	cat( "\nUnique Reads hitting expected strand:    ", Nright, "\t Pct: ", as.percent( Nright / total))
-	cat( "\nUnique Reads hitting wrong strand:       ", Nwrong, "\t Pct: ", as.percent( Nwrong / total))
+	cat( "\nUnique Reads hitting expected strand:    ", Nright, "\t Pct: ", as.percent( Nright / max(total,1)))
+	cat( "\nUnique Reads hitting wrong strand:       ", Nwrong, "\t Pct: ", as.percent( Nwrong / max(total,1)))
 	Nright_combo <- round( Nright_combo)
 	Nwrong_combo <- round( Nwrong_combo)
 	total_combo <- Nright_combo + Nwrong_combo
 	cat( "\nAll Reads hitting expected strand:       ", Nright_combo, "\t Pct: ", 
-			as.percent( Nright_combo / total_combo))
+			as.percent( Nright_combo / max(total_combo,1)))
 	cat( "\nAll Reads hitting wrong strand:          ", Nwrong_combo, "\t Pct: ", 
-			as.percent( Nwrong_combo / total_combo))
+			as.percent( Nwrong_combo / max(total_combo,1)))
 
 	cat( "\n\nGene Specificity of reads: \n")
 	NinterG <- round( NinterG)
 	NinterG_combo <- round( NinterG_combo)
 	totalAllReads <- total + NinterG
 	cat( "\nUnique Reads hitting annotated genes:    ", total, "\t Pct: ", 
-			as.percent( total / totalAllReads))
+			as.percent( total / max(totalAllReads,1)))
 	cat( "\nUnique Reads hitting intergenic areas:   ", NinterG, "\t Pct: ", 
-			as.percent( NinterG / totalAllReads))
+			as.percent( NinterG / max(totalAllReads,1)))
 	totalAllReads_combo <- total_combo + NinterG_combo
 	cat( "\nAll Reads hitting annotated genes:       ", total_combo, "\t Pct: ", 
-			as.percent( total_combo / totalAllReads_combo))
+			as.percent( total_combo / max(totalAllReads_combo,1)))
 	cat( "\nAll Reads hitting intergenic areas:      ", NinterG_combo, "\t Pct: ", 
-			as.percent( NinterG_combo / totalAllReads_combo))
+			as.percent( NinterG_combo / max(totalAllReads_combo,1)))
 
 	cat( "\n\nGene Sensitivity of reads: \n")
 	cat( "\nGenes with at least    1 read:           ", nGenes1deep, "\t Pct: ", 
