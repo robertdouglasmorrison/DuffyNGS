@@ -11,7 +11,7 @@
 	errorOut <- list( "rawReads"=0, "sigma"=0, "rpkm"=0, "strandness"=0, 
 		"rawReads.Multi"=0, "sigma.Multi"=0, 
 		"rpkm.Multi"=0, "strandness.Multi"=0, 
-		"nBases"=nBases) 
+		"nBases"=100) 
 
 	# calculate all the transcription terms for one gene, for speed we should know what gene already
 	if ( is.null( gmapPtr)) {
@@ -29,6 +29,10 @@
 
 	# allow a graceful exit if we have no wiggle data...
 	if ( is.null( wiggleChunk)) {
+		errorOut <- list( "rawReads"=0, "sigma"=0, "rpkm"=0, "strandness"=0, 
+			"rawReads.Multi"=0, "sigma.Multi"=0, 
+			"rpkm.Multi"=0, "strandness.Multi"=0, 
+			"nBases"=nBases) 
 		return( errorOut)
 	}
 
