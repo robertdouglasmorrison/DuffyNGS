@@ -198,6 +198,14 @@
 		ans <- riboConvert( riboFile, riboFileOut, genomefile=genomicFile, sampleID=sampleID, 
 				riboMapFile=riboMap, rawReadCount=rawReadCount, 
 				readBufferSize=readBufferSize, verbose=verbose)
+		
+		# if we fail, exit gracefully
+		if ( is.null(ans)) {
+			# set the 'we are done' flag
+			watchFile <- paste( sampleID, "convertingRiboBAM.done", sep=".")
+			writeLines( "Fail", watchFile)
+			return()
+		}
 
 		quickFileLineCountRecord( riboFileOut, sampleID, lineCount=ans$Alignments)
 
@@ -238,6 +246,13 @@
 		if (verbose) cat( "\n\nAppending GeneID terms to genomic alignments...\n")
 		ans <- genomicConvert( genomicFile, sampleID=sampleID, readBufferSize=readBufferSize, 
 				rawReadCount=rawReadCount, verbose=verbose)
+		
+		# if we fail, exit gracefully
+		if ( is.null(ans)) {
+			watchFile <- paste( sampleID, "convertingGenomeBAM.done", sep=".")
+			writeLines( "Fail", watchFile)
+			return()
+		}
 
 		quickFileLineCountRecord( genomicFile, sampleID, lineCount=ans$Alignments)
 
@@ -288,6 +303,13 @@
 					spliceMapPath=indexPath, spliceMapPrefix=spliceMapPrefix, 
 					readSense=readSense, readBufferSize=readBufferSize, sampleID=sampleID,
 					rawReadCount=rawReadCount)
+		
+		# if we fail, exit gracefully
+		if ( is.null(ans)) {
+			watchFile <- paste( sampleID, "convertingSpliceBAM.done", sep=".")
+			writeLines( "Fail", watchFile)
+			return()
+		}
 
 		quickFileLineCountRecord( spliceFileOut, sampleID, lineCount=ans$Alignments)
 
