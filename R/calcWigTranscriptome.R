@@ -27,10 +27,11 @@
 	# pre evaluate what we can
 	hasNonGenes <- ("REAL_G" %in% colnames( geneMap))
 	totalWIGreads <- WIG_getTotalReadsForRPKM( WIG, minReadsPerSpecies=minReadsPerSpecies)
-	readLength <- WIG$Info$ReadLength
 	# catch the very rare case of no reads
 	if ( totalWIGreads$Unique < 1) totalWIGreads$Unique <- 1
 	if ( totalWIGreads$Multi < 1) totalWIGreads$Multi <- 1
+	readLength <- WIG$Info$ReadLength
+	if ( is.na(readLength) || readLength < 32) readLength <- 32
 
 	# visit every gene
 	ngenes <- nTranscribed <- 0

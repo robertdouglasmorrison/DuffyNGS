@@ -107,10 +107,6 @@
 		combo_rpkm <- calculateRPKM( combo_totalCnt, nBases, totalReads$Multi)
 	}
 
-	# make sure valid values if need be
-	if ( is.null(rpkm) || is.nan(rpkm) || is.na(rpkm)) rpkm <- 0
-	if ( is.null(combo_rpkm) || is.nan(combo_rpkm) || is.na(combo_rpkm)) combo_rpkm <- 0
-
 	out <- list( "rawReads"=totalCnt, "sigma"=sigma, "rpkm"=rpkm, "strandness"=strandCC, 
 			"rawReads.Multi"=combo_totalCnt, "sigma.Multi"=combo_sigma, 
 			"rpkm.Multi"=combo_rpkm, "strandness.Multi"=combo_strandCC, 
