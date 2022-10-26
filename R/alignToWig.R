@@ -550,6 +550,14 @@
 		FileNameSet <- c( curfiles, filein)
 	}
 
+	# try to gracefully handle a missing file, as in the case if zero reads ever aligned
+	if ( ! file.exists( filein)) {
+		compressWIGfromScratchFiles( sampleID)
+		eraseAllScratchFiles( sampleID)
+		setCurrentSpecies( saveSpecies)
+		return( 0)
+	}
+
 	# open that BAM file, and kow the dictionary
 	conBam <- bamReader( filein)
 	refData <- getRefData( conBam)

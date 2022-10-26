@@ -2,8 +2,8 @@
 
 
 `makeSpadesContigs` <- function( fastaFile, outpath, spades.path=dirname(Sys.which("spades.py")), 
-				spades.mode=c("isolate","rna","meta"), kmerSizes=NULL, spades.args="", 
-				doPairedEnd=FALSE, verbose=FALSE) {
+				spades.mode=c("isolate","rna","meta", "bio", "plasmid", "metaplasmid"), 
+				kmerSizes=NULL, spades.args="", doPairedEnd=FALSE, verbose=FALSE) {
 
 	# in general, SPAdes wants an empty folder
 	if ( file.exists( outpath)) {

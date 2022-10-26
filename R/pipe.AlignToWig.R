@@ -55,6 +55,13 @@
 				readBufferSize=readBufferSize, dataType=dataType)
 		reload <- FALSE
 	    }
+
+	    # if there were zero reads aligned, make an empty WIG data structure
+	    if (reload) {
+		alignToWig( filein, sampleID, readSense=readSense, reload=TRUE, 
+				annotationFile=annotationFile, optionsFile=optionsFile, results.path=results.path, 
+				readBufferSize=readBufferSize, dataType=dataType)
+	    }
 	    return()
 	}
 
@@ -88,6 +95,15 @@
 					readBufferSize=readBufferSize, dataType=dataType)
 			if ( nbuf > 0) reload <- FALSE
 		}
+	}
+
+	# if there were zero reads aligned, make an empty WIG data structure
+	if (reload) {
+	    	filein <- paste( sampleID, "genomic.bam", sep=".")
+	    	filein <- file.path( results.path, "align", filein)
+		alignToWig( filein, sampleID, readSense=readSense, reload=TRUE, 
+				annotationFile=annotationFile, optionsFile=optionsFile, results.path=results.path, 
+				readBufferSize=readBufferSize, dataType=dataType)
 	}
 
 	return()

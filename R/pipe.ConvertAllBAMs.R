@@ -95,13 +95,11 @@
 			}
 			if ( ! any( c( watchRibo, watchGenomic, watchSplice))) break
 
-			# there is a tiny chance that one could die...  bale as soon as Genome is done
-			if ( ! watchGenomic) {
-				timeOutCount <- timeOutCount + 1
-				if ( timeOutCount > 360) {
-					cat( "\nGenome done converting..  Timed out on some others..  Continuing on..")
-					break
-				}
+			# there is a tiny chance that one could die...  bale once genomic is done
+			timeOutCount <- timeOutCount + 1
+			if ( timeOutCount > 360 && !watchGenomic) {
+				cat( "\nGenome done converting..  Timed out on some others..  Continuing on..")
+				break
 			}
 		} 
 	}
