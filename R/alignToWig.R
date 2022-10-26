@@ -552,6 +552,7 @@
 
 	# try to gracefully handle a missing file, as in the case if zero reads ever aligned
 	if ( ! file.exists( filein)) {
+		totalWiggleCountPerSpecies <- tallyWiggleCountsBySpecies( allSeqWiggleCnts)
 		compressWIGfromScratchFiles( sampleID)
 		eraseAllScratchFiles( sampleID)
 		setCurrentSpecies( saveSpecies)
