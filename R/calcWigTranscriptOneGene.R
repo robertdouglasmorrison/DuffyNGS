@@ -7,13 +7,19 @@
 				readLength=32, useBothStrands=FALSE, exonsOnly=FALSE) {
 
 
+	# define a roubust error result
+	errorOut <- list( "rawReads"=0, "sigma"=0, "rpkm"=0, "strandness"=0, 
+		"rawReads.Multi"=0, "sigma.Multi"=0, 
+		"rpkm.Multi"=0, "strandness.Multi"=0, 
+		"nBases"=nBases) 
+
 	# calculate all the transcription terms for one gene, for speed we should know what gene already
 	if ( is.null( gmapPtr)) {
 		gmapPtr <- base::match( gene, geneMap$GENE_ID, nomatch=0)[1]
 		if ( gmapPtr == 0) {
 			cat( "\ncalcWigTranscriptOneGene:  not a found gene: ", gene, 
 				"\tSpecies: ", getCurrentSpecies(),"n")
-			return(NULL)
+			return(errorOut)
 		}
 	}
 	ig <- gmapPtr
@@ -23,11 +29,7 @@
 
 	# allow a graceful exit if we have no wiggle data...
 	if ( is.null( wiggleChunk)) {
-		out <- list( "rawReads"=0, "sigma"=0, "rpkm"=0, "strandness"=0, 
-			"rawReads.Multi"=0, "sigma.Multi"=0, 
-			"rpkm.Multi"=0, "strandness.Multi"=0, 
-			"nBases"=nBases) 
-		return( out)
+		return( errorOut)
 	}
 
 	# get the read counts for this region
@@ -100,6 +102,10 @@
 		combo_sigma <- rosettaSigma( combo_totalCnt)
 		combo_rpkm <- calculateRPKM( combo_totalCnt, nBases, totalReads$Multi)
 	}
+
+	# make sure valid values if need be
+	if ( is.null(rpkm) || is.nan(rpkm) || is.na(rpkm)) rpkm <- 0
+	if ( is.null(combo_rpkm) || is.nan(combo_rpkm) || is.na(combo_rpkm)) combo_rpkm <- 0
 
 	out <- list( "rawReads"=totalCnt, "sigma"=sigma, "rpkm"=rpkm, "strandness"=strandCC, 
 			"rawReads.Multi"=combo_totalCnt, "sigma.Multi"=combo_sigma, 
