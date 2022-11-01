@@ -1,8 +1,8 @@
 # pipe.CellTypeProportions.R -- do various ways of calling immune cell subset proportions from gene transcription
 
 `pipe.CellTypeProportions` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				speciesID=getCurrentSpecies(), results.path=NULL, geneUniverse=NULL,
-				recalculate=c("none", "all", "missing", "profile", "deconvolution"), 
+				speciesID=getCurrentSpecies(), results.path=NULL, geneUniverse=NULL, genePercentage=NULL,
+				recalculate=c("none", "all", "missing", "profile", "deconvolution"), mode=c("average","best"), 
 				makePlots=c( "final", "none", "all"),
 				verbose=TRUE) {
 
@@ -32,20 +32,50 @@
 		cat( "\nError: required transcriptome result file not found: ", transcriptFile)
 		return( NULL)
 	}
+	# grab the gene expression values for later RMS deviation calcuations
+	unitsColumn <- getExpressionUnitsColumn( optionsFile, verbose=verbose)
+	units <- sub( "_[MU]$", "", unitsColumn)
+	sampleMatrix <- expressionFileSetToMatrix( transcriptFile, sampleID)
 	
-	# set up if needed
+	# set up the current defined cell type details
 	CellTypeSetup()
 	cellTypeColors <- getCellTypeColors()
 	cellTypeNames <- names(cellTypeColors)
 	N_CellTypes <- length( cellTypeColors)
+	reference <- getCellTypeReference()
+	cellTypeMatrix <- getCellTypeMatrix()
+
+	# let the caller reduce the gene universe by percentage instead of by naming genes
+	if ( ! is.null( genePercentage)) {
+		if ( ! is.null( geneUniverse)) {
+			cat( "\n  Warning: only one of 'geneUniverse' or 'genePercentage' can be non-NULL")
+			return( NULL)
+		}
+		genePercentage <- as.numeric( genePercentage)
+		if ( genePercentage > 100) {
+			cat( "\n  Warning: 'genePercentage' must be in the range (0 to 1) or (2 to 100)")
+			return( NULL)
+		} else if ( genePercentage > 1.0) {
+			genePercentage <- genePercentage / 100
+		}
+		# get the target matrix, and decide which genes we will keep, least DE get discarded
+		de <- apply( cellTypeMatrix, 1, function(x) diff( range( x, na.rm=T)))
+		ord <- order( de, decreasing=T)
+		# decide how many genes we keep
+		nGenesKeep <- round( nrow(cellTypeMatrix) * genePercentage)
+		# that gives us our universe of genes
+		keep <- ord[ 1:nGenesKeep]
+		geneUniverse <- rownames(cellTypeMatrix)[ keep]
+		cat( "\nPercentage of genes to use in fitting =", genePercentage*100, "\nThus Reducing to a universe of", nGenesKeep, "most DE genes.\n")
+	}
 
 	# name for the file of results
-	celltypeDetailsFile <- file.path( celltype.path, paste( sampleID, prefix, "CellTypeProportions.csv", sep="."))
-	celltypePlotFile <- file.path( celltype.path, paste( sampleID, prefix, "CellTypeProportions.Final.pdf", sep="."))
+	celltypeDetailsFile <- file.path( celltype.path, paste( sampleID, prefix, reference, "Proportions.csv", sep="."))
+	celltypePlotFile <- file.path( celltype.path, paste( sampleID, prefix, reference, "Proportions.Final.pdf", sep="."))
 	cellAns <- NULL
-	pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- pcts7 <- pcts8 <- rep.int( NA, N_CellTypes)
-	names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- names(pcts7) <-  names(pcts8) <- cellTypeNames
-	TestNames <- c( "Fit.SteepDescent", "Fit.NLS", "Fit.GenSA", "Deconv.NLS", "Deconv.GenSA", "Deconv.Log2.NLS", "Deconv.Log2.GenSA", "Deconv.SteepDescent")
+	pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- rep.int( NA, N_CellTypes)
+	names(pcts1) <- names(pcts2) <- names(pcts3) <- names(pcts4) <- names(pcts5) <- names(pcts6) <- cellTypeNames
+	TestNames <- c( "Fit.SteepDescent", "Fit.NLS", "Fit.GenSA", "Deconv.NLS", "Deconv.GenSA", "Deconv.SteepDescent")
 	
 	recalculate <- match.arg( recalculate)
 	makePlots <- match.arg( makePlots)
@@ -62,8 +92,6 @@
 		if ( TestNames[4] %in% colnames(cellAns)) pcts4 <- as.numeric( cellAns[[ TestNames[4]]])
 		if ( TestNames[5] %in% colnames(cellAns)) pcts5 <- as.numeric( cellAns[[ TestNames[5]]])
 		if ( TestNames[6] %in% colnames(cellAns)) pcts6 <- as.numeric( cellAns[[ TestNames[6]]])
-		if ( TestNames[7] %in% colnames(cellAns)) pcts7 <- as.numeric( cellAns[[ TestNames[7]]])
-		if ( TestNames[8] %in% colnames(cellAns)) pcts8 <- as.numeric( cellAns[[ TestNames[8]]])
 	}
 	
 	if (recalculate != "none" || is.null(cellAns)) {
@@ -76,7 +104,7 @@
 
 		# 1)  Steepest Descent of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts1)))) {
-			cat( "\n1. Cell Type Profile: Fit by Steepest Descent:\n")
+			cat( "\n1. Cell Type Profile: Fit", units, "by Steepest Descent:\n")
 			ans1 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='steep',
 						geneUniverse=geneUniverse)
@@ -89,7 +117,7 @@
 
 		# 2)  Nonlinear Least Squares of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts2)))) {
-			cat( "\n2. Cell Type Profile: Fit by Nonlinear Least Squares (NLS):\n")
+			cat( "\n2. Cell Type Profile: Fit", units, "by Nonlinear Least Squares (NLS):\n")
 			ans2 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='nls',
 						geneUniverse=geneUniverse)
@@ -102,7 +130,7 @@
 
 		# 3)  GenSA of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile")) || (recalculate == "missing" && all(is.na(pcts3)))) {
-			cat( "\n3. Cell Type Profile: Fit by Simulated Annealing (GenSA):\n")
+			cat( "\n3. Cell Type Profile: Fit", units, "by Simulated Annealing (GenSA):\n")
 			ans3 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='GenSA',
 						geneUniverse=geneUniverse)
@@ -115,7 +143,7 @@
 
 		# 4)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts4)))) {
-			cat( "\n4. Cell Type Deconvolution:  Fit RPKM by Nonlinear Least Squares (NLS):\n")
+			cat( "\n4. Cell Type Deconvolution:  Fit", units, "by Nonlinear Least Squares (NLS):\n")
 			ans4 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
@@ -128,7 +156,7 @@
 		
 		# 5)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts5)))) {
-			cat( "\n5. Cell Type Deconvolution:  Fit RPKM by Simulated Annealing (GenSA):\n")
+			cat( "\n5. Cell Type Deconvolution:  Fit", units, "by Simulated Annealing (GenSA):\n")
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
@@ -140,67 +168,55 @@
 			}
 		}
 		
-		# 6)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
+		# 6)  Transcriptome Deconvolution, by Steepest Descent...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts6)))) {
-			cat( "\n6. Cell Type Deconvolution:  Fit Log2(RPKM) by Nonlinear Least Squares (NLS):\n")
-			cat( "           Not numerically stable..  Skip this method for now..\n")
-			#ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
-			#				useLog=TRUE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,,
-			#				geneUniverse=geneUniverseverbose=F)
-			#if ( ! is.null(ans6)) pcts6 <- ans6$BestFit
-		}
-		
-		# 7)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
-		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts7)))) {
-			cat( "\n7. Cell Type Deconvolution:  Fit Log2(RPKM) by Simulated Annealing (GenSA):\n")
-			cat( "           Not numerically stable..  Skip this method for now..\n")
-			#ans7 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
-			#			useLog=TRUE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-			#			geneUniverse=geneUniverse, verbose=F)
-			#if ( ! is.null(ans7)) pcts7 <- ans7$BestFit
-			#if ( ! is.null(ans7)) {
-			#	pcts7 <- ans7$BestFit
-			#	cellWhere <- match( cellTypeNames, rownames(pcts7))
-			#	pcts7 <- pcts7[ cellWhere, 1]
-			#}
-		}
-		
-		# 8)  Transcriptome Deconvolution, by Steepest Descent...
-		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution")) || (recalculate == "missing" && all(is.na(pcts8)))) {
-			cat( "\n8. Cell Type Deconvolution:  Fit RPKM by Steepest Descent:\n")
-			ans8 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
+			cat( "\n6. Cell Type Deconvolution:  Fit", units, "by Steepest Descent:\n")
+			ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			#if ( ! is.null(ans8)) pcts8 <- ans8$BestFit
-			if ( ! is.null(ans8)) {
-				pcts8 <- ans8$BestFit
-				cellWhere <- match( cellTypeNames, rownames(pcts8))
-				pcts8 <- pcts8[ cellWhere, 1]
+			#if ( ! is.null(ans6)) pcts6 <- ans6$BestFit
+			if ( ! is.null(ans6)) {
+				pcts6 <- ans6$BestFit
+				cellWhere <- match( cellTypeNames, rownames(pcts6))
+				pcts6 <- pcts6[ cellWhere, 1]
 			}
 		}
 	}
 	
-	# done with all methods, now merge and average
-	cellM <- matrix( NA, nrow=N_CellTypes, ncol=8)
+	# done with all methods, now merge and average the proportions
+	cellM <- matrix( NA, nrow=N_CellTypes, ncol=6)
 	colnames(cellM) <- TestNames
 	cellM[ ,1] <- pcts1
 	cellM[ ,2] <- pcts2
 	cellM[ ,3] <- pcts3
 	cellM[ ,4] <- pcts4
 	cellM[ ,5] <- pcts5
-	# we have decided/proven that the log2 data is unreliable
-	cellM[ ,6] <- NA;   #pcts6
-	cellM[ ,7] <- NA;   #pcts7
-	cellM[ ,8] <- pcts8
+	cellM[ ,6] <- pcts6
 
 	# catch any that are all zero
 	isAllZero <- which( apply( cellM, 2, function(x) all( x == 0, na.rm=T)))
 	if ( length(isAllZero)) cellM[ , isAllZero] <- NA
-	cellMean <- apply( cellM, 1, mean, na.rm=T)
-	cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
+
+	# let's independently eavaluate the RMS fit for every method
+	rmsdAns <- rmsDeviation( obsMatrix=sampleMatrix, calcMatrix=cellTypeMatrix, calcPcts=cellM, geneUniverse=geneUniverse)
+	if (verbose) {
+		cat( "\n\nGene expression RMS deviation by method:\n")
+		print( rmsdAns)
+	}
+
+	# final answer is either the average or the one method with lowest RMS
+	mode <- match.arg( mode)
+	if ( mode == "average") {
+		cellMean <- apply( cellM, 1, mean, na.rm=T)
+		cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
+		if (verbose) cat( "\n  Final answer is average of all methods")
+	} else {
+		best <- which.min(rmsdAns)
+		cellMean <- round( cellM[ , best], digits=3)
+		if (verbose) cat( "\n  Final answer is best RMSD method: ", names(rmsdAns)[best])
+	}
 		
-	# leave out the NLS and GenSA of Log2 data for now...
-	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM[,-c(6:7)],digits=3), stringsAsFactors=F)
+	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM,digits=3), stringsAsFactors=F)
 	write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
 
 	# make a plot image of the final average
@@ -216,8 +232,46 @@
 	return( invisible( out))
 }
 
+`rmsDeviation` <- function( obsMatrix, calcMatrix, calcPcts, geneUniverse=NULL) {
 
-`pipe.CellTypeCompare` <- function( sampleIDset, groups, levels=sort(unique(as.character(groups))), 
+	# measure the Root Mean Square (RMS) deviation of each set of fitted cell type percentages
+	# first get the set of genes to use
+	obsGenes <- shortGeneName( rownames( obsMatrix), keep=1)
+	calcGenes <- rownames( calcMatrix)
+	useGenes <- sort( intersect( obsGenes, calcGenes))
+	if ( ! is.null( geneUniverse)) {
+		useGenes <- intersect( useGenes, geneUniverse)
+	}
+	NG <- length( useGenes)
+	whereObs <- match( useGenes, obsGenes)
+	whereCalc <- match( useGenes, calcGenes)
+
+	# now calc the deviation for each proportions answer
+	obsExpression <- obsMatrix[ ,1]
+	Npcts <- ncol( calcPcts)
+	NcellTypes <- nrow(calcPcts)
+	rmsOut <- rep.int( NA, Npcts)
+	names(rmsOut) <- colnames(calcPcts)
+	for ( j in 1:Npcts) {
+		if ( all( is.na( calcPcts[ ,j]))) next
+		# build a calculated transcriptome
+		calcExpression <- rep.int( 0, nrow(calcMatrix))
+		for ( i in 1:NcellTypes) {
+			thisCell <- calcMatrix[ , i] * calcPcts[ i, j] / 100
+			thisCell[ is.na( thisCell)] <- 0
+			calcExpression <- calcExpression + thisCell
+		}
+		vObs <- obsExpression[ whereObs]
+		vCalc <- calcExpression[ whereCalc]
+		vDiff <- vObs - vCalc
+		rms <- sqrt( mean( vDiff * vDiff))
+		rmsOut[j] <- round( rms, digits=1)
+	}
+	return( rmsOut)
+}
+
+
+`pipe.CellTypeCompare` <- function( sampleIDset, groups=sampleIDset, levels=sort(unique(as.character(groups))), 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, cellProportionsColumn="Final.Proportions", 
 				prefix=NULL, 
@@ -246,6 +300,7 @@
 	CellTypeSetup()
 	cellTypeColors <- getCellTypeColors()
 	N_CellTypes <- length( cellTypeColors)
+	reference <- getCellTypeReference()
 
 	# gather the cell type proportions data from every sample
 	NS <- length( sampleIDset)
@@ -265,7 +320,7 @@
 
 		# name for  file of results
 		my.celltype.path <- file.path( celltype.path, sid)
-		celltypeDetailsFile <- file.path( my.celltype.path, paste( sid, prefix[i], "CellTypeProportions.csv", sep="."))
+		celltypeDetailsFile <- file.path( my.celltype.path, paste( sid, prefix[i], reference, "Proportions.csv", sep="."))
 		if ( ! file.exists(celltypeDetailsFile)) {
 			cat( "\nCell Type Proportions results not found for sample: ", sid, "|", celltypeDetailsFile)
 			next
@@ -301,19 +356,19 @@
 	out <- vector( mode="list")
 	out[[1]] <- ctpM
 	names(out)[1] <- "Proportions.Matrix"
-	outFile <- file.path( celltype.path, "All.CellType.Proportion.Details.csv")
+	outFile <- file.path( celltype.path, paste( "All", reference, "Proportion.Details.csv", sep="."))
 	write.csv( ctpM, outFile)
 
 	if ( length(levels) < 3) {
 		out[[2]] <- ans
 		names(out)[2] <- "Comparison.Results"
-		outFile <- file.path( celltype.path, paste( "CellTypeCompare_", levelString, "_Details.csv", sep=""))
+		outFile <- file.path( celltype.path, paste( reference, ".Compare_", levelString, "_Details.csv", sep=""))
 		write.csv( ans, outFile, row.names=F)
 	} else {
 		for (j in 1:length(ans)) {
 			out[[j+1]] <- ans[[j]]
 			names(out)[j+1] <- names(ans)[j]
-			outFile <- file.path( celltype.path, paste( "CellTypeCompare_", names(ans)[j], "_Details.csv", sep=""))
+			outFile <- file.path( celltype.path, paste( reference, ".Compare_", names(ans)[j], "_Details.csv", sep=""))
 			write.csv( ans[[j]], outFile, row.names=F)
 		}
 	}
