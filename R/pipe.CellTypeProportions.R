@@ -59,14 +59,14 @@
 			genePercentage <- genePercentage / 100
 		}
 		# get the target matrix, and decide which genes we will keep, least DE get discarded
-		de <- apply( cellTypeMatrix, 1, function(x) diff( range( x, na.rm=T)))
+		de <- apply( cellTypeMatrix, 1, function(x) diff( range( x, na.rm=T)) / max( mean(x,na.rm=T,1)))
 		ord <- order( de, decreasing=T)
 		# decide how many genes we keep
 		nGenesKeep <- round( nrow(cellTypeMatrix) * genePercentage)
 		# that gives us our universe of genes
 		keep <- ord[ 1:nGenesKeep]
 		geneUniverse <- rownames(cellTypeMatrix)[ keep]
-		cat( "\nPercentage of genes to use in fitting =", genePercentage*100, "\nThus Reducing to a universe of", nGenesKeep, "most DE genes.\n")
+		cat( "\nPercentage of genes to use in fitting =", genePercentage*100, "\nThus reducing to a universe of", nGenesKeep, "most DE genes.\n")
 	}
 
 	# name for the file of results
