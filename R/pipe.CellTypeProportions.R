@@ -232,7 +232,7 @@
 	return( invisible( out))
 }
 
-`rmsDeviation` <- function( obsMatrix, calcMatrix, calcPcts, geneUniverse=NULL) {
+`rmsDeviation` <- function( obsMatrix, calcMatrix, calcPcts, geneUniverse=NULL, DEBUG=FALSE) {
 
 	# measure the Root Mean Square (RMS) deviation of each set of fitted cell type percentages
 	# first get the set of genes to use
@@ -246,26 +246,37 @@
 	whereObs <- match( useGenes, obsGenes)
 	whereCalc <- match( useGenes, calcGenes)
 
-	# now calc the deviation for each proportions answer
-	obsExpression <- obsMatrix[ ,1]
-	Npcts <- ncol( calcPcts)
+	# force the reference to scale match the observed, to be exactly what the deconvolution tools saw
 	NcellTypes <- nrow(calcPcts)
-	rmsOut <- rep.int( NA, Npcts)
+	Nmethods <- ncol( calcPcts)
+	obsValue <- obsMatrix[ whereObs, 1]
+	obsSum <- sum( obsValue, na.rm=T)
+	calcValues <- calcMatrix[ whereCalc, ]
+	calcSums <- apply( calcValues, 2, sum, na.rm=T)
+	calcScales <- obsSum / calcSums
+	for ( j in 1:NcellTypes) calcValues[ , j] <- calcValues[ ,j] * calcScales[j]
+
+	if (DEBUG) {
+		cat( "\n  Debug:  Total Observed Expression: ", obsSum)
+		cat( "\n  Debug:  Total Calculated Expression: \n")
+		print( apply( calcValues, 2, sum, na.rm=T))
+	}
+
+	# now calc the deviation for each proportions answer
+	rmsOut <- rep.int( NA, Nmethods)
 	names(rmsOut) <- colnames(calcPcts)
-	for ( j in 1:Npcts) {
+	for ( j in 1:Nmethods) {
 		if ( all( is.na( calcPcts[ ,j]))) next
 		# build a calculated transcriptome
-		calcExpression <- rep.int( 0, nrow(calcMatrix))
+		thisCalcValue <- rep.int( 0, NG)
 		for ( i in 1:NcellTypes) {
-			thisCell <- calcMatrix[ , i] * calcPcts[ i, j] / 100
-			thisCell[ is.na( thisCell)] <- 0
-			calcExpression <- calcExpression + thisCell
+			thisCellValue <- calcValues[ , i] * calcPcts[ i, j] / 100
+			thisCellValue[ is.na( thisCellValue)] <- 0
+			thisCalcValue <- thisCalcValue + thisCellValue
 		}
-		vObs <- obsExpression[ whereObs]
-		vCalc <- calcExpression[ whereCalc]
-		vDiff <- vObs - vCalc
+		vDiff <- obsValue - thisCalcValue
 		rms <- sqrt( mean( vDiff * vDiff))
-		rmsOut[j] <- round( rms, digits=1)
+		rmsOut[j] <- round( rms, digits=3)
 	}
 	return( rmsOut)
 }
@@ -349,26 +360,26 @@
 	dev.type <- getPlotDeviceType( optT)
 	levelString <- paste( levels, collapse=".v.")
 	if ( length(levels) > 3) levelString <- paste( paste( levels[1:3], collapse=".v."), ".v.etc", sep="")
-	plotFile <- paste( "CellTypeCompare_", levelString, "_", toupper(plot.mode), ".Plot.", dev.type, sep="")
+	plotFile <- paste( "Compare", prefix[1], reference, "_", levelString, "_", toupper(plot.mode), ".Plot.", dev.type, sep="")
 	printPlot( file.path( celltype.path, plotFile))
 
 	# package up the final details
 	out <- vector( mode="list")
 	out[[1]] <- ctpM
 	names(out)[1] <- "Proportions.Matrix"
-	outFile <- file.path( celltype.path, paste( "All", reference, "Proportion.Details.csv", sep="."))
+	outFile <- file.path( celltype.path, paste( "All", prefix[1], reference, "Proportion.Details.csv", sep="."))
 	write.csv( ctpM, outFile)
 
 	if ( length(levels) < 3) {
 		out[[2]] <- ans
 		names(out)[2] <- "Comparison.Results"
-		outFile <- file.path( celltype.path, paste( reference, ".Compare_", levelString, "_Details.csv", sep=""))
+		outFile <- file.path( celltype.path, paste( prefix[1], ".", reference, ".Compare_", levelString, "_Details.csv", sep=""))
 		write.csv( ans, outFile, row.names=F)
 	} else {
 		for (j in 1:length(ans)) {
 			out[[j+1]] <- ans[[j]]
 			names(out)[j+1] <- names(ans)[j]
-			outFile <- file.path( celltype.path, paste( reference, ".Compare_", names(ans)[j], "_Details.csv", sep=""))
+			outFile <- file.path( celltype.path, paste( prefix[1], ".", reference, ".Compare_", names(ans)[j], "_Details.csv", sep=""))
 			write.csv( ans[[j]], outFile, row.names=F)
 		}
 	}
