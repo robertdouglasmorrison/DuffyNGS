@@ -2,7 +2,7 @@
 
 `pipe.CellTypeProportions` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, geneUniverse=NULL, genePercentage=NULL,
-				recalculate=c("none", "all", "missing", "profile", "deconvolution"), mode=c("average","best"), 
+				recalculate=c("none", "all", "missing", "profile", "deconvolution"), mode=c("weighted.mean","average","best"), 
 				makePlots=c( "final", "none", "all"),
 				verbose=TRUE) {
 
@@ -148,7 +148,8 @@
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
 			if ( ! is.null(ans4)) {
-				pcts4 <- ans4$BestFit
+				# deconvolution tool returns weights.  Trun them to percentages
+				pcts4 <- ans4$BestFit * 100
 				cellWhere <- match( cellTypeNames, rownames(pcts4))
 				pcts4 <- pcts4[ cellWhere, 1]
 			}
@@ -160,9 +161,9 @@
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			#if ( ! is.null(ans5)) pcts5 <- ans5$BestFit
 			if ( ! is.null(ans5)) {
-				pcts5 <- ans5$BestFit
+				# deconvolution tool returns weights.  Trun them to percentages
+				pcts5 <- ans5$BestFit * 100
 				cellWhere <- match( cellTypeNames, rownames(pcts5))
 				pcts5 <- pcts5[ cellWhere, 1]
 			}
@@ -174,16 +175,16 @@
 			ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=F)
-			#if ( ! is.null(ans6)) pcts6 <- ans6$BestFit
 			if ( ! is.null(ans6)) {
-				pcts6 <- ans6$BestFit
+				# deconvolution tool returns weights.  Trun them to percentages
+				pcts6 <- ans6$BestFit * 100
 				cellWhere <- match( cellTypeNames, rownames(pcts6))
 				pcts6 <- pcts6[ cellWhere, 1]
 			}
 		}
 	}
 	
-	# done with all methods, now merge and average the proportions
+	# done with all methods, now merge
 	cellM <- matrix( NA, nrow=N_CellTypes, ncol=6)
 	colnames(cellM) <- TestNames
 	cellM[ ,1] <- pcts1
@@ -205,15 +206,24 @@
 	}
 
 	# final answer is either the average or the one method with lowest RMS
+	# final answer will now be 'proportion', not 'percentage'.  Not summing to 100% anymore.
 	mode <- match.arg( mode)
-	if ( mode == "average") {
+	if ( mode == "weighted.mean") {
+		wts <- 1 / ((rmsdAns^2) / min(rmsdAns^2))
+		names(wts) <- names(rmsdAns)
+		cat( "\nDebug: RMSD and Weighted Means: \n")
+		print( rmsdAns); print( wts);
+		cellMean <- apply( cellM, 1, weighted.mean, w=wts, na.rm=T)
+		cellMean <- round( cellMean, digits=5)
+		if (verbose) cat( "\n  Final answer is weighted mean of all methods, using RMSD as weights")
+	} else if ( mode == "average") {
 		cellMean <- apply( cellM, 1, mean, na.rm=T)
-		cellMean <- round( cellMean * 100 / sum(cellMean), digits=3)
+		cellMean <- round( cellMean, digits=5)
 		if (verbose) cat( "\n  Final answer is average of all methods")
 	} else {
 		best <- which.min(rmsdAns)
-		cellMean <- round( cellM[ , best], digits=3)
-		if (verbose) cat( "\n  Final answer is best RMSD method: ", names(rmsdAns)[best])
+		cellMean <- round( cellM[ , best], digits=5)
+		if (verbose) cat( "\n  Final answer is method with best (lowest) RMSD: ", names(rmsdAns)[best])
 	}
 		
 	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM,digits=3), stringsAsFactors=F)
@@ -231,6 +241,7 @@
 	out <- data.frame( "SampleID"=sampleID, cellAns, stringsAsFactors=F)
 	return( invisible( out))
 }
+
 
 `rmsDeviation` <- function( obsMatrix, calcMatrix, calcPcts, geneUniverse=NULL, DEBUG=FALSE) {
 
@@ -270,6 +281,7 @@
 		# build a calculated transcriptome
 		thisCalcValue <- rep.int( 0, NG)
 		for ( i in 1:NcellTypes) {
+			# turn the given percentages back to weights
 			thisCellValue <- calcValues[ , i] * calcPcts[ i, j] / 100
 			thisCellValue[ is.na( thisCellValue)] <- 0
 			thisCalcValue <- thisCalcValue + thisCellValue
