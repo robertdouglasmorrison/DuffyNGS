@@ -533,7 +533,7 @@
 	#tmpdnaV <- strsplit( tmpdna, split="")[[1]]
 	consensusDNAflankFile <- sub( "ConsensusDNA", "ConsensusDNAwithFlanks", consensusDNAfile)
 	writeFasta( as.Fasta( myDesc, tmpdna), consensusDNAflankFile, line.width=100)
-	indexFile <- file.path( peptide.path, "ConsensusProteinIndex")
+	indexFile <- file.path( peptide.path, paste( geneName, "ConsensusProteinIndex", sep="."))
 	cat( "\nMaking Bowtie index from consensus sequence with flanks..")
 	callBowtie2Build( buildBowtie2BuildCommandLine( inputFastaFile=consensusDNAflankFile, outputIndexFile=indexFile, 
 			optionsFile=optionsFile, verbose=F))
@@ -555,8 +555,9 @@
 			cat( "  ", keyword)
 		}
 	}
-	bamFile <- file.path( peptide.path, "ConsensusProtein.bam")
-	nhFile <- file.path( peptide.path, "ConsensusProtein.noHits.fastq.gz")
+	# put the gene name in these temp files, to prevent collisions
+	bamFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.bam", sep="."))
+	nhFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))
 	bowtieAns <- fastqToBAM( inputFastqFile=allReadsFiles, outputFile=bamFile, sampleID=sampleID, 
 			optionsFile=optionsFile, annotationFile=annotationFile, 
 			alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
@@ -583,9 +584,9 @@
 	cat( "\nWrote new realigned .FASTA and BaseCalls for sampleID: ", sampleID, "\n")
 
 	# step 6:  turn the alignments back to fastq and then to peptides
-	bamFile <- file.path( peptide.path, "ConsensusProtein.sorted.bam")
-	fastqFile <- file.path( peptide.path, "ConsensusProtein.AlignedReads.fq.gz")
-	tempPeptidesFile <- file.path( peptide.path, "ConsensusProtein.Peptides.txt")
+	bamFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.sorted.bam", sep="."))
+	fastqFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))
+	tempPeptidesFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.Peptides.txt", sep="."))
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
 	bam2fastq( bamfile=bamFile, outfile=fastqFile, verbose=F)
 	# since the raw DNA reads wt got aligned are already cutAdapt'ed, no need to do it again...
@@ -599,10 +600,10 @@
 			info=list( "Length_AA"=nchar(aaSeq), "N_Peptides"=nReadsAligned))
 
 	# lastly, clean up
-	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein*bam*")))
-	system( paste( "rm ", file.path( peptide.path, "ConsensusProteinIndex*")))
-	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein.noHits.fastq.gz")))
-	system( paste( "rm ", file.path( peptide.path, "ConsensusProtein.AlignedReads.fq.gz")))
+	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein*bam*", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProteinIndex*", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))))
 	system( paste( "rm ", consensusDNAflankFile))
 	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusDNAwithFlanks.fasta.fai", sep="."))))
 	system( paste( "rm ", tempPeptidesFile))
