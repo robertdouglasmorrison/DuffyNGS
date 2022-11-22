@@ -31,13 +31,14 @@
 		baseDir <- basename( d)
 
 		# some are just giant compressed data that can't be further compressed
-		if ( baseDir %in% c( "align", "fastq", "Viral.BAMS")) {
+		if ( baseDir %in% c( "align", "fastq")) {
 			cat( "\nIgnoring already compressed folder: ", baseDir)
 			next
 		}
 		# some are folders of folders, where each subfolder should get compressed
 		if ( baseDir %in% c( "DESeq", "EdgeR", "MetaResults", "RankProduct", "RoundRobin", "SAM", 
-					"ConsensusProteins", "SieveAnalysis", "VariantCalls", "VelvetContigs")) {
+					"ConsensusProteins", "SieveAnalysis", "VariantCalls", "VelvetContigs",
+					"TargetSearch", "SpadesContigs")) {
 			cat( "\nCompressing folders down inside: ", baseDir)
 			ans <- compressFolderSubfolders( d, overwrite=overwrite)
 			if ( ! is.null(ans)) out <- rbind( out, ans)

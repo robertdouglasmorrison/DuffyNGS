@@ -42,8 +42,11 @@
 
 	mode <- match.arg( mode)
 
-	# make sure we have the raw reads as peptides ready
-	alignedReadsFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
+	# make sure we have the raw reads as peptides ready.  Small chance that gene name could have invalid filename characters
+	geneFileName <- file.cleanSpecialCharactersFromFileName( geneName)
+	constructFileName <- file.cleanSpecialCharactersFromFileName( constructName)
+	
+	alignedReadsFile <- file.path( peptide.path, paste( sampleID, geneFileName, "RawReadPeptides.txt", sep="."))
 	nohitReadsFile <- file.path( peptide.path, paste( sampleID, "NoHits", "RawReadPeptides.txt", sep="."))
 	if ( ! file.exists( alignedReadsFile)) {
 		cat( "\nMissing Raw Reads Peptides files for", sampleID, geneName)
@@ -60,13 +63,13 @@
 	# also store up the good scoring peptides
 	outPep <- outCnt <- outStart <- outScore <- outSource <- vector()
 	nPepOut <- 0
-	pepOutfile <- file.path( peptide.path, paste( constructName, "GoodScorePeptides.txt", sep="."))
+	pepOutfile <- file.path( peptide.path, paste( constructFileName, "GoodScorePeptides.txt", sep="."))
 
 	# lastly, lets try to track alternate reading frames too, if possible
 	constructRF2 <- constructRF3 <- NULL
-	baseCallsFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
+	baseCallsFile <- file.path( peptide.path, paste( sampleID, geneFileName, "ConsensusBaseCalls.txt", sep="."))
 	if ( mode == "realigned") {
-		baseCallsFile <- file.path( peptide.path, paste( sampleID, geneName, "RealignedConsensusBaseCalls.txt", sep="."))
+		baseCallsFile <- file.path( peptide.path, paste( sampleID, geneFileName, "RealignedConsensusBaseCalls.txt", sep="."))
 	}
 	if ( file.exists( baseCallsFile)) {
 		tmp <- read.delim( baseCallsFile, as.is=T)
@@ -86,6 +89,11 @@
 	}
 
 	if ( ! showFrameShiftPeptides) constructRF2 <- constructRF3 <- NULL
+
+	# tiny chance of invalid DNA/AA calls existing in the consensus construct.  Catch to prevent breaking Biostrings compares
+	constructAAstr <- AAString( gsub( "?", "A", construct, fixed=T))
+	if ( ! is.null( constructRF2)) constructRF2 <- gsub( "?", "A", constructRF2, fixed=T)
+	if ( ! is.null( constructRF3)) constructRF3 <- gsub( "?", "A", constructRF3, fixed=T)
 
 	# local function to find first free spot on the plot to lay down a peptide
 	findFreeDepth <- function( xfrom, xto, maxUseDepth=maxDepth) {

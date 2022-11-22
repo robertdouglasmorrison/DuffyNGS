@@ -3,7 +3,7 @@
 
 `pipe.ConsensusBaseCalls` <- function( sampleID, geneID=NULL, seqID=NULL, start=NULL, stop=NULL, 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", results.path=NULL,
-				genomicFastaFile=NULL, genomicVector=NULL,
+				genomicFastaFile=NULL, genomicVector=NULL, bamfile=NULL, 
 				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, 
 				best.frame=as.cDNA, utr.tail.length=0,
 				SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE) {
@@ -17,7 +17,7 @@
 		genomicFastaFile <- getOptionValue( optT, "genomicFastaFile", verbose=F)
 	}
 
-	bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
+	if ( is.null( bamfile)) bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 
 	# control what to do when no reads cover a region
 	noReadCalls <- match.arg( noReadCalls)
@@ -105,7 +105,7 @@
 			summarize.calls=TRUE, verbose=FALSE)
 	#if ( is.null(curMPU)) return(NULL)
 	if ( is.null(curMPU)) curMPU <- data.frame()
-
+	
 	# add the reference genome
 	# we may have passed in the vector of bases explicitly
 	explicitVector <- ( !isGeneric && ! is.null(genomicVector) && (seqID %in% seqMap$SEQ_ID) && 
@@ -284,6 +284,7 @@
 
 	out <- list( "ref"=genomeBaseText, "callsMatrix"=flips, "dna.consensus"=genomeSNPtext, 
 			"aa.consensus"=genomeAminoText, "indel.details"=indelOut)
+				
 	return( out)
 }
 

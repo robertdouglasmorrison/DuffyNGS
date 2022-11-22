@@ -24,6 +24,9 @@
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	if ( ! file.exists( peptide.path)) dir.create( peptide.path, recursive=T)
+	
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 
 	# step 1: make sure all needed peptide and pileup files are in place
 	nAA <- pipe.ConsensusProteinSetup( sampleID, geneID=geneID, geneName=geneName, results.path=results.path, 
@@ -95,6 +98,9 @@
 	if ( ! file.exists( peptide.path)) dir.create( peptide.path, recursive=T)
 
 	madeAnyFiles <- FALSE
+	
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 
 	# Step 1:  make sure that all the needed raw read and peptide files are ready
 	#		allow use of trimmed reads for the noHits by default
@@ -246,11 +252,14 @@
 
 `inspectConsensus` <- function( sampleID, geneName="Var2csa", context=NULL, extra.rows=3,
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", results.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
+
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 
 	# get the current consensus base calls file
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
 	aaAns <- consensusTranslation( calls$DNA)
@@ -290,11 +299,14 @@
 `modifyConsensus` <- function( sampleID, geneName="Var2csa", 
 				command=c("delete", "insert", "replace", "frameshift","append"), 
 				location=NULL, seq, readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", results.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
+
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 
 	# get the current consensus base calls file
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
 	aaAns <- consensusTranslation( calls$DNA)
@@ -444,13 +456,16 @@
 `realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName=geneID, 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", annotationFile="Annotation.txt", results.path=NULL,
-				exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
+				peptide.path=NULL, exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
 
 	require(Biostrings)
 
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
+
 	# given a manually improved consensus sequence, redo the Bowtie alignment step to this custome protein target
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	consensusAAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusAA.fasta", sep="."))
 	consensusDNAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusDNA.fasta", sep="."))
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
@@ -611,10 +626,13 @@
 
 
 `acceptRealignedConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName=geneID, optionsFile="Options.txt", 
-				results.path=NULL) {
+				results.path=NULL, peptide.path=NULL) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 
 	consensusAAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusAA.fasta", sep="."))
 	consensusDNAfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusDNA.fasta", sep="."))
@@ -687,11 +705,15 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 
 
 `searchForMisalignedReads` <- function( sampleID, geneName="Var2csa", context=NULL, flank.size=50,
-				optionsFile="Options.txt", results.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
 
 	# get the current consensus base calls file
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
-	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
+
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
+
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
 	aaAns <- consensusTranslation( calls$DNA)
@@ -769,6 +791,8 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 
 `auditFileName` <- function( peptide.path, sampleID, geneName) {
 
+	# the gene name is used in all filenames, force it to be clean of special characters
+	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
 	f <- paste( sampleID, geneName, "AuditTrail.txt", sep=".")
 	return( file.path( peptide.path, f))
 }
