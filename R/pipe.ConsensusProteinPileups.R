@@ -456,7 +456,8 @@
 `realignConsensus` <- function( sampleID, geneID="PF3D7_1200600", geneName=geneID, 
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", annotationFile="Annotation.txt", results.path=NULL,
-				peptide.path=NULL, exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE) {
+				peptide.path=NULL, exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE,
+				mode=c("normal", "TargetSearch")) {
 
 	require(Biostrings)
 
@@ -491,88 +492,99 @@
 	# step 2:  make a Bowtie index of this tiny sequence
 	# but we want to add a bit of flanking data to make the alignments at the edges be more robust...
 
-	# step 2.1: find the flanks of reference DNA around this construct
-	gmap <- subset( getCurrentGeneMap(), GENE_ID == geneID)
-	if ( nrow(gmap) < 1) stop( "'geneID' problem:  no gene detected..")
-	myStart <- gmap$POSITION[1]
-	myStop <- gmap$END[1]
-	cat( "\nExtracting genomic flanking regions..")
-	flankLen <- 50
-	refAns <- pipe.ConsensusBaseCalls( sampleID, geneID=geneID, start=myStart, stop=myStop, 
-			aaToo=FALSE, as.cDNA=FALSE, utr.tail.length=flankLen, noReadCalls="genomic")
-	myRefV <- refAns$ref
-	myRefStr <- paste( myRefV, collapse="")
-	if ( gmap$STRAND[1] == "-") myRefStr <- myReverseComplement(myRefStr)
-	# we need the 'exon' info to grab/find the correct flanking data
-	emap <- subset( getCurrentCdsMap(), GENE_ID == geneID)
-	Nexons <- nrow( emap)
-	if (! is.null(exon)) {
-		exon <- as.integer(exon)
-		if( ! (exon %in% 1:Nexons)) stop( paste( "\nError:  'exon' must be an integer in 1..",Nexons))
+	# step 2.1: find the flanks of reference DNA around this construct.  When we have a real gene in the current map set
+	if ( ! is.null( geneID)) {
+		gmap <- subset( getCurrentGeneMap(), GENE_ID == geneID)
+		if ( nrow(gmap) < 1) stop( "'geneID' problem:  no gene detected..")
+		myStart <- gmap$POSITION[1]
+		myStop <- gmap$END[1]
+		cat( "\nExtracting genomic flanking regions..")
+		flankLen <- 50
+		refAns <- pipe.ConsensusBaseCalls( sampleID, geneID=geneID, start=myStart, stop=myStop, 
+				aaToo=FALSE, as.cDNA=FALSE, utr.tail.length=flankLen, noReadCalls="genomic")
+		myRefV <- refAns$ref
+		myRefStr <- paste( myRefV, collapse="")
+		if ( gmap$STRAND[1] == "-") myRefStr <- myReverseComplement(myRefStr)
+		# we need the 'exon' info to grab/find the correct flanking data
+		emap <- subset( getCurrentCdsMap(), GENE_ID == geneID)
+		Nexons <- nrow( emap)
+		if (! is.null(exon)) {
+			exon <- as.integer(exon)
+			if( ! (exon %in% 1:Nexons)) stop( paste( "\nError:  'exon' must be an integer in 1..",Nexons))
+		}
+		# if we are doing a single exon, then our construct will be found directly
+		if ( is.integer( exon) || Nexons == 1) {
+			cat( "\nGetting single exon flanking regions..")
+			paAns <- pairwiseAlignment( dnaSeq, myRefStr, type="global-local")
+			if ( score( paAns) < nchar(dnaSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
+			myRefStart <- start( subject( paAns))
+			myRefStop <- width( subject( paAns)) + myRefStart - 1
+			leftFlank <- substr( myRefStr, max( 1, myRefStart-flankLen), myRefStart-1)
+			rightFlank <- substr( myRefStr, myRefStop+1, min( myRefStop+flankLen, nchar(myRefStr)))
+		} else {
+			# but if doing a multi-exon construct, we have to go find the correct edges separately
+			cat( "\nGetting multi exon flanking regions..")
+			if (gmap$STRAND[1] == "-") emap <- emap[ rev( 1:Nexons), ]
+			firstExonStart <- 1
+			firstExonStop <- emap$END[1] - emap$POSITION[1] + 1
+			firstExonSeq <- substr( dnaSeq, firstExonStart, firstExonStop)
+			paAns <- pairwiseAlignment( firstExonSeq, myRefStr, type="global-local")
+			if ( score( paAns) < nchar(firstExonSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
+			myRefStart <- start( subject( paAns))
+			myRefStop <- width( subject( paAns)) + myRefStart - 1
+			leftFlank <- substr( myRefStr, max( 1, myRefStart-flankLen), myRefStart-1)
+			lastExonStop <- nchar( dnaSeq)
+			lastExonStart <- lastExonStop - (emap$END[Nexons] - emap$POSITION[Nexons])
+			lastExonSeq <- substr( dnaSeq, lastExonStart, lastExonStop)
+			paAns <- pairwiseAlignment( lastExonSeq, myRefStr, type="global-local")
+			if ( score( paAns) < nchar(lastExonSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
+			myRefStart <- start( subject( paAns))
+			myRefStop <- width( subject( paAns)) + myRefStart - 1
+			rightFlank <- substr( myRefStr, myRefStop+1, min( myRefStop+flankLen, nchar(myRefStr)))
+		}
+		leftFlankLen <- nchar( leftFlank)
+		rightFlankLen <- nchar( rightFlank)
+	} else {	# no real gene to get flanks from...
+		leftFlank <- rightFlank <- ""
+		leftFlankLen <- rightFlankLen <- 0
 	}
-	# if we are doing a single exon, then our construct will be found directly
-	if ( is.integer( exon) || Nexons == 1) {
-		cat( "\nGetting single exon flanking regions..")
-		paAns <- pairwiseAlignment( dnaSeq, myRefStr, type="global-local")
-		if ( score( paAns) < nchar(dnaSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
-		myRefStart <- start( subject( paAns))
-		myRefStop <- width( subject( paAns)) + myRefStart - 1
-		leftFlank <- substr( myRefStr, max( 1, myRefStart-flankLen), myRefStart-1)
-		rightFlank <- substr( myRefStr, myRefStop+1, min( myRefStop+flankLen, nchar(myRefStr)))
-	} else {
-	# but if doing a multi-exon construct, we have to go find the correct edges separately
-		cat( "\nGetting multi exon flanking regions..")
-		if (gmap$STRAND[1] == "-") emap <- emap[ rev( 1:Nexons), ]
-		firstExonStart <- 1
-		firstExonStop <- emap$END[1] - emap$POSITION[1] + 1
-		firstExonSeq <- substr( dnaSeq, firstExonStart, firstExonStop)
-		paAns <- pairwiseAlignment( firstExonSeq, myRefStr, type="global-local")
-		if ( score( paAns) < nchar(firstExonSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
-		myRefStart <- start( subject( paAns))
-		myRefStop <- width( subject( paAns)) + myRefStart - 1
-		leftFlank <- substr( myRefStr, max( 1, myRefStart-flankLen), myRefStart-1)
-		lastExonStop <- nchar( dnaSeq)
-		lastExonStart <- lastExonStop - (emap$END[Nexons] - emap$POSITION[Nexons])
-		lastExonSeq <- substr( dnaSeq, lastExonStart, lastExonStop)
-		paAns <- pairwiseAlignment( lastExonSeq, myRefStr, type="global-local")
-		if ( score( paAns) < nchar(lastExonSeq)/2) cat( "  low 'flank search alignment score' warning: ", score(paAns))
-		myRefStart <- start( subject( paAns))
-		myRefStop <- width( subject( paAns)) + myRefStart - 1
-		rightFlank <- substr( myRefStr, myRefStop+1, min( myRefStop+flankLen, nchar(myRefStr)))
-	}
-	leftFlankLen <- nchar( leftFlank)
-	rightFlankLen <- nchar( rightFlank)
 
 	# step 2.2:  make a temp sequence that has these flanks
 	tmpdna <- paste( leftFlank, dnaSeq, rightFlank, sep="", collapse="")
 	#tmpdnaV <- strsplit( tmpdna, split="")[[1]]
 	consensusDNAflankFile <- sub( "ConsensusDNA", "ConsensusDNAwithFlanks", consensusDNAfile)
 	writeFasta( as.Fasta( myDesc, tmpdna), consensusDNAflankFile, line.width=100)
-	indexFile <- file.path( peptide.path, paste( geneName, "ConsensusProteinIndex", sep="."))
+	indexFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProteinIndex", sep="."))
 	cat( "\nMaking Bowtie index from consensus sequence with flanks..")
 	callBowtie2Build( buildBowtie2BuildCommandLine( inputFastaFile=consensusDNAflankFile, outputIndexFile=indexFile, 
 			optionsFile=optionsFile, verbose=F))
 
-	# step 3:  realign the raw reads against this new target
+	# step 3:  realign the raw reads against this new target.  This step needs to be aware of which workflow called it
+	mode <- match.arg( mode)
 	cat( "\nCalling Bowtie against consensus sequence..")
-	nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
-	geneReadsFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "fastq.gz", sep="."))
-	if (useCutadapt) {
-		nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.trimmed.fastq.gz", sep="."))
-		geneReadsTrimFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "trimmed.fastq.gz", sep="."))
-	}
-	allReadsFiles <- c(geneReadsFile, nohitReadsFile)
-	if ( ! is.null( extra.fastq.keyword)) {
-		cat( "  extra FASTQ:  ")
-		for ( keyword in extra.fastq.keyword) {
-			extraFile <- file.path( results.path, "fastq", paste( sampleID, keyword, "fastq.gz", sep="."))
-			allReadsFiles <- c( allReadsFiles, extraFile)
-			cat( "  ", keyword)
+	if ( mode == "TargetSearch") {
+		geneReadsFile <- file.path( peptide.path, paste( sampleID, geneName, "fastq.gz", sep="."))
+		allReadsFiles <- geneReadsFile
+	} else {
+		nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.fastq.gz", sep="."))
+		geneReadsFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "fastq.gz", sep="."))
+		if (useCutadapt) {
+			nohitReadsFile <- file.path( results.path, "fastq", paste( sampleID, "noHits.trimmed.fastq.gz", sep="."))
+			geneReadsTrimFile <- file.path( results.path, "fastq", paste( sampleID, geneName, "trimmed.fastq.gz", sep="."))
+		}
+		allReadsFiles <- c(geneReadsFile, nohitReadsFile)
+		if ( ! is.null( extra.fastq.keyword)) {
+			cat( "  extra FASTQ:  ")
+			for ( keyword in extra.fastq.keyword) {
+				extraFile <- file.path( results.path, "fastq", paste( sampleID, keyword, "fastq.gz", sep="."))
+				allReadsFiles <- c( allReadsFiles, extraFile)
+				cat( "  ", keyword)
+			}
 		}
 	}
-	# put the gene name in these temp files, to prevent collisions
-	bamFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.bam", sep="."))
-	nhFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))
+	# put the sample and gene name in these temp files, to prevent collisions
+	bamFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.bam", sep="."))
+	nhFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))
 	bowtieAns <- fastqToBAM( inputFastqFile=allReadsFiles, outputFile=bamFile, sampleID=sampleID, 
 			optionsFile=optionsFile, annotationFile=annotationFile, 
 			alignIndex=indexFile, index.path=".", noHitsFile=nhFile, verbose=F)
@@ -599,9 +611,9 @@
 	cat( "\nWrote new realigned .FASTA and BaseCalls for sampleID: ", sampleID, "\n")
 
 	# step 6:  turn the alignments back to fastq and then to peptides
-	bamFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.sorted.bam", sep="."))
-	fastqFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))
-	tempPeptidesFile <- file.path( peptide.path, paste( geneName, "ConsensusProtein.Peptides.txt", sep="."))
+	bamFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.sorted.bam", sep="."))
+	fastqFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))
+	tempPeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.Peptides.txt", sep="."))
 	genePeptidesFile <- file.path( peptide.path, paste( sampleID, geneName, "RawReadPeptides.txt", sep="."))
 	bam2fastq( bamfile=bamFile, outfile=fastqFile, verbose=F)
 	# since the raw DNA reads wt got aligned are already cutAdapt'ed, no need to do it again...
@@ -615,10 +627,10 @@
 			info=list( "Length_AA"=nchar(aaSeq), "N_Peptides"=nReadsAligned))
 
 	# lastly, clean up
-	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein*bam*", sep="."))))
-	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProteinIndex*", sep="."))))
-	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))))
-	system( paste( "rm ", file.path( peptide.path, paste( geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein*bam*", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusProteinIndex*", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.noHits.fastq.gz", sep="."))))
+	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusProtein.AlignedReads.fq.gz", sep="."))))
 	system( paste( "rm ", consensusDNAflankFile))
 	system( paste( "rm ", file.path( peptide.path, paste( sampleID, geneName, "ConsensusDNAwithFlanks.fasta.fai", sep="."))))
 	system( paste( "rm ", tempPeptidesFile))
