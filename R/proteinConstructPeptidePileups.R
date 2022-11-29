@@ -3,7 +3,7 @@
 
 
 `proteinConstructPeptidePileups` <- function( sampleID, geneName, constructFile, peptide.path=".",
-					constructName=paste(sampleID,geneName,sep="."), 
+					constructName=paste(sampleID,geneName,sep="_"), 
 					txt.cex=0.25, maxNoHits=1000000, max.depth=60, max.drawnPerSite=3,
 					mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
 					showFrameShiftPeptides=TRUE, ...) {
@@ -24,9 +24,9 @@
 		return(NULL)
 	}
 	fa <- loadFasta( constructFile, verbose=T)
-	who <- intersect( grep ( sampleID, fa$desc), grep( geneName, fa$desc))
+	who <- intersect( grep ( sampleID, fa$desc, fixed=T), grep( geneName, fa$desc, fixed=T))
 	if ( length(who) != 1) {
-		who <- grep ( constructName, fa$desc)
+		who <- grep ( constructName, fa$desc, fixed=T)
 		if ( length(who) != 1) {
 			cat( "\nFailed to find a single protein construct in FASTA file")
 			cat( "\nLooked for: ", constructName, " or ", sampleID, "\nConstruct names found:\n")

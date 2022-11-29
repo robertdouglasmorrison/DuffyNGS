@@ -164,7 +164,7 @@
 				"READS_M"=hitCntsM, "PCT_M"=pctHitsM, "RPKM_M"=hitsRPKM_M, "TPM_M"=hitsTPM_M, 
 				"READS_U"=hitCntsU, "PCT_U"=pctHitsU, "RPKM_U"=hitsRPKM_U, "TPM_U"=hitsTPM_U,
 				stringsAsFactors=F)
-		ord <- order( hitCntsM, decreasing=T)
+		ord <- order( hitCntsU, hitCntsM, decreasing=T)
 		smlDF <- smlDF[ ord, ]
 		rownames(smlDF) <- 1:nrow(smlDF)
 		outfile <- file.path( bam.path, paste( sid, targetName, "Summary.csv", sep="."))
@@ -179,7 +179,7 @@
 	if ( ! nrow(bigDF)) return( bigDF)
 
 	# final ordering is...
-	ord <- order( bigDF$READS_M, decreasing=T)
+	ord <- order( bigDF$READS_U, bigDF$READS_M, decreasing=T)
 	bigDF <- bigDF[ ord, ]
 	rownames(bigDF) <- 1:nrow(bigDF)
 
