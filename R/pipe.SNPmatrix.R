@@ -390,7 +390,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 		# if we have but don't want InDels, remove them now
 		nBases <- N_BASES
 		if ( !indelsToo && ncol(tbl) > 4) {
-			tbl <- tbl[ , 1:4]
+			tbl <- tbl[ , 1:4, drop=FALSE]
 			nBases <- 4
 		}
 		# if we asked for Indels, and they're not present, ignore
@@ -469,7 +469,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	# drop any empty rows
 	if ( nrow(out) && na.rm != "none") {
-		nNA <- apply( out[ ,1:nFiles], 1, function(x) sum( is.na(x)))
+		nNA <- apply( out[ ,1:nFiles, drop=FALSE], 1, function(x) sum( is.na(x)))
 		if ( na.rm == "all") drops <- which( nNA == nFiles)
 		if ( na.rm == "any") drops <- which( nNA > 0)
 		if ( na.rm == "half") drops <- which( nNA >= nFiles/2)
@@ -481,7 +481,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	# drop any zero rows, or any rows with the 'too small' a frequency value
 	if ( nrow(out) && ! is.null( min.freq)) {
-		rmaxs <- apply( out[ ,1:nFiles], 1, max, na.rm=T)
+		rmaxs <- apply( out[ ,1:nFiles, drop=FALSE], 1, max, na.rm=T)
 		drops <- which( rmaxs < min.freq)
 		if ( length(drops)) {
 			out <- out[ -drops, , drop=FALSE]
@@ -491,7 +491,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	# drop any minimal difference rows
 	if ( nrow(out) && ! is.null( min.diff)) {
-		rdiffs <- apply( out[ ,1:nFiles], 1, function(x) diff( range(x)))
+		rdiffs <- apply( out[ ,1:nFiles, drop=FALSE], 1, function(x) diff( range(x)))
 		drops <- which( rdiffs < min.diff)
 		if ( length(drops)) {
 			out <- out[ -drops, , drop=FALSE]
