@@ -212,12 +212,9 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 		# the calculation about "PCT_REF" that the SNP caller returns only uses the depths as seen by VCFTOOLS, that
 		# is often much lower that the true depths.  So re-calc from first principles
-		hasData <- which( ! is.na(where))
-		if ( length( hasData)) {
-			myRefCnt <- geneAns2[ hasData, "REF_DEPTH"]
-			myTotalCnt <- apply( geneAns2[ hasData, , drop=F], 1, sum, na.rm=T)
-			out$PCT_REF[ hasData] <- round( myRefCnt * 100 / myTotalCnt, digits=2)
-		}
+		myRefCnt <- geneAns2[ , "REF_DEPTH"]
+		myTotalCnt <- apply( geneAns2, 1, sum, na.rm=T)
+		out$PCT_REF <- round( myRefCnt * 100 / myTotalCnt, digits=2)
 	}
 
 	# tiny chance of no SNPs at all....
