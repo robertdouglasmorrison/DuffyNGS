@@ -2,7 +2,7 @@
 
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				seqIDset=NULL, start=NULL, stop=NULL, geneID=NULL, prob.variant=0.95, 
+				seqIDset=NULL, start=NULL, stop=NULL, geneID=NULL, prob.variant=0.95, min.qual=10,
 				snpCallMode=c("consensus", "multiallelic"), min.depth=1, max.depth=10000, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", 
@@ -50,7 +50,7 @@
 	`variantCallOneSeq` <- function( sid, ploidy="1") {
 		ans <- BAM.variantCalls( bamfilelist, seqID=sid, fastaFile=fastaFile, 
 					start=start, stop=stop, min.depth=min.depth, max.depth=max.depth, 
-					prob.variant=prob.variant, mpileupArgs=mpileupArgs, 
+					prob.variant=prob.variant, min.qual=min.qual, mpileupArgs=mpileupArgs, 
 					vcfArgs=vcfArgs, ploidy=ploidy, snpCallMode=snpCallMode,
 					verbose=verbose)
 		cat( "\n", sid, "\tN_Variants: ", nrow(ans),"\n")
@@ -108,9 +108,10 @@
 					optionsFile=optionsFile, results.path=results.path,
 					exonOnly=exonOnly, snpOnly=snpOnly)
 		} else if ( length( sampleIDset) == 1 && ! is.null( geneID)) {
-			pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
+			out <- pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
 					optionsFile=optionsFile, results.path=results.path, seqIDset=seqIDs,
 					exonOnly=exonOnly, snpOnly=snpOnly, geneID=geneID)
+			return( invisible(out))
 		}
 	}
 	if ( length( allIDs) < 1) return( NULL)
@@ -182,6 +183,43 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		cat( "\r", sid, nrow(tbl))
 	}
 	
+
+	# we now allow the tool to have been called on a single gene
+	# if so, combine all the actual base call counts with the SNP calling
+	snpOut <- out
+	if ( ! is.null( geneID) && nrow(out)) {
+		geneAns1 <- pipe.BAMpileup( sampleID, geneID=geneID, max.depth=0)
+		geneAns2 <- MPU.callStringsToMatrix( geneAns1$BASE_TABLE)
+		# merge and recombine all these perspectives of the data
+		out1 <- cbind( geneAns1[ , 1:2], "GENE_ID"=geneID, geneAns1[ , c(3,5)], "RAW_DEPTH"=geneAns1$DEPTH, stringsAsFactors=F)
+		colnames(geneAns2) <- paste( sub( "^,$","REF",colnames(geneAns2)), "DEPTH", sep="_")
+		# see which positions had a SNP result, and use those too
+		where <- match( out1$POSITION, snpOut$POSITION, nomatch=NA)
+		noData <- which( is.na(where))
+		out2 <- snpOut[ where, 5:11]
+		noData <- which( is.na(where))
+		if ( length(noData)) {
+			out2$ALT_BASE[noData] <- ""
+			out2$QUAL[noData] <- 0
+			out2$SCORE[noData] <- 0
+			out2$PCT_REF[noData] <- 100
+			out2$ALT_AA[noData] <- ""
+			out2$GENOTYPE_CALL[noData] <- ""
+		}
+		colnames(out2) <- sub( "^DEPTH$", "VCF_DEPTH", colnames(out2))
+		out <- cbind( out1, geneAns2, out2, stringsAsFactors=F)
+		rownames(out) <- 1:nrow(out)
+
+		# the calculation about "PCT_REF" that the SNP caller returns only uses the depths as seen by VCFTOOLS, that
+		# is often much lower that the true depths.  So re-calc from first principles
+		hasData <- which( ! is.na(where))
+		if ( length( hasData)) {
+			myRefCnt <- geneAns2[ hasData, "REF_DEPTH"]
+			myTotalCnt <- apply( geneAns2[ hasData, , drop=F], 1, sum, na.rm=T)
+			out$PCT_REF[ hasData] <- round( myRefCnt * 100 / myTotalCnt, digits=2)
+		}
+	}
+
 	# tiny chance of no SNPs at all....
 	if ( ! nrow(out)) {
 		null <- vector( mode="character", length=0)
@@ -190,14 +228,16 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 				"SCORE"=null, "PCT_REF"=null, "ALT_AA"=null)
 	}
 	outfile <- paste( sampleID, prefix, "Summary.VCF.txt", sep=".")
-	# allow the tool to have been called on a single gene
 	if ( ! is.null( geneID)) {
 		outfile <- paste( sampleID, prefix, geneID, "Summary.VCF.txt", sep=".")
 	}
 	outfile <- file.path( vcfPath, outfile)
-	write.table( out, outfile, sep="\t", quote=F, row.names=F)
-	cat( "\nWrote variant call summary: ", outfile, "\nN_Calls: ", nrow(out), "\n")
+	write.table( out, outfile, sep="\t", quote=F, na="", row.names=F)
+	cat( "\nWrote variant call summary: ", outfile, "\nN_Calls: ", nrow(snpOut), "\n")
 
+	if ( ! is.null( geneID)) {
+		return( invisible( out))
+	}
 	return()
 }
 
