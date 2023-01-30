@@ -2,7 +2,7 @@
 
 `pipe.VariantCalls` <- function( sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				seqIDset=NULL, start=NULL, stop=NULL, prob.variant=0.95, 
+				seqIDset=NULL, start=NULL, stop=NULL, geneID=NULL, prob.variant=0.95, 
 				snpCallMode=c("consensus", "multiallelic"), min.depth=1, max.depth=10000, 
 				ploidy=if (speciesID %in% MAMMAL_SPECIES) "" else "1",
 				mpileupArgs="", vcfArgs="", comboSamplesName="Combined", 
@@ -56,6 +56,9 @@
 		cat( "\n", sid, "\tN_Variants: ", nrow(ans),"\n")
 		N <- nrow(ans)
 		outfile <- paste( finalName, sid, "VCF.txt", sep=".")
+		if ( ! is.null(geneID)) {
+			outfile <- paste( finalName, geneID, "VCF.txt", sep=".")
+		}
 		outfile <- file.path( vcfPath, outfile)
 		file.delete( outfile)
 		if ( nrow(ans) > 0) write.table( ans, outfile, sep="\t", quote=FALSE, row.names=FALSE)
@@ -74,6 +77,20 @@
 		seqMap <- seqMap[ order( seqMap$LENGTH, decreasing=TRUE), ]
 		seqIDs <- seqMap$SEQ_ID
 		if ( ! is.null( seqIDset)) seqIDs <- intersect( seqIDs, seqIDset)
+
+		# allow to be given a single gene name
+		if ( ! is.null( geneID)) {
+			geneMap <- subset( getCurrentGeneMap(), GENE_ID == geneID)
+			if ( nrow(geneMap)) {
+				seqIDs <- geneMap$SEQ_ID[1]
+				start <- geneMap$POSITION[1]
+				stop <- geneMap$END[1]
+			} else {
+				seqIDs <- character(0)
+				start <- stop <- NULL
+			}
+		}
+
 		N <- length(seqIDs)
 		if ( N < 1) next
 		vCounts <- rep.int( 0, N)
@@ -86,10 +103,14 @@
 		allCounts <- c( allCounts, vCounts)
 
 		# if all the chromosomes were done, go ahead and summarize too
-		if ( length( sampleIDset) == 1 && is.null( seqIDset)) {
+		if ( length( sampleIDset) == 1 && is.null( seqIDset) && is.null(geneID)) {
 			pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
 					optionsFile=optionsFile, results.path=results.path,
 					exonOnly=exonOnly, snpOnly=snpOnly)
+		} else if ( length( sampleIDset) == 1 && ! is.null( geneID)) {
+			pipe.VariantSummary( sampleIDset[1], speciesID, annotationFile=annotationFile,
+					optionsFile=optionsFile, results.path=results.path, seqIDset=seqIDs,
+					exonOnly=exonOnly, snpOnly=snpOnly, geneID=geneID)
 		}
 	}
 	if ( length( allIDs) < 1) return( NULL)
@@ -100,7 +121,7 @@
 
 
 pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annotationFile="Annotation.txt", 
-				optionsFile="Options.txt", results.path=NULL, seqIDset=NULL,
+				optionsFile="Options.txt", results.path=NULL, seqIDset=NULL, geneID=NULL,
 				min.depth=1, min.score=5, exonOnly=FALSE, snpOnly=FALSE) {
 
 	# get needed paths, etc. from the options file
@@ -120,6 +141,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 	for ( sid in seqIDset) {
 		infile <- paste( sampleID, sid, "VCF.txt", sep=".")
+		# allow that we may have called for a single gene
+		if ( ! is.null( geneID)) {
+			infile <- paste( sampleID, geneID, "VCF.txt", sep=".")
+		}
 		infile <- file.path( vcfPath, infile)
 		if ( ! file.exists(infile)) {
 			cat( "\rVariant Calls file not found:  ", infile, "  Skip..\n")
@@ -165,6 +190,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 				"SCORE"=null, "PCT_REF"=null, "ALT_AA"=null)
 	}
 	outfile <- paste( sampleID, prefix, "Summary.VCF.txt", sep=".")
+	# allow the tool to have been called on a single gene
+	if ( ! is.null( geneID)) {
+		outfile <- paste( sampleID, prefix, geneID, "Summary.VCF.txt", sep=".")
+	}
 	outfile <- file.path( vcfPath, outfile)
 	write.table( out, outfile, sep="\t", quote=F, row.names=F)
 	cat( "\nWrote variant call summary: ", outfile, "\nN_Calls: ", nrow(out), "\n")
