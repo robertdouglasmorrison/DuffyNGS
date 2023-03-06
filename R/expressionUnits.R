@@ -30,7 +30,7 @@
 
 
 # create the text string of the expression column name we will use for expression
-`getExpressionUnitsColumn` <- function( optionsFile, useMultiHits=TRUE, verbose=TRUE) {
+`getExpressionUnitsColumn` <- function( optionsFile="Options.txt", useMultiHits=TRUE, verbose=TRUE) {
 
 	units <- expressionUnits( optionsFile, verbose=verbose)
 	suffix <- if (useMultiHits) "M" else "U"

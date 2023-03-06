@@ -38,7 +38,12 @@
 	sampleMatrix <- expressionFileSetToMatrix( transcriptFile, sampleID)
 	
 	# set up the current defined cell type details
-	CellTypeSetup()
+	CellTypeSetup( reload=TRUE)
+	
+	# modify the shape of the cell type data to reflect what we are fitting against
+	reshapeCellTypeMatrix( f=transcriptFile, intensityColumn=unitsColumn, verbose=verbose)
+	
+	# get the details of the cell type data
 	cellTypeColors <- getCellTypeColors()
 	cellTypeNames <- names(cellTypeColors)
 	N_CellTypes <- length( cellTypeColors)
@@ -104,7 +109,7 @@
 
 		# 1)  Steepest Descent of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile","steep")) || (recalculate == "missing" && all(is.na(pcts1)))) {
-			cat( "\n1. Cell Type Profile: Fit", units, "by Steepest Descent:\n")
+			cat( "\n1. Cell Type Profile: Fit Dimension Proportions by Steepest Descent:\n")
 			ans1 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='steep',
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -117,7 +122,7 @@
 
 		# 2)  Nonlinear Least Squares of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile","nls")) || (recalculate == "missing" && all(is.na(pcts2)))) {
-			cat( "\n2. Cell Type Profile: Fit", units, "by Nonlinear Least Squares (NLS):\n")
+			cat( "\n2. Cell Type Profile: Fit Dimension Proportions by Nonlinear Least Squares (NLS):\n")
 			ans2 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='nls',
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -130,7 +135,7 @@
 
 		# 3)  GenSA of the 28-dimensional immune profile
 		if ( is.null(cellAns) || (recalculate %in% c("all","profile","GenSA")) || (recalculate == "missing" && all(is.na(pcts3)))) {
-			cat( "\n3. Cell Type Profile: Fit", units, "by Simulated Annealing (GenSA):\n")
+			cat( "\n3. Cell Type Profile: Fit Dimension Proportions by Simulated Annealing (GenSA):\n")
 			ans3 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='GenSA',
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -143,7 +148,7 @@
 
 		# 4)  Transcriptome Deconvolution, by NLS using the 'port' algorithm...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution","nls")) || (recalculate == "missing" && all(is.na(pcts4)))) {
-			cat( "\n4. Cell Type Deconvolution:  Fit", units, "by Nonlinear Least Squares (NLS):\n")
+			cat( "\n4. Cell Type Deconvolution:  Fit Gene", units, "by Nonlinear Least Squares (NLS):\n")
 			ans4 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -157,7 +162,7 @@
 		
 		# 5)  Transcriptome Deconvolution, by NLS using the 'GenSA' simulated annealing algorithm...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution","GenSA")) || (recalculate == "missing" && all(is.na(pcts5)))) {
-			cat( "\n5. Cell Type Deconvolution:  Fit", units, "by Simulated Annealing (GenSA):\n")
+			cat( "\n5. Cell Type Deconvolution:  Fit Gene", units, "by Simulated Annealing (GenSA):\n")
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -171,7 +176,7 @@
 		
 		# 6)  Transcriptome Deconvolution, by Steepest Descent...
 		if ( is.null(cellAns) || (recalculate %in% c("all","deconvolution","steep")) || (recalculate == "missing" && all(is.na(pcts6)))) {
-			cat( "\n6. Cell Type Deconvolution:  Fit", units, "by Steepest Descent:\n")
+			cat( "\n6. Cell Type Deconvolution:  Fit Gene", units, "by Steepest Descent:\n")
 			ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
 						geneUniverse=geneUniverse, verbose=verbose)
@@ -201,7 +206,7 @@
 	# let's independently eavaluate the RMS fit for every method
 	rmsdAns <- rmsDeviation( obsMatrix=sampleMatrix, calcMatrix=cellTypeMatrix, calcPcts=cellM, geneUniverse=geneUniverse)
 	if (verbose) {
-		cat( "\n\nGene expression RMS Deviation by method:\n")
+		cat( "\nGene expression RMS Deviation by method:\n")
 		print( rmsdAns)
 	}
 
@@ -212,18 +217,31 @@
 		wts <- 1 / ((rmsdAns^2) / min(rmsdAns^2))
 		names(wts) <- names(rmsdAns)
 		if (verbose) {
-			cat( "\nDebug: RMSD and Weighted Means: \n")
-			print( rmsdAns); print( wts);
+			cat( "\nFit Weights by method:\n")
+			print( wts);
 		}
 		cellMean <- apply( cellM, 1, weighted.mean, w=wts, na.rm=T)
 		cellMean <- round( cellMean, digits=5)
-		if (verbose) cat( "\n  Final answer is weighted mean of all methods, using RMSD as weights")
+		if (verbose) cat( "\n  Final answer is weighted mean of all methods, using relative RMSD as weights")
 	} else if ( mode == "average") {
+		wts <- rep.int( 1, 6)
+		names(wts) <- names(rmsdAns)
+		if (verbose) {
+			cat( "\nFit Weights by method:\n")
+			print( wts);
+		}
 		cellMean <- apply( cellM, 1, mean, na.rm=T)
 		cellMean <- round( cellMean, digits=5)
 		if (verbose) cat( "\n  Final answer is average of all methods")
 	} else {
 		best <- which.min(rmsdAns)
+		wts <- rep.int( 0, 6)
+		wts[ best] <- 1
+		names(wts) <- names(rmsdAns)
+		if (verbose) {
+			cat( "\nFit Weights by method:\n")
+			print( wts);
+		}
 		cellMean <- round( cellM[ , best], digits=5)
 		if (verbose) cat( "\n  Final answer is method with best (lowest) RMSD: ", names(rmsdAns)[best])
 	}
@@ -233,10 +251,10 @@
 
 	# make a plot image of the final average
 	if ( makePlots != "none") {
-		tmpM <- matrix( cellMean, nrow=nrow(cellM), ncol=1)
+		tmpM <- cbind( cellM, cellMean)
 		rownames(tmpM) <- cellTypeNames
-		colnames(tmpM) <- sampleID
-		plotTranscriptProportions( tmpM, col=cellTypeColors, label="Final average of all methods")
+		colnames(tmpM) <- sub( "\\.", "\n", c( colnames(cellM), "Final.Proportions"))
+		plotTranscriptProportions( tmpM, col=cellTypeColors, label=paste( sampleID, ":  Final average of all methods", sep=""))
 		printPlot( celltypePlotFile, width=12, height=9)
 	}
 
