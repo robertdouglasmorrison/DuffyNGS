@@ -214,7 +214,7 @@
 	# final answer will now be 'proportion', not 'percentage'.  Not summing to 100% anymore.
 	mode <- match.arg( mode)
 	if ( mode == "weighted.mean") {
-		wts <- 1 / ((rmsdAns^2) / min(rmsdAns^2))
+		wts <- 1 / ((rmsdAns^2) / min(rmsdAns^2, na.rm=T))
 		names(wts) <- names(rmsdAns)
 		if (verbose) {
 			cat( "\nFit Weights by method:\n")
