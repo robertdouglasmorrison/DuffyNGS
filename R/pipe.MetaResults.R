@@ -241,7 +241,7 @@
 	    if (addCellTypes) {
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
-	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering)
+	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering, ...)
 	    	plotfile <- sub( "JOINED.txt$", paste( cellReference, ".VolcanoPlot", dev.ext, sep=""), fileout)
 	    	printPlot( plotfile)
 		# perhaps write some extra content about the volcaco cell clusters
