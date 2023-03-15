@@ -73,6 +73,7 @@
 
 	# name for the file of results
 	celltypeDetailsFile <- file.path( celltype.path, paste( sampleID, prefix, reference, "Proportions.csv", sep="."))
+	celltypeStatsFile <- file.path( celltype.path, paste( sampleID, prefix, reference, "Fit.Statistics.csv", sep="."))
 	celltypePlotFile <- file.path( celltype.path, paste( sampleID, prefix, reference, "Proportions.Final.pdf", sep="."))
 	pcts1 <- pcts2 <- pcts3 <- pcts4 <- pcts5 <- pcts6 <- rep.int( NA, N_CellTypes)
 	pcts7 <- pcts8 <- pcts9 <- pcts10 <- pcts11 <- pcts12 <- rep.int( NA, N_CellTypes)
@@ -372,6 +373,10 @@
 		
 	cellAns <- data.frame( "CellType"=cellTypeNames, "Final.Proportions"=cellMean, round(cellM,digits=3), stringsAsFactors=F)
 	write.table( cellAns, celltypeDetailsFile, sep=",", quote=T, row.names=F)
+	statsM <- matrix( c( rmsdAns, codAns, wts), nrow=12, ncol=3)
+	rownames(statsM) <- names(rmsdAns)
+	statsAns <- data.frame( "Statistic"=c("RMSD", "CoD", "Weight"), t(statsM), stringsAsFactors=F)
+	write.table( statsAns, celltypeStatsFile, sep=",", quote=T, row.names=F)
 
 	# make a plot image of the final average
 	if ( makePlots != "none") {
@@ -379,7 +384,9 @@
 		rownames(tmpM) <- cellTypeNames
 		colnames(tmpM) <- sub( "\\.", "\n", c( colnames(cellM), "Final.Proportions"))
 		plotAns <- plotTranscriptProportions( tmpM, col=cellTypeColors, label=paste( sampleID, ":  Final average of all methods", sep=""))
-		text( c(-0.05,plotAns$bar.centers), rep.int(102,14), c("CoD=", as.character(round(codAns,dig=3)),""), cex=0.7, col=1, xpd=NA)
+		text( c(-0.05,plotAns$bar.centers), rep.int(101.5,14), c("CoD=", as.character(round(codAns,dig=3)),""), cex=0.65, col=1, xpd=NA)
+		text( c(-0.05,plotAns$bar.centers), rep.int(-1.5,14), c("Wt=", as.character(round(wts,dig=3)),""), cex=0.65, col=1, xpd=NA)
+		dev.flush()
 		printPlot( celltypePlotFile, width=12, height=9)
 	}
 

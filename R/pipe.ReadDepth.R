@@ -39,7 +39,7 @@
 	}
 	if (exonsOnly) {
 		exonMap <- getCurrentExonMap()
-		exonMap <- subset( exonMap, GENE_ID %in% geneIDset)
+		exonMap <- subset( exonMap, GENE_ID %in% geneMap$GENE_ID)
 	}
 	gids <- geneMap$GENE_ID
 	sids <- geneMap$SEQ_ID
@@ -63,11 +63,13 @@
 				next
 			}
 			curSeqID <- thisS
+			cat( "\n  ",thisS, "\n")
 		}
 
 		# gather the set of all wiggle base depths in this range
 		start <- geneMap$POSITION[i]
 		stop <- geneMap$END[i]
+		myStrand <- geneMap$STRAND[i]
 		allBases <- start : stop
 		NBases <- length(allBases)
 		baseM <- matrix( 0, nrow=NBases, ncol=NTracks)
@@ -95,7 +97,7 @@
 			if ( nrow(emap)) {
 				exonBases <- vector()
 				for (k in 1:nrow(emap)) exonBases <- c( exonBases, (emap$POSITION[k] : emap$END[k]))
-				keep <- which( allBases %in% exonBalses)
+				keep <- which( allBases %in% exonBases)
 				baseM <- baseM[ keep, ]
 				NBases <- nrow(baseM)
 			}
