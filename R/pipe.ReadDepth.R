@@ -95,8 +95,9 @@
 		if ( exonsOnly) {
 			emap <- subset.data.frame( exonMap, GENE_ID == thisG)
 			if ( nrow(emap)) {
-				exonBases <- vector()
-				for (k in 1:nrow(emap)) exonBases <- c( exonBases, (emap$POSITION[k] : emap$END[k]))
+				#exonBases <- vector()
+				#for (k in 1:nrow(emap)) exonBases <- c( exonBases, (emap$POSITION[k] : emap$END[k]))
+				exonBases <- unlist( mapply( FUN=`:`, emap$POSITION, emap$END, SIMPLIFY=F))
 				keep <- which( allBases %in% exonBases)
 				baseM <- baseM[ keep, ]
 				NBases <- nrow(baseM)

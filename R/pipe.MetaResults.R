@@ -10,7 +10,8 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
-				nFDRsimulations=0, gene.pct.clustering=1, addCellTypes=TRUE, PLOT.FUN=NULL, ...)
+				nFDRsimulations=0, gene.pct.clustering=1, addCellTypes=TRUE, PLOT.FUN=NULL, 
+				cell.pct.forest=20, ...)
 {
 
 	if (verbose) {
@@ -238,7 +239,9 @@
 	    plotfile <- sub( "JOINED.txt$", paste("Gene.VolcanoPlot",dev.ext,sep=""), fileout)
 	    printPlot( plotfile)
 
+	    # extra plots when cell type data is present
 	    if (addCellTypes) {
+	    	# cluster balloons
 	    	mainText <- paste( "MetaResults:  Cell Types UP in group ", grp, "\nComparison Folder: ", folderName)
 	    	cellClusterAns <- plotCellTypeClusters( fileout, pvalueColumn="AVG_PVALUE", right.label=grp, left.label=otherGrpsLabel,
 	    				label=mainText, label.cex=0.8, gene.pct=gene.pct.clustering, ...)
@@ -246,6 +249,11 @@
 	    	printPlot( plotfile)
 		# perhaps write some extra content about the volcaco cell clusters
 		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF, reference=cellReference)
+		# forest plot
+	    	cellForestAns <- plotCellTypeForest( fileout, main=mainText, right.label=grp, left.label=otherGrpsLabel,
+	    				 text.cex=0.85, cell.min.pct=cell.pct.forest, ...)
+	    	plotfile <- sub( "JOINED.txt$", paste( cellReference, ".ForestPlot", dev.ext, sep=""), fileout)
+	    	printPlot( plotfile)
 	    }
 	    par( mai=saveMAI)
 
