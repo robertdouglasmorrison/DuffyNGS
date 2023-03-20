@@ -329,6 +329,14 @@
 		cod <- codAns
 		cod[ cod <= 0] <- 0
 		cod[ is.na(cod)] <- 0
+		# Note:  there is a small chance that ALL CoD can be negative.  If so, revert to using normalized RMS deviation instead
+		if ( all( cod == 0)) {
+			cat( "\n  Warning:  all CoD are negative, reverting to using normalized RMSD instead.")
+			nrms <- min(rmsdAns,na.rm=T) / rmsdAns
+			nrms[ nrms <= 0] <- 0
+			nrms[ is.na(nrms)] <- 0
+			cod <- nrms
+		}
 		codRange <- range(cod[cod>0])
 		if ( diff(codRange) > 0.05) {
 			# if large enough spread, treat worst as zero and prorate all others back to original scale
@@ -529,7 +537,7 @@
 	dev.type <- getPlotDeviceType( optT)
 	levelString <- paste( levels, collapse=".v.")
 	if ( length(levels) > 3) levelString <- paste( paste( levels[1:3], collapse=".v."), ".v.etc", sep="")
-	plotFile <- paste( "Compare", prefix[1], reference, "_", levelString, "_", toupper(plot.mode), ".Plot.", dev.type, sep="")
+	plotFile <- paste( "Compare.", prefix[1], ".", reference, "_", levelString, "_", toupper(plot.mode), ".Plot.", dev.type, sep="")
 	printPlot( file.path( celltype.path, plotFile))
 
 	# package up the final details
