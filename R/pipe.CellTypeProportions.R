@@ -4,7 +4,7 @@
 				speciesID=getCurrentSpecies(), results.path=NULL, geneUniverse=NULL, genePercentage=NULL,
 				recalculate=c("none", "all", "missing", "profile", "deconvolution", "nls", "GenSA","steep"), 
 				mode=c("weighted.mean","average","best"), makePlots=c( "final", "none", "all"),
-				verbose=TRUE) {
+				verbose=TRUE, ...) {
 
 	if ( length(sampleID) > 1) {
 		cat( "\nWarning: expected a single sample ID..")
@@ -391,7 +391,7 @@
 		tmpM <- cbind( cellM, cellMean)
 		rownames(tmpM) <- cellTypeNames
 		colnames(tmpM) <- sub( "\\.", "\n", c( colnames(cellM), "Final.Proportions"))
-		plotAns <- plotTranscriptProportions( tmpM, col=cellTypeColors, label=paste( sampleID, ":  Final average of all methods", sep=""))
+		plotAns <- plotTranscriptProportions( tmpM, col=cellTypeColors, label=paste( sampleID, ":  Final average of all methods", sep=""), ...)
 		text( c(-0.05,plotAns$bar.centers), rep.int(101.5,14), c("CoD=", as.character(round(codAns,dig=3)),""), cex=0.65, col=1, xpd=NA)
 		text( c(-0.05,plotAns$bar.centers), rep.int(-1.5,14), c("Wt=", as.character(round(wts,dig=3)),""), cex=0.65, col=1, xpd=NA)
 		dev.flush()
