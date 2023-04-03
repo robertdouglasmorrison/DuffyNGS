@@ -11,7 +11,7 @@
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
 				nFDRsimulations=0, gene.pct.clustering=1, addCellTypes=TRUE, PLOT.FUN=NULL, 
-				cell.pct.forest=20, ...)
+				cell.top.N=if (speciesID %in% MAMMAL_SPECIES) 100 else 50, ...)
 {
 
 	if (verbose) {
@@ -251,7 +251,7 @@
 		writeCellTypeClusterExtras( cellClusterAns, resultsfile=fileout, resultsTbl=outDF, reference=cellReference)
 		# forest plot
 	    	cellForestAns <- plotCellTypeForest( fileout, main=mainText, right.label=grp, left.label=otherGrpsLabel,
-	    				 text.cex=0.85, cell.min.pct=cell.pct.forest, ...)
+	    				 text.cex=0.85, cell.top.N=cell.top.N, ...)
 	    	plotfile <- sub( "JOINED.txt$", paste( cellReference, ".ForestPlot", dev.ext, sep=""), fileout)
 	    	printPlot( plotfile)
 	    }
