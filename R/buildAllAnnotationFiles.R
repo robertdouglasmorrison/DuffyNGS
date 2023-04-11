@@ -39,10 +39,11 @@
 	cat( "\n\nBuilding All Index files for:  ", speciesID, "\n")
 	genomicFastaFile <- genomicFastaFileSet[ iSpecies]
 	optionsFile <- optionsFileSet[ iSpecies]
-	otherSpeciesID <- otherSpeciesIDSet[ iSpecies]
-	if ( is.list( otherSpeciesID)) otherSpeciesID <- otherSpeciesIDSet[[ iSpecies]]
-	otherGenomicIndex <- otherGenomicIndexSet[ iSpecies]
-	if ( is.list(otherGenomicIndexSet)) otherGenomicIndex <- otherGenomicIndexSet[[ iSpecies]]
+	# the 'other' data must be a list of vectors, instead of a vector.  Catch that here
+	if ( ! is.list( otherSpeciesIDSet)) stop( "'otherSpeciesIDSet' must be a list of vectors")
+	if ( ! is.list( otherGenomicIndexSet)) stop( "'otherGenomicIndexSet' must be a list of vectors")
+	otherSpeciesID <- otherSpeciesIDSet[[ iSpecies]]
+	otherGenomicIndex <- otherGenomicIndexSet[[ iSpecies]]
 	maxExonSkip <- maxExonSkipSet[ iSpecies]
 	intronSplicesToo <- intronSplicesTooSet[ iSpecies]
 
@@ -216,12 +217,12 @@
 			cat( "\nBowtie1 index found and ready..")
 		}
 		# also verify the index we need for all the 'other' genomes are there
-		nOtherIndex <- length( otherSpeciesIDSet)
+		# here, any list from the main parent call has been dealt with.  This is
+		# now a vector of species and indexes
+		nOtherIndex <- length( otherSpeciesID)
 		if (nOtherIndex) for ( k in 1:nOtherIndex) {
-			otherIndex <- otherGenomicIndexSet[k]
-			otherSpecies <- otherSpeciesIDSet[k]
-			if ( is.list( otherSpeciesIDSet)) otherSpecies <- otherSpeciesIDSet[[k]]
-			if ( is.list(otherGenomicIndexSet)) otherIndex <- otherGenomicIndexSet[[k]]
+			otherSpecies <- otherSpeciesID[k]
+			otherIndex <- otherGenomicIndex[k]
 			idxFiles <- dir( bowtie1IndexPath, pattern=paste( "^",otherIndex,sep=""))
 			if ( ! length( idxFiles)) {
 				cat( "\n\nNo Bowtie1 index found for:  ", otherIndex)
