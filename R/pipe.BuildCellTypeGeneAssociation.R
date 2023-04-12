@@ -115,7 +115,7 @@
 	}
 
 	# apply manual currated fixes, like for HGB
-	if (speciesID %in% MAMMAL_SPECIES) {
+	if (speciesID %in% MAMMAL_SPECIES && all( c("RBC") %in% cellNames)) {
 		sml <- getManualGeneFixes()
 		if( nrow(sml)) ans <- rbind( ans, sml)
 	}
