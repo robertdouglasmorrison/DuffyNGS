@@ -197,7 +197,7 @@
 		ord <- order( genePattTable, decreasing=T)
 		genePattTable <- genePattTable[ ord[ 1:N]]
 		maxCharShow <- 28
-		for( ig in 1:N) {
+		if (N) for( ig in 1:N) {
 			thisGrp <- names(genePattTable)[ig]
 			if ( nchar(thisGrp) > maxCharShow) thisGrp <- paste( substr( thisGrp, 1, maxCharShow), "...", sep="")
 			nhits <- genePattTable[ig]
@@ -225,7 +225,7 @@
 			ord <- order( genePattTable, decreasing=T)
 			genePattTable <- genePattTable[ ord[ 1:N]]
 			maxCharShow <- 32
-			for( ig in 1:N) {
+			if (N) for( ig in 1:N) {
 				thisGrp <- names(genePattTable)[ig]
 				if ( nchar(thisGrp) > maxCharShow) thisGrp <- paste( substr( thisGrp, 1, maxCharShow), "...", sep="")
 				nhits <- genePattTable[ig]
