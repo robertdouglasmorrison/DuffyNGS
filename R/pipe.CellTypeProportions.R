@@ -411,6 +411,7 @@
 	calcGenes <- rownames( calcMatrix)
 	useGenes <- sort( intersect( obsGenes, calcGenes))
 	if ( ! is.null( geneUniverse)) {
+		geneUniverse <- as.GeneUniverse( geneUniverse)
 		useGenes <- intersect( useGenes, geneUniverse)
 	}
 	NG <- length( useGenes)
