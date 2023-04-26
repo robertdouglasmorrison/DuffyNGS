@@ -263,6 +263,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		tbl <- tbl[ -drops, ]
 		cat( "\nDropped for SCORE < ", min.score, ":  ", length(drops))
 	}
+	if ( ! nrow(tbl)) {
+		cat( "\nNo remaining high scoring SNPs...  No HTML file made.")
+		return()
+	}
 	if ( altAA.only) {
 		drops <- which( tbl$ALT_AA == "")
 		if ( length( drops)) {
@@ -270,13 +274,16 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			cat( "\nDropped as synonymous: ", length(drops))
 		}
 	}
+	if ( ! nrow(tbl)) {
+		cat( "\nNo remaining non-synonymous SNPs...  No HTML file made.")
+		return()
+	}
 	# order by SCORE, then by coordinates
 	ord <- order( -tbl$SCORE, tbl$SEQ_ID, tbl$POSITION)
 	tbl <- tbl[ ord, ]
 	rownames(tbl) <- 1:nrow(tbl)
 
 	N <- min( max.plots, nrow( tbl))
-	if ( N < 1) return(NULL)
 
 	localPlotPath <- "SNP_Plots"
 	plotPath <- file.path( snp.path, localPlotPath)
