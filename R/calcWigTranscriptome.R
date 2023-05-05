@@ -82,6 +82,10 @@
 	tpmM <- tpm( totCntSetM, nBaseSet, minReadsPerSpecies=minReadsPerSpecies)
 	tpmU <- tpm( totCntSet, nBaseSet, minReadsPerSpecies=minReadsPerSpecies)
 
+	# calc gene rankings
+	rnkM <- rank( tpmM, ties.method="min")
+	rnkU <- rank( tpmU, ties.method="min")
+
 	# trim to sensible digits resolution
 	rpkmSetM <- round( rpkmSetM, digits=4)
 	rpkmSet <- round( rpkmSet, digits=4)
@@ -94,15 +98,15 @@
 	strandSetM <- round( strandSetM, digits=3)
 	strandSet <- round( strandSet, digits=3)
 
-	out <- data.frame( geneSet, gProdSet, rpkmSetM, totCntSetM, tpmM, sigmaSetM, strandSetM, 
-			rpkmSet, totCntSet, tpmU, sigmaSet, strandSet, nBaseSet, stringsAsFactors=FALSE)
+	out <- data.frame( geneSet, gProdSet, rpkmSetM, totCntSetM, tpmM, rnkM, sigmaSetM, strandSetM, 
+			rpkmSet, totCntSet, tpmU, rnkU, sigmaSet, strandSet, nBaseSet, stringsAsFactors=FALSE)
 	colnames( out) <- c("GENE_ID", "PRODUCT", 
-			"RPKM_M", "READS_M", "TPM_M", "SIGMA_M", "STRAND_M", 
-			"RPKM_U", "READS_U", "TPM_U", "SIGMA_U", "STRAND_U", 
+			"RPKM_M", "READS_M", "TPM_M", "RANK_M", "SIGMA_M", "STRAND_M", 
+			"RPKM_U", "READS_U", "TPM_U", "RANK_U", "SIGMA_U", "STRAND_U", 
 			"N_EXON_BASES")
 			
 	# now sort into intensity order
-	ord <- base::order( out$RPKM_M, decreasing=TRUE)
+	ord <- base::order( out$TPM_M, decreasing=TRUE)
 	out <- out[ ord, ]
 	rownames( out) <- 1:nrow(out)
 	

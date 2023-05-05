@@ -4,7 +4,7 @@
 # get the units for expression from the Options file
 `expressionUnits` <- function( optionsFile="Options.txt", verbose=TRUE) {
 
-	knownUnits <- c( "RPKM", "READS", "TPM")
+	knownUnits <- c( "RPKM", "READS", "TPM", "RANK")
 	defaultUnits <- "RPKM"
 
 	# default has always be RPKM.  Allow reading from the Options file
