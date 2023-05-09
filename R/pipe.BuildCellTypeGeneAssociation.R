@@ -70,6 +70,10 @@
 		keep2 <- which( expres >= min.expression)
 		nonGenes <- grep( "(ng)", tbl$GENE_ID, fixed=T)
 		keep <- sort( setdiff( intersect(keep,keep2), nonGenes))
+		if ( length(keep) < 10) {
+			cat( "\nWarning: too few genes expressed and up-regulated.  Check DE file:\n", defile)
+			return(NULL)
+		}
 
 		out <- data.frame( "GENE_ID"=myGenes[keep], "CellType"=myCellType, 
 				"Expression"=expres[keep], "Log2Fold"=round( fold[keep], digits=3), 
