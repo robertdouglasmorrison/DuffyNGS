@@ -49,7 +49,7 @@
 	}
 
 	outrefid <- outpos <- outncig <- outcig <- outflag <- outseq <- outqual <- vector()
-	outname <- outrev <- outsize <- outgid <- outstage <- vector()
+	outname <- outrev <- outsize <- outsid <- outgid <- outstage <- vector()
 	nout <- 0
 
 	for ( f in bamFiles) {
@@ -89,6 +89,7 @@
 				smallDF$seq <- readSeq( chunk)
 				smallDF$qual <- readQual( chunk)
 			}
+			smallDF$seqid <- sml$SEQ_ID
 			smallDF$geneid <- sml$GENE_ID
 			smallDF$stage <- thisStage
 			 
@@ -138,6 +139,7 @@
 			outname[now] <- smallDF$name
 			outrev[now] <- smallDF$revstrand
 			outsize[now] <- smallDF$insertsize
+			outsid[now] <- smallDF$seqid
 			outgid[now] <- smallDF$geneid
 			outstage[now] <- smallDF$stage
 			nout <- max( now)
@@ -159,11 +161,12 @@
 	outname <- outname[ ord]
 	outrev <- outrev[ ord]
 	outsize <- outsize[ ord]
+	outsid <- outsid[ ord]
 	outgid <- outgid[ ord]
 	outstage <- outstage[ ord]
 	out <- data.frame( "refid"=outrefid, "position"=outpos, "nCigar"=outncig, "cigar"=outcig,
 				"flag"=outflag, "seq"=outseq, "qual"=outqual, "name"=outname,
-				"revstrand"=outrev, "insertsize"=outsize, "geneid"=outgid, 
+				"revstrand"=outrev, "insertsize"=outsize, "seqid"=outsid, "geneid"=outgid, 
 				"stage"=outstage, stringsAsFactors=FALSE)
 	if (nrow(out)) rownames(out) <- 1:nrow(out)
 	if (verbose) cat( "  Done.")

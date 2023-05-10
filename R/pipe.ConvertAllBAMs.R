@@ -180,7 +180,9 @@
 	results.path <- getOptionValue( optT, "results.path", notfound=".")
 	bowtie2Par.defaults( optionsFile)
 	readBufferSize <- as.integer( getOptionValue( optT, "readBufferSize", notfound="1000000"))
+	# note we can use either sorted or unsorted genomic data
 	genomicFile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
+	if ( ! file.exists(genomicFile)) genomicFile <- file.path( results.path, "align", paste( sampleID, "genomic.sorted.bam", sep="."))
 	riboFile <- file.path( results.path, "riboClear", paste( sampleID, "ribo.bam", sep="."))
 	riboFileOut <- file.path( results.path, "riboClear", paste( sampleID, "ribo.converted.bam", sep="."))
 	indexPath <- getOptionValue( optT, "bowtie2Index.path")
