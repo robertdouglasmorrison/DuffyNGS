@@ -17,22 +17,53 @@
 	colnames(countM) <- sampleIDset
 	rownames(countM) <- rrnaGenes
 
+	optT <- readOptionsTable( optionsFile)
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
+	}
+	
 	for ( i in 1:NS) {
 	
 		# get all the alignments from the BAM file
 		s <- sampleIDset[i]
-		tmp <- pipe.GatherGeneAlignments( s, genes=rrnaGenes, optionsFile=optionsFile,
-		 		results.path=results.path, stages="riboClear", mode="all",
-		 		asFASTQ=F, verbose=FALSE)
-		 
-		# we want read counts, not alignments, so only keep one instance of each
-		keep <- which( ! duplicated( tmp$name))
-		tmp <- tmp[ keep, ]
 		
+		# the ribo conversion step seems to misplaced some reads, such that 'position' may
+		# be off.  Use a different barebones method for now
+		#tmp <- pipe.GatherGeneAlignments( s, genes=rrnaGenes, optionsFile=optionsFile,
+		# 		results.path=results.path, stages="riboClear", mode="all",
+		# 		asFASTQ=F, verbose=FALSE) 
+		# we want read counts, not alignments, so only keep one instance of each
+		#keep <- which( ! duplicated( tmp$name))
+		#tmp <- tmp[ keep, ]
 		# gather those gene counts
-		cntsTbl <- table( factor( tmp$geneid, levels=rrnaGenes))
+		#cntsTbl <- table( factor( tmp$geneid, levels=rrnaGenes))
+		#countM[ , i] <- as.numeric( cntsTbl)
+		
+		# read the BAM file directly
+		bamfile <- file.path( results.path, "riboClear", paste( s, ".ribo.converted.bam", sep="")))
+		bamfile <- BAM.verifySorted( bamfile, verbose=verbose, threads=2)
+		br <- bamReader( "results2023/riboClear/MM4.1_PB.ribo.converted.sorted.bam")
+		
+		# grab gene ID tag elements in chunks, keeping only one read per MAR
+		geneTags <- vector()
+		nRead <- 0
+		while (TRUE) { 
+			ch <- getNextChunk( br, n=1000000); 
+			if (size(ch) < 1) break; 
+			nRead <- nRead + size(ch);
+			tags <- getTag(ch, "GI"); 
+			# primary alignments only
+			tags <- tags[ ! secondaryAlign(ch)]; 
+			# only keep those in this species
+			tags <- tags[ tags %in% rrnaGenes]
+			geneTags <- c( geneTags, tags); 
+			if (verbose) cat( "\r", s, nRead, "\tRibo Reads: ", length(geneTags))
+		}
+		# done with the BAM file
+		bamClose(br)
+		cntsTbl <- table( factor( geneTags, levels=rrnaGenes))
 		countM[ , i] <- as.numeric( cntsTbl)
-		if (verbose) cat( "\n", s, "  \tRibo Reads: ", sum(cntsTbl))
+		if (verbose) cat( "\n")
 	}
 
 	out <- data.frame( "GENE_ID"=rrnaGenes, "PRODUCT"=gene2Product(rrnaGenes), countM, 

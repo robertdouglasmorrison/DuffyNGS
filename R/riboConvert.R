@@ -59,7 +59,6 @@
 
 		# the SeqID field is in riboMap notation
 		riboIndexID <- refID2seqID( refID( chunk), refData=riboRefData)
-		#readIDs <- readID( chunk)
 
 		# take apart the riboClear seqID,  they're in the form <seqid>::<geneID>::<group>
 		if (verbose) cat( "  riboClearLookup..")
