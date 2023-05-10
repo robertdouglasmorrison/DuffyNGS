@@ -75,6 +75,9 @@
 			refid <- seqID2refID( sml$SEQ_ID, refData=refData)
 			start <- sml$POSITION - tail.width
 			end <- sml$END + tail.width
+			# quietly catch case of that chromosome not in the data
+			if (refid < 0) next
+
 			# force clip to this chromosome's limits
 			start <- max( start, 1)
 			end <- min( end, smap$LENGTH[ match( sml$SEQ_ID, smap$SEQ_ID)])
