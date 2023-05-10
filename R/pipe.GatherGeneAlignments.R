@@ -166,7 +166,7 @@
 				"revstrand"=outrev, "insertsize"=outsize, "geneid"=outgid, 
 				"stage"=outstage, stringsAsFactors=FALSE)
 	if (nrow(out)) rownames(out) <- 1:nrow(out)
-	cat( "  Done.")
+	if (verbose) cat( "  Done.")
 
 	if ( asFASTQ) {
 		if (verbose) cat( "\nConverting Alignments back to FASTQ..")
