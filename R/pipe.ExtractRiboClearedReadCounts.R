@@ -40,7 +40,7 @@
 		#countM[ , i] <- as.numeric( cntsTbl)
 		
 		# read the BAM file directly
-		bamfile <- file.path( results.path, "riboClear", paste( s, ".ribo.converted.bam", sep="")))
+		bamfile <- file.path( results.path, "riboClear", paste( s, ".ribo.converted.bam", sep=""))
 		bamfile <- BAM.verifySorted( bamfile, verbose=verbose, threads=2)
 		br <- bamReader( "results2023/riboClear/MM4.1_PB.ribo.converted.sorted.bam")
 		
