@@ -59,7 +59,7 @@
 		if ( regexpr( "splice", f) > 0) thisStage <- "splice"
 
 		# make sure we have that BAM file sorted and indexed
-		cat( "\nFile: ", basename(f))
+		if (verbose) cat( "\nFile: ", basename(f))
 		bamf <- BAM.verifySorted( f, verbose=F, threads=2)
 		if ( is.null( bamf)) next
 		bamidx <- paste( bamf, "bai", sep=".")
@@ -147,7 +147,7 @@
 	if ( verbose) cat( "\nTotal Alignments: ", nout)
 
 	# put into chromosomal order
-	cat( "\nSorting alignments..")
+	if (verbose) cat( "\nSorting alignments..")
 	ord <- order( outrefid, outpos)
 	outrefid <- outrefid[ ord]
 	outpos <- outpos[ ord]
