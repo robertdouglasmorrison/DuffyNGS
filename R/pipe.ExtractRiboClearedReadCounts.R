@@ -24,7 +24,12 @@
 		tmp <- pipe.GatherGeneAlignments( s, genes=rrnaGenes, optionsFile=optionsFile,
 		 		results.path=results.path, stages="riboClear", mode="all",
 		 		asFASTQ=F, verbose=FALSE)
-		 		
+		 
+		# reads could have aligned to 2+ species. 
+		# First keep only alignments that hit current species
+		keep <- which( tmp$seqid %in% sMap$SEQ_ID)
+		tmp <- tmp[ keep, ]
+
 		# we want read counts, not alignments, so only keep one instance of each
 		keep <- which( ! duplicated( tmp$name))
 		tmp <- tmp[ keep, ]
