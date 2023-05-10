@@ -13,9 +13,9 @@
 	# get the genes we will count, and set up storage
 	rrnaGenes <- sort( rrnaMap$GENE_ID)
 	NG <- length(rrnaGenes)
-	countM <- matrix( 0, nrow=NS, ncol=NG)
-	rownames(countM) <- sampleIDset
-	colnames(countM) <- rrnaGenes
+	countM <- matrix( 0, nrow=NG, ncol=NS)
+	colnames(countM) <- sampleIDset
+	rownames(countM) <- rrnaGenes
 
 	for ( i in 1:NS) {
 	
@@ -31,11 +31,12 @@
 		
 		# gather those gene counts
 		cntsTbl <- table( factor( tmp$geneid, levels=rrnaGenes))
-		countM[ i, ] <- as.numeric( cntsTbl)
+		countM[ , i] <- as.numeric( cntsTbl)
 		if (verbose) cat( "\n", s, "  \tRibo Reads: ", sum(cntsTbl))
 	}
 
-	out <- data.frame( "SampleID"=sampleIDset, countM, stringsAsFactors=FALSE)
+	out <- data.frame( "GENE_ID"=rrnaGenes, "PRODUCT"=gene2Product(rrnaGenes), countM, 
+			stringsAsFactors=FALSE)
 	rownames(out) <- 1:nrow(out)
 	return( out)
 }
