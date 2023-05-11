@@ -116,8 +116,8 @@
 		# get the other facts we will need, in matrix row order
 		whereRef <- match( rownames(intenM), refTrans$GENE_ID)
 		if ( any( is.na(whereRef))) {
-			cat( "\nUnexpected Error:  Found some gene IDs not present in the first transcxriptome file.")
-			cat( "\nUnable to to Round Robin in Matrix mode..")
+			cat( "\nUnexpected Error:  Found some gene IDs not present in the first transcriptome file.")
+			cat( "\nUnable to do Round Robin in Matrix mode..")
 			stop()
 		}
 		refGeneIDs <- refTrans$GENE_ID[ whereRef]

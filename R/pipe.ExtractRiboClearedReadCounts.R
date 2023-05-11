@@ -42,6 +42,10 @@
 		# read the BAM file directly
 		bamfile <- file.path( results.path, "riboClear", paste( s, ".ribo.converted.bam", sep=""))
 		bamfile <- BAM.verifySorted( bamfile, verbose=verbose, threads=2)
+		if ( is.null(bamfile)) {
+			cat( "\nWarning: trouble finding or sorting BAM file.  Skipped.")
+			next
+		}
 		br <- bamReader( bamfile)
 		
 		# grab gene ID tag elements in chunks, keeping only one read per MAR
