@@ -277,7 +277,7 @@
 			if (folder %in% c( "EdgeR", "DESeq")) next
 
 			pathFrom <- file.path( results.path, folder, paste( prefix, folderName, sep="."))
-			fset <- dir( pathFrom, pattern="(Cluster|PCA).+(png|psf)$", full.name=T)
+			fset <- dir( pathFrom, pattern="(Cluster|PCA).+(png|pdf)$", full.name=T)
 			if ( length(fset)) {
 				fout <- file.path( metaPath, basename(fset))
 				file.copy( fset, fout, overwrite=T)
