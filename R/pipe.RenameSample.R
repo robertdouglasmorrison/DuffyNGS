@@ -19,8 +19,9 @@
 		stop()
 	}
 	
-	# make sure the sampleID has a valid name format
-	checkSampleNames( c( sampleID, newSampleID))
+	# make sure the new sampleID has a valid name format
+	#checkSampleNames( c( sampleID, newSampleID))
+	checkSampleNames( newSampleID)
 
 	# make folders for all results...
 	if ( is.null( results.path)) {

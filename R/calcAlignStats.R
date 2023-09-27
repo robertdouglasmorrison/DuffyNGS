@@ -164,9 +164,6 @@
 	load( statsFile)
 	plotAlignStats( alignStatsData, asPNG=TRUE, plotPath=statsPath, pause=pause, verbose=verbose)
 
-	# close that graphics window
-	dev.off()
-
 	bamClose( reader)
 	
 	return()

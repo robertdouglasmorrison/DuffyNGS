@@ -166,6 +166,9 @@
 		nNoHits <- nNoHits - (sum(adapterCounts) + nPolyN)
 	}
 
+	# set up all results for by-buffer progress
+	checkX11( width=9, height=7, xpos=20, ypos=20, bg='white');
+
 	# now we can build the pie, based on Mode
 	pieCounts <- c( adapterCounts, nPolyN, nNoHits, nUniqueRibo, nMultiRibo, nUnique, nUniqueSplice, 
 			nMulti, nMultiSplice, (nMoreK + nMoreKribo))
