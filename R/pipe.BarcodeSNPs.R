@@ -38,7 +38,6 @@
 		# interogate this samples BAM file at all barcode marker sites
 		bamfile <- file.path( results.path, "align", paste( sampleID, "genomic.bam", sep="."))
 	    	bamfile <- BAM.verifySorted( bamfile, index=TRUE)
-		if ( ! is.null(sortfile)) {
 		bamAns <- getBarcodeFromBAMfile( bamfile, genomeFastaFile=genomeFastaFile, max.depth=max.depth)
 		if ( is.null( bamAns)) return(NULL)
 		write.table( bamAns, barcodeDetailsFile, sep=",", quote=T, row.names=F)
