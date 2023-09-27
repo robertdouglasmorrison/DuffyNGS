@@ -296,6 +296,10 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	newID <- paste( origID, out$POSITION, sep=".")
 	out$GENE_ID <- newID
 
+	# let's add the PRODUCT term to make it interpretable
+	gProd <- gene2Product( origID)
+	out <- cbind( out[ ,1:3], "PRODUCT"=gProd, out[ ,4:ncol(out)], stringsAsFactors=F)
+
 	# the "GENOTYPE" field is not wanted
 	isGENO <- match( "GENOTYPE_CALL", colnames(out), nomatch=0)
 	if (isGENO) out <- out[ , -isGENO]
