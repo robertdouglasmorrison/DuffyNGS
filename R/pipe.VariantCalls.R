@@ -179,6 +179,13 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		# let's augment with the AA SNP if at all possible
 		tbl <- DNAvariantsToAAvariants( tbl, seqID=sid, genomeFastaFile=genomeFastaFile)
 
+		# add in the gene product term
+		isPROD <- match( "PRODUCT", colnames(tbl), nomatch=0)
+		if ( ! isPROD) {
+			gProd <- gene2Product( tbl$GENE_ID)
+			tbl <- cbind( tbl[ ,1:3], "PRODUCT"=gProd, tbl[ ,4:ncol(tbl)], stringsAsFactors=F)
+		}
+
 		out <- rbind( out, tbl)
 		cat( "\r", sid, nrow(tbl))
 	}
@@ -220,7 +227,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	# tiny chance of no SNPs at all....
 	if ( ! nrow(out)) {
 		null <- vector( mode="character", length=0)
-		out <- data.frame( "SEQ_ID"=null, "POSITION"=null, "GENE_ID"=null, "REF_BASE"=null,
+		out <- data.frame( "SEQ_ID"=null, "POSITION"=null, "GENE_ID"=null, "PRODUCT"=null, "REF_BASE"=null,
 				"ALT_BASE"=null, "QUAL"=null, "DEPTH"=null, "GENOTYPE_CALL"=null,
 				"SCORE"=null, "PCT_REF"=null, "ALT_AA"=null)
 	}
@@ -297,8 +304,11 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	out$GENE_ID <- newID
 
 	# let's add the PRODUCT term to make it interpretable
-	gProd <- gene2Product( origID)
-	out <- cbind( out[ ,1:3], "PRODUCT"=gProd, out[ ,4:ncol(out)], stringsAsFactors=F)
+	isPROD <- match( "PRODUCT", colnames(out), nomatch=0)
+	if ( ! isPROD) {
+		gProd <- gene2Product( origID)
+		out <- cbind( out[ ,1:3], "PRODUCT"=gProd, out[ ,4:ncol(out)], stringsAsFactors=F)
+	}
 
 	# the "GENOTYPE" field is not wanted
 	isGENO <- match( "GENOTYPE_CALL", colnames(out), nomatch=0)
