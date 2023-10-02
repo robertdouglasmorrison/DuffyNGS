@@ -108,10 +108,7 @@
 			goodHits <- setdiff( 1:nReads, union( badMatch, badComplex))
 			targetHits <- c( targetHits, seqID[goodHits])
 			# also keep the weights if K more than one
-			if ( k.bowtie == 1) {
-				targetWts <- c( targetWts, rep.int(1,length(goodHits)))
-			} else {
-				# we need to calc the wts
+			if ( k.bowtie > 1) {
 				readIDs <- readID( chunk)
 				readWtsM <- readWtsU <- rep.int( 1, nReads)
 				tapply( 1:nReads, factor(readIDs), function(x) { 
