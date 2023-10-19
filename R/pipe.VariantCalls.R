@@ -195,6 +195,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	# if so, combine all the actual base call counts with the SNP calling
 	snpOut <- out
 	if ( ! is.null( geneID) && nrow(out)) {
+		cat( "  also gathering all Gene non-SNP base call depth info..")
 		geneAns1 <- pipe.BAMpileup( sampleID, geneID=geneID, max.depth=0)
 		geneAns2 <- MPU.callStringsToMatrix( geneAns1$BASE_TABLE)
 		# merge and recombine all these perspectives of the data
@@ -202,8 +203,8 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		colnames(geneAns2) <- paste( sub( "^,$","REF",colnames(geneAns2)), "DEPTH", sep="_")
 		# see which positions had a SNP result, and use those too
 		where <- match( out1$POSITION, snpOut$POSITION, nomatch=NA)
-		noData <- which( is.na(where))
-		out2 <- snpOut[ where, 5:11]
+		# the number of columns 'could' change...  This should be less hard-coded
+		out2 <- snpOut[ where, 5:12]
 		noData <- which( is.na(where))
 		if ( length(noData)) {
 			out2$ALT_BASE[noData] <- ""
