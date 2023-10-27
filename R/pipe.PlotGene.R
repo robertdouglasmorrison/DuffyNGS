@@ -53,7 +53,7 @@
 	annT <- readAnnotationTable( annotationFile)
 	doSamples <- intersect( sampleIDs, annT$SampleID)
 	if ( length( doSamples) < 1) {
-		cat( "\nNo Samples found that match annotation: ", annT$SampleID)
+		cat( "\nNo Samples found that match annotation: Given: ", sampleIDs, "\nFound: ", annT$SampleID, "\n")
 		return()
 	}
 	if ( length( doSamples) < length( sampleIDs)) {
@@ -162,7 +162,7 @@
 	annT <- readAnnotationTable( annotationFile)
 	doSamples <- intersect( sampleIDs, annT$SampleID)
 	if ( length( doSamples) < 1) {
-		cat( "\nNo Samples found that match annotation: ", annT$SampleID)
+		cat( "\nNo Samples found that match annotation: Given: ", sampleIDs, "\nFound: ", annT$SampleID, "\n")
 		return()
 	}
 	if ( length( doSamples) < length( sampleIDs)) {
