@@ -32,7 +32,7 @@
 	if ( ! is.null( kmerSizes)) kmerStr <- paste( "-k", paste( kmerSizes, collapse=" "))
 
 	# put those args together
-	cmdline <- paste( file.path( spades.path, "spades.py"), modeStr, filesStr, 
+	cmdline <- paste( "python3", file.path( spades.path, "spades.py"), modeStr, filesStr, 
 				kmerStr, spades.args, "-o", outpath, "  2>&1", sep=" ")
 
 	cat( "\n\nCalling SPAdes...\n")
