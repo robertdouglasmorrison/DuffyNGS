@@ -139,7 +139,7 @@
 `pipe.BAMproteins.SampleCompare` <- function( sampleID1, sampleID2=NULL, geneIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, dropGenes=NULL,
 				min.confidence=40, min.editDist=1, nWorst=20, show.details=T, nMutations=10, 
-				folder=NULL, otherIDs=NULL, verbose=T) {
+				folder=NULL, otherIDs=NULL, verbose=T, ...) {
 
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
@@ -309,7 +309,7 @@
 	# call the plotter function too?
 	if ( ! is.null( folder)) {
 		plotBAMproteinDifferences( out, folder=folder, otherIDs=otherIDs,
-				results.path=results.path, optionsFile=optionsFile)
+				results.path=results.path, optionsFile=optionsFile, ...)
 	}
 
 	return( out)
@@ -350,8 +350,8 @@
 	}
 
 	# re-arrange the columns and rename a bit
-	tbl <- tbl[ , c(1,9,5,3,6,7,10)]
-	colnames(tbl) <- c( "GENE_ID", "PRODUCT", "Pct Different", "Edit Dist", "Internal Stop Codons",
+	tbl <- tbl[ , c(1,9,2,5,3,6,7,10)]
+	colnames(tbl) <- c( "GENE_ID", "PRODUCT", "N_AA", "Pct Different", "Edit Dist", "Internal Stop Codons",
 				"Indel Gaps", "MutationDetails")
 
 	# put some of the other metrics into the title
