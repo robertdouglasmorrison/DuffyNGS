@@ -1,11 +1,10 @@
 # pipe.AssemblePseudoGenome.R
 
 # turn raw FASTQ reads into a 'complete' genome, using SPAdes to build contigs and then
-# BLAST to fing how they organize
+# BLAST to decide how they align & organize
 
 
-
-# turn raw FASTQ into Pseudon Genome FASTA and Annotation for one sample
+# turn raw FASTQ into a Pseudo Genome FASTA and Annotation for one sample
 
 `pipe.AssemblePseudoGenome` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				doCutadapt=TRUE, cutadaptProgram=Sys.which("cutadapt"), forceMatePairs=NULL, 
@@ -76,6 +75,10 @@
 	# Step 4:  now assemble these contigs, using reference genes as the guide
 	out <- assembleContigsToGenome( spades.out.path, sampleID=sampleID, genome.file=genome.file, 
 					blastAns=blastAns, verbose=verbose)
+	
+	# Step 5:  try to find unexpected arrangements of genes
+	out <- findUnexpectedArrangements( spades.out.path, sampleID=sampleID)
+	
 	
 	cat( verboseOutputDivider)
 	cat( "\n\nFinished 'AssemblePseudoGenome' on Sample:     ", sampleID, "\n")
@@ -230,7 +233,7 @@
 
 	# Step 3:  Build the new genome and map, one chromosome at a time
 	contigHits <- rep.int( 0, NCONTIG)
-	gidOut <- posOut <- endOut <- sidOut <- strandOut <- prodOut <- notesOut <- vector()
+	gidOut <- posOut <- endOut <- sidOut <- strandOut <- prodOut <- contigidOut <- vector()
 	nout <- 0
 	chromoIdOut <- chromoSeqOut <- vector()
 	nchromo <- 0
@@ -291,7 +294,7 @@
 				endOut[nout] <- seqLenPrev + smlAns$S_END[1]
 				strandOut[nout] <- smlAns$STRAND[1]
 				prodOut[nout] <- gmap$PRODUCT[whMap]
-				notesOut[nout] <- smlAns$SEQ_ID[1]
+				contigidOut[nout] <- smlAns$SEQ_ID[1]
 			}
 			# after each contig has been added, append a spacer
 			chromoSeq <- paste( chromoSeq, SPACER, sep="", collapse="")
@@ -307,7 +310,7 @@
 	outFasta <- as.Fasta( chromoIdOut, chromoSeqOut)
 	writeFasta( outFasta, outGenome, line=100)
 	outMap <- data.frame( "GENE_ID"=gidOut, "POSITION"=posOut, "END"=endOut, "SEQ_ID"=sidOut,
-			"STRAND"=strandOut, "PRODUCT"=prodOut, "CONTIG_NOTES"=notesOut, stringsAsFactors=T)
+			"STRAND"=strandOut, "PRODUCT"=prodOut, "CONTIG_ID"=contigidOut, stringsAsFactors=T)
 	rownames(outMap) <- 1:nout
 	# add a metric of relative position of each gene to the true location on the chromosome
 	whMap <- match( outMap$GENE_ID, gmap$GENE_ID)
@@ -317,3 +320,97 @@
 	return( invisible( outMap))
 }
 
+
+`findUnexpectedArrangements` <- function( out.path, sampleID, min.move.dist=100, min.gap.size=100) {
+
+	# given the assembled pseudo genome and gene map results, see if we can find any unexpected items
+	
+	# Step 0: set up:  get the contigs, pseudo genome, and pseudo gene map
+	contigFile <- file.path( out.path, paste( sampleID, "BlastContigs.fasta", sep="."))
+	contigFasta <- loadFasta( contigFile, verbose=F)
+	NCONTIG <- length( contigFasta$desc)
+	# file names for the results we just generated, and read them back in
+	inGenome <- file.path( out.path, paste( sampleID, "PseudoGenome.fasta", sep="."))
+	myGenomeFA <- loadFasta( inGenome, verbose=F)
+	inGeneMap <- file.path( out.path, paste( sampleID, "PseudoGenome.GeneMap.txt", sep="."))
+	myGmap <- read.delim( inGeneMap, as.is=T)
+	NG <- nrow(myGmap)
+	# re-get the set of reference genome genes, that we will look for in the contigs
+	refGmap <- subset( getCurrentGeneMap(), REAL_G == TRUE)
+	
+	# Step 1:  see if any gene inside a conserved contig seems way out of place
+	# 		use a set of 5 adjacent genes, inside the same raw contig, as the neighborhood.
+	#		check the center one
+	myGmap$Gene.Moved <- ""
+	for ( g in refGmap$GENE_ID) {
+		myRow <- match( g, myGmap$GENE_ID, nomatch=0)
+		if ( ! myRow) next
+		myNeighborRows <- (max(myRow-2, 1) : min(myRow+2, NG))
+		myNeighborContigs <- myGmap$CONTIG_ID[ myNeighborRows]
+		# all must be the same to trust looking at the gene
+		if ( length( unique( myNeighborContigs)) > 1) next
+		# see if this gene is 'more distant' than its peers
+		myDist <- myGmap$SHIFT_DISTANCE[myRow]
+		myNeighborDists <- myGmap$SHIFT_DISTANCE[ setdiff(myNeighborRows,myRow)]
+		myDistDifferent <- setdiff( myDist, myNeighborDists)
+		myDistDiff <- myDist - median( myNeighborDists)
+		if ( length( myDistDifferent) && abs(myDistDiff) >= min.move.dist) {
+			myGmap$Gene.Moved[ myRow] <- paste( "Moved", myDistDiff)
+		}
+	}
+	
+	# Step 2:  see if any gaps without genes inside a conserved contig seems way different size
+	# 		use a set of 2 adjacent genes, inside the same raw contig, as the neighborhood.
+	#		check the gap in both this map and the reference
+	myGmap$Post.Gene.Gap.Feature <- ""
+	myGmap$Post.Gene.Gap.Blast.Hit <- ""
+	# accumulate novel DNA to blast against NT
+	extraDesc <- extraSeq <- vector()
+	for ( ig in 1:(nrow(refGmap)-1)) {
+		g1 <- refGmap$GENE_ID[ig]
+		g2 <- refGmap$GENE_ID[ig+1]
+		myRow1 <- match( g1, myGmap$GENE_ID, nomatch=0)
+		myRow2 <- match( g2, myGmap$GENE_ID, nomatch=0)
+		if ( ! myRow1 || ! myRow2 ) next
+		if ( myRow2 - myRow1 != 1) next
+		if ( myGmap$CONTIG_ID[myRow1] != myGmap$CONTIG_ID[myRow2]) next
+		# we have 2 adjacent genes in the same contig.  Check for large change in size.
+		refGapSize <- refGmap$POSITION[ig+1] - refGmap$END[ig]
+		if ( refGapSize < min.gap.size) next
+		myGapSize <- myGmap$POSITION[myRow2] - myGmap$END[myRow1]
+		if ( myGapSize < refGapSize/2) {
+			myGmap$Post.Gene.Gap.Feature[myRow1] <- paste( "Post-Gene Gap is Smaller by", refGapSize-myGapSize)
+			next
+		}
+		if ( myGapSize > refGapSize*1.5) {
+			myGmap$Post.Gene.Gap.Feature[myRow1] <- paste( "Post-Gene Gap is Larger by", myGapSize-refGapSize)
+			# since it is bigger, let's try to see what it is
+			thisSeqID <- myGmap$SEQ_ID[myRow1]
+			thisChromo <- myGenomeFA$seq[ match( thisSeqID, myGenomeFA$desc)]
+			thisGapSeq <- substr( thisChromo, myGmap$END[myRow1] + 5, myGmap$POSITION[myRow2] - 5)
+			extraDesc <- c( extraDesc, g1)
+			extraSeq <- c( extraSeq, thisGapSeq)
+			next
+		}
+	}
+	
+	# if we got some extra DNA, try to blast it
+	if ( length( extraSeq)) {
+		cat( "\n  BLASTing ", length( extraSeq), " unexpected DNA..")
+		tmpFastaFile <- paste( sampleID, "Unexpected.Gaps.fasta", sep=".")
+		writeFasta( as.Fasta( extraDesc, extraSeq), tmpFastaFile, line=100)
+		tmpBlastFile <- paste( sampleID, "Unexpected.Gaps.Blast.Output.txt", sep=".")
+		# because we build a Unix command line, embed the outfmt string in quotes
+		#callBlastn( tmpFastaFile, outfile=tmpBlastFile, wordsize=11, evalue=0.1, maxhits=3, outfmt=' "6 std stitle" ')
+		callBlastx( tmpFastaFile, outfile=tmpBlastFile, wordsize=4, evalue=0.1, maxhits=3, outfmt=' "6 std stitle" ')
+		SAV_BLAST_ANS <<- ans <- readBlastOutput( tmpBlastFile, nKeep=1, outfmt="6 std stitle")
+		# make an answer string from the result
+		blastText <- paste( ans$SEQ_ID, ", Title=", ans$STITLE, "; Length=", ans$LEN_MATCH, "; Score=", ans$SCORE, sep="")
+		where <- match( ans$PROBE_ID, myGmap$GENE_ID, nomatch=0)
+		myGmap$Post.Gene.Gap.Blast.Hit[ where] <- blastText[ where > 0]
+		#file.delete( c( tmpFastaFile, tmpBlastFile))
+	}
+	
+	write.table( myGmap, inGeneMap, sep="\t", quote=F, row.names=F)
+	return( invisible( myGmap))
+}
