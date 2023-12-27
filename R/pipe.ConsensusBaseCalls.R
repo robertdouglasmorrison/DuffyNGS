@@ -335,7 +335,7 @@
 		}
 		indel.details <- baseCallAns$indel.details
 		keep <- base::which( rownames(calls) %in% cdsBases)
-		calls <- calls[ keep, ]
+		calls <- calls[ keep, , drop=F]
 		indel.details <- indel.details[ keep]
 		if ( strand == "-" && nrow(calls)) {
 			# swap A/T and C/G
