@@ -346,7 +346,7 @@
 			calls[,"C"] <- calls[,"G"]
 			calls[,"G"] <- tmp
 			# and lastly flip the row ordering too
-			calls <- calls[ rev(1:nrow(calls)), ]
+			calls <- calls[ rev(1:nrow(calls)), , drop=F]
 			indel.details <- rev( indel.details)
 		}
 		# there is no gaurantee that the calls have all base locations, so 
