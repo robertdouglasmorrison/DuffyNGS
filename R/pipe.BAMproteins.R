@@ -95,7 +95,7 @@
 		# the consensus now returns a confidence score
 		conf <- if ( is.null( ans$aa.confidence)) 0 else round( as.numeric( ans$aa.confidence) * 100, digits=2)
 
-		if (verbose) cat( "\r", gid, NCHAR(myProt), conf)
+		if (verbose) cat( "\r", gid, NCHAR(myProt), conf, parallel:::isChild())
 		return( list( "seq"=myProt, "confidence"=conf))
 	}
 	
