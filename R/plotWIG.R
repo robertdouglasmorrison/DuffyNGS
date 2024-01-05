@@ -1337,7 +1337,7 @@ dashedLine <- function( xb, xe, y, ...) {
 	  }
 	} 
 
-	if ( showDetectability && !is.null( curDetectSelf) && !is.na( curDetectSelf$Unique)) {
+	if ( showDetectability && !is.null( curDetectSelf) && !is.null( curDetectSelf$Unique)) {
 	    binsetptr <- WB_getBinSetPtrFromSeqID( curDetectSelf$Unique, seqid)
 	    # if we fail to find the detectability, flag it as not being done back up in the caller routine and quit
 	    if ( binsetptr < 1) {
@@ -1348,7 +1348,7 @@ dashedLine <- function( xb, xe, y, ...) {
 
 	    # setup for one 'other species too'
 	    hasOther <- FALSE
-	    if ( !is.null( curDetectOther) && !is.na( curDetectOther$Detectable)) {
+	    if ( !is.null( curDetectOther) && !is.null( curDetectOther$Detectable)) {
 	    	otherbinsetptr <- WB_getBinSetPtrFromSeqID( curDetectOther$Unique, seqid)
 	    	otherBinset <- curDetectOther$Detectable$BinData[[ binsetptr]]
 	    	if ( otherbinsetptr >= 1) {

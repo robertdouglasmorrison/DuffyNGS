@@ -170,11 +170,11 @@ WB_UNIQUE_PCT <- 2
 		}
 	}
 
-	needLoad <- ( is.null( curDetectability) || ( curDetectability$Species != selfID))
+	needLoad <- ( is.null(curDetectability) || is.null(curDetectability$Species) || ( curDetectability$Species != selfID))
 	 
 	# also see if the 'other' species forces a need to re-load
 	if ( ! is.null( otherID)) {
-		if ( is.null( curOther) || (curOther$Species != otherID))  needLoad <- TRUE
+		if ( is.null(curOther) || is.null(curOther$Species) || (curOther$Species != otherID))  needLoad <- TRUE
 	}
 
 	if ( needLoad ) {
@@ -196,30 +196,27 @@ WB_UNIQUE_PCT <- 2
 	file <- paste( prefix, "selfUnique", "WB", sep=".")
 
 	# load that 'selfUnique' detectability object,  this object is called 'WB'
-	WB <- NA
-	try( data( list=list(file), package="DuffyNGS", envir=environment()), silent=TRUE)
+	WB <- NULL
+	try( data( list=file, package="DuffyNGS", envir=environment()), silent=FALSE)
 	WBself <- WB
 	selfAnswer <- list( "Species"=speciesID, "Unique"=WBself)
 
 	# load that 'otherDetectable' detectability object,  this object is called 'WB'
 	otherAnswer <- NULL
-	WB <- NA
+	WB <- NULL
 	if ( ! is.null( otherID)) { 
 		setCurrentSpecies( otherID)
 		otherPrefix <- getCurrentSpeciesFilePrefix()
 		otherFile <- paste( prefix, "by", otherPrefix,"detectable", "WB", sep=".")
-		try( data( list=list(otherFile), package="DuffyNGS", envir=environment()), silent=TRUE)
+		try( data( list=otherFile, package="DuffyNGS", envir=environment()), silent=TRUE)
 	}
 	WBother <- WB
 	# if we got a good WB data set, then pass it back
 	if ( ! any(is.na( WBother))) otherAnswer <- list( "Species"=otherID, "Detectable"=WBother)
 
-	#out <- list( "Self"=selfAnswer, "Other"=otherAnswer)
-	
 	# set this as the current detectability
 	assign( "SelfDetectability", value=selfAnswer, envir=WB_Env)
 	assign( "OtherDetectability", value=otherAnswer, envir=WB_Env)
 
-	#return( out)
 	return( )
 }
