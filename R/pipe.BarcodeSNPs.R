@@ -223,7 +223,7 @@
 
 	prefix <- getCurrentSpeciesFilePrefix()
 	f <- paste( prefix, "Barcode.SNPs", sep=".")
-	data( list=list(f), package="DuffyTools", envir=environment())
+	data( list=f, package="DuffyTools", envir=environment())
 	out <- barcodeSNPs
 	out
 }
