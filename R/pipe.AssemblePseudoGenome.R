@@ -86,7 +86,7 @@
 	myTime <- elapsedProcTime( startT, proc.time(), N=nrow(out), what="Mapped Genes")
 	print( myTime)
 	
-	return( out)
+	return( invisible( out))
 }
 
 
