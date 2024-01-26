@@ -236,5 +236,7 @@ function( filein, fileout=sub( "bam$", "converted.bam", filein), genomefile="gen
 	ans <- calcAlignSummary( mode="report")
 	cat( "\n", ans$textSummary, "\n")
 
-	return( c( ans, list( "Alignments"=nReadsOut, "SplicedReads"=nReads, "NonSpliceAlignments"=nBad)))
+	extras <- list( "Alignments"=nReadsOut, "SplicedReads"=nReads, "NonSpliceAlignments"=nBad)
+	out <- c( ans, extras)
+	return( out)
 }

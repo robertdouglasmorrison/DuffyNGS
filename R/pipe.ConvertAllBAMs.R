@@ -324,7 +324,7 @@
 
 		# turn the splice details into a file for each species
 		tbl <- ans$spliceDetailSummary
-		if ( !is.null(tbl) && !is.na(tbl) && nrow( tbl)) {
+		if ( !is.null(tbl) && is.data.frame(tbl) && nrow(tbl)) {
 		    speciesSet <- sort( unique.default( tbl$SPECIES_ID))
 		    speciesIDcolumn <- match( "SPECIES_ID", colnames(tbl), nomatch=0)
 		    for ( i in 1:length( speciesSet)) {
@@ -338,7 +338,7 @@
 			if ( speciesIDcolumn > 0) sml <- sml[ , -speciesIDcolumn]
 			ttlReads <- sum( sml$N_READS, na.rm=T)
 			pctReads <- sml$N_READS * 100 / ttlReads
-			sml$PCT_READS <- format( pctReads, digits=3)
+			sml$PCT_READS <- round( pctReads, digits=3)
 			sml$KEY_ID <- paste( sml$GENE_ID, sml$SPLICE_ID, sep="::")
 
 			outfile <- paste( sampleID, "splice", thisPrefix, "Summary.txt", sep=".")
