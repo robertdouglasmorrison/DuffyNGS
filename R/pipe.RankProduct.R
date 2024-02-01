@@ -8,7 +8,7 @@
 				groupColumn="Group", colorColumn="Color", folderName="", 
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
-				keepIntergenics=FALSE, verbose=!interactive(), 
+				keepIntergenics=FALSE, verbose=TRUE,
 				nSimulations=100, label="", doDE=TRUE, PLOT.FUN=NULL, 
 				targetGroups=NULL, forceMulticore=FALSE, ...)
 {
@@ -20,11 +20,12 @@
 		cat("\n", label, "\n\nUsing results from Species:  ", speciesID,"\n")
 	}
 
-	# set up for this species...
+	# setting the target can reset the speciesID, so do that explicitly
 	optT <- readOptionsTable( optionsFile)
+	wantedSpeciesID <- speciesID
 	if ( is.null( targetID)) targetID <- getOptionValue( optT, "targetID", notfound="HsPf", verbose=F)
 	setCurrentTarget( targetID)
-	setCurrentSpecies( speciesID)
+	setCurrentSpecies( wantedSpeciesID)
 	
 	# sanity check on the inputs...
 	if ( length( unlist(sampleIDset)) < 2) stop( "RankProduct requires at least 2 sampleIDs")

@@ -18,8 +18,12 @@
 		cat("\n\nUsing results from Species:  ", speciesID,"\n")
 	}
 
-	if ( is.null( targetID)) targetID <- getOptionValue( optionsFile, "targetID", notfound="HsPf", verbose=F)
+	# setting the target can reset the speciesID, so do that explicitly
+	optT <- readOptionsTable( optionsFile)
+	wantedSpeciesID <- speciesID
+	if ( is.null( targetID)) targetID <- getOptionValue( optT, "targetID", notfound="HsPf", verbose=F)
 	setCurrentTarget( targetID)
+	setCurrentSpecies( wantedSpeciesID)
 
 	annT <- readAnnotationTable( annotationFile)
 	if ( ! (groupColumn %in% colnames(annT))) {
@@ -30,7 +34,6 @@
 	# the new 'Matrix' method needs a few option values
 	method <- match.arg( method)
 	if ( method == "Matrix") {
-		optT <- readOptionsTable( optionsFile)
 		# get the weights for ranking the results
 		wt.fold <- as.numeric( getOptionValue( optT, "DE.weightFoldChange", notfound="1"))
 		wt.pvalue <- as.numeric( getOptionValue( optT, "DE.weightPvalue", notfound="1"))

@@ -29,10 +29,12 @@
 	}
 	groupIDs <- checkGroupNames( annT[[ groupColumn]])
 
+	# setting the target can reset the speciesID, so do that explicitly
 	optT <- readOptionsTable( optionsFile)
+	wantedSpeciesID <- speciesID
 	if ( is.null( targetID)) targetID <- getOptionValue( optT, "targetID", notfound="HsPf", verbose=F)
 	setCurrentTarget( targetID)
-	setCurrentSpecies( speciesID)
+	setCurrentSpecies( wantedSpeciesID)
 	prefix <- getCurrentSpeciesFilePrefix()
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".")
