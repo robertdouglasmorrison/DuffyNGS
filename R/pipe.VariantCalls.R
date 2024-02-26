@@ -898,9 +898,13 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		if ( length(drops)) out <- out[ , -drops]
 	}
 
+	# make a bit of extra explaining text
+	grpTable <- table( groupSet)
+	grpCntsStr <- paste( "(", paste(names(grpTable),": N=",as.numeric(grpTable),sep="",collapse=", "), ")", sep=" ")
+	extraText <- paste( "Differential SNP comparisons among", length(sampleIDset), "samples", grpCntsStr)
 	globalOutfile <- file.path( outPath, outfile)
 	table2html( out, globalOutfile, title=paste( "Variant Comparison: &nbsp; ", label), maxRows=N,
-			linkPaths=localPlotPath)
+			linkPaths=localPlotPath, extraHTMLtext=extraText)
 	# write a text version too
 	globalOutfile <- file.path( outPath, sub( "html$", "txt", outfile))
 	write.table( tbl, globalOutfile, sep="\t", quote=F, row.names=F)
