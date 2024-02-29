@@ -348,11 +348,12 @@ MAX_KMERS <- 250000000
 	cat( "\nDone.\n")
 	rm( normTbl)
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), round(t(avg.cnt)), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), round(t(avg.cnt)), round(t(avg),digits=3), 
+			"Log2.Fold"=round(fold,digits=4), "P.Value"=pval,
 			row.names=seq_len(NR), stringsAsFactors=F)
-	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
-	out <- out[ ord, ]
-	rownames(out) <- 1:NR
+	#ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
+	#out <- out[ ord, ]
+	#rownames(out) <- 1:NR
 	return(out)
 }
 
@@ -431,11 +432,12 @@ MAX_KMERS <- 250000000
 	
 	# step 4:  Dispersion -- EdgeR can take very long to calculate.  Allow a simple override
 	if ( is.null(dispersion)) {
-		cat( "  Dispersion..")
+		cat( "  EstimateDispersion..")
 		dispersion <- "auto"
 		ans <- estimateDisp( ans)
 	} else {
-		dispersion <- 0.05
+		dispersion <- as.numeric(dispersion)
+		cat( "  UseExplicitDispersion=", dispersion)
 	}
 
 	# step 5: do the DE assessment
@@ -469,8 +471,8 @@ MAX_KMERS <- 250000000
 	}
 	cat( "\nDone.\n")
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), nPos, avgCnt, "Log2.Fold"=fold, 
-			"P.Value"=pval, "Q.Value"=qval, row.names=seq_len(NR), stringsAsFactors=F)
+	out <- data.frame( "Kmer"=rownames(useTbl), nPos, round(avgCnt, digits=3), "Log2.Fold"=round(fold,digits=4), 
+			"P.Value"=pval, "Q.Value"=round(qval,digits=5), row.names=seq_len(NR), stringsAsFactors=F)
 	#ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	#out <- out[ ord, ]
 	#rownames(out) <- 1:NR
