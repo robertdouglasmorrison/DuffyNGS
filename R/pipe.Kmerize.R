@@ -261,7 +261,7 @@ MAX_KMERS <- 250000000
 }
 
 
-# do differential Kmer analysis by sample groups
+# do differential Kmer abundance analysis by sample groups, using normalized data
 
 `pipe.KmerCompare` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), normalize=c("LKPTM"), 
 				min.count=NULL, min.samples=NULL, n.remove=100, offset=0.1) {
@@ -349,6 +349,116 @@ MAX_KMERS <- 250000000
 	rm( normTbl)
 	
 	out <- data.frame( "Kmer"=rownames(useTbl), t(cnt), round(t(avg.cnt)), t(avg), "Log2.Fold"=fold, "P.Value"=pval,
+			row.names=seq_len(NR), stringsAsFactors=F)
+	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
+	out <- out[ ord, ]
+	rownames(out) <- 1:NR
+	return(out)
+}
+
+
+# do differential Kmer abundance analysis using the EdgeR counts tool
+
+`pipe.KmerEdgeR` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), 
+				min.count=NULL, min.samples=NULL, n.remove=100) {
+
+	# use just the samples asked for, and make sure the columns are in sample & group order
+	where <- match( sampleIDset, colnames(kmerTbl), nomatch=0)
+	if ( any( where == 0)) stop( "Some SampleIDs not in Kmer table")
+	if ( length(where) != ncol(kmerTbl) || !all( where == (1:ncol(kmerTbl)))) {
+		useTbl <- kmerTbl[ , where]
+	} else {
+		useTbl <- kmerTbl
+	}
+	NC <- ncol(useTbl)
+	NR <- nrow(useTbl)
+	
+	# get our group factors
+	if ( ! is.factor( groupSet)) {
+		grpFac <- factor( groupSet, levels=levels)
+	} else {
+		grpFac <- groupSet
+		groupSet <- as.character(groupSet)
+	}
+	grpLvls <- levels( grpFac)
+	nGrps <- nlevels( grpFac)
+	if ( nGrps != 2) stop( "Expected exactly 2 Sample Groups")
+	grp1 <- which( as.numeric(grpFac) == 1)
+	grp2 <- which( as.numeric(grpFac) == 2)
+	cat( "\nBreakdown by Group:\n")
+	print( table( groupSet))
+	
+	# allow a further trimming of Kmers for low detection, after it was already done during table creation
+	if ( ! ( is.null(min.count) && is.null(min.samples))) {
+		if ( is.null(min.count) || is.null(min.samples)) stop( "Error: must give both 'min.count' and 'min.samples' values")
+		cat( "\nChecking for low coverage Kmers to drop: \n  At least", min.count, "counts in at least", min.samples, "samples..")
+		nGood <- apply( useTbl, 1, function(x) sum( x >= min.count))
+		drops <- which( nGood < min.samples)
+		if ( length(drops)) {
+			cat( "  Removing", length(drops), "Kmers rows..")
+			useTbl <- useTbl[ -drops, ]
+			NR <- nrow(useTbl)
+			cat( "  N_Kmer: ", NR)
+		}
+		rm( nGood)
+	}
+
+	# drop the super high count Kmers
+	if (n.remove > 0) {
+		useTbl <- remove.HighCountKmers( useTbl, n.remove=n.remove)
+		NR <- nrow(useTbl)
+	}
+	gc()
+
+	# we are now ready to do tests per Kmer
+	cat( "\nRunning EdgeR Differential Detection on ", NR, " Kmers..\n")
+	
+	# step 1:  build the EdgeR object
+	# the column flags for EdgeR are to end up as 1,2, where 1 is the one we want...
+	# as in Group 1 divided by Group 2
+	grpNumber <- rep( 2, times=length(groupSet))
+	grpNumber[ groupSet == groupSet[2]] <- 1
+	cat( "  Build DEGList..")
+	ans <- DGEList( counts=useTbl, group=grpNumber)
+	
+	# step 2: filtering of low expression genes.  Not for Kmers
+	
+	# step 3: normalize the library sizes
+	cat( "  Normalize..")
+	ans <-  normLibSizes( ans)
+	
+	# step 4:  Dispersion -- EdgeR will choke if less than two samples per group
+	canDoDispersion <- TRUE
+	dispersion <- "auto"
+	if( sum( grpNumber == 1) < 2) canDoDispersion <- FALSE
+	if( sum( grpNumber == 2) < 2) canDoDispersion <- FALSE
+	if ( canDoDispersion) {
+		cat( "  Dispersion..")
+		ans <- estimateDisp( ans)
+	} else {
+		dispersion <- 0.05
+	}
+
+	# step 5: do the DE assessment
+	cat( "  ExactTest..")
+	etAns <- exactTest( ans, pair=c(2,1), dispersion=dispersion)
+	cat( "  ExtractTags..")
+	NR <- nrow(useTbl)
+	topTagsAns <- topTags( etAns, n=NR)
+	edgeRout <- topTagsAns$table
+	# get what we want/need out
+	fout <- edgeRout[ , 1]
+	pout <- edgeRout[ , 3]
+	qout <- edgeRout[ , 4]
+	gnames <- rownames( edgeRout)
+	where <- match( rownames(useTbl), gnames, nomatch=0)
+	fold <- pval <- qval <- rep.int(NA, NR)
+	fold[ where > 0] <- fout[where]
+	pval[ where > 0] <- pout[where]
+	qval[ where > 0] <- qout[where]
+	cat( "\nDone.\n")
+	
+	out <- data.frame( "Kmer"=rownames(useTbl), "Log2.Fold"=fold, "P.Value"=pval, "Q.Value"=qval,
 			row.names=seq_len(NR), stringsAsFactors=F)
 	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
 	out <- out[ ord, ]
