@@ -362,6 +362,8 @@ MAX_KMERS <- 250000000
 `pipe.KmerEdgeR` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), 
 				min.count=NULL, min.samples=NULL, n.remove=100) {
 
+	require( edgeR)
+
 	# use just the samples asked for, and make sure the columns are in sample & group order
 	where <- match( sampleIDset, colnames(kmerTbl), nomatch=0)
 	if ( any( where == 0)) stop( "Some SampleIDs not in Kmer table")
@@ -442,27 +444,39 @@ MAX_KMERS <- 250000000
 	# step 5: do the DE assessment
 	cat( "  ExactTest..")
 	etAns <- exactTest( ans, pair=c(2,1), dispersion=dispersion)
+	rm( ans); gc()
+	
 	cat( "  ExtractTags..")
 	NR <- nrow(useTbl)
-	topTagsAns <- topTags( etAns, n=NR)
-	edgeRout <- topTagsAns$table
+	edgeRout <- topTags( etAns, n=NR)$table
 	# get what we want/need out
 	fout <- edgeRout[ , 1]
 	pout <- edgeRout[ , 3]
 	qout <- edgeRout[ , 4]
 	gnames <- rownames( edgeRout)
+	rm( edgeRout);  gc()
+	
+	cat( "  BuildResults..")
 	where <- match( rownames(useTbl), gnames, nomatch=0)
 	fold <- pval <- qval <- rep.int(NA, NR)
 	fold[ where > 0] <- fout[where]
 	pval[ where > 0] <- pout[where]
 	qval[ where > 0] <- qout[where]
+	nPos <- avgCnt <- matrix( NA, nrow=NR, ncol=2)
+	colnames(nPos) <- paste( "N.Samples", grpLvls, sep=".")
+	colnames(avgCnt) <- paste( "Avg.Count", grpLvls, sep=".")
+	for( i in 1:NR) {
+		x <- useTbl[ i, ]
+		nPos[ i, ] <- tapply( x, grpFac, function(y) sum( y > 0))
+		avgCnt[ i, ] <- tapply( x, grpFac, mean)
+	}
 	cat( "\nDone.\n")
 	
-	out <- data.frame( "Kmer"=rownames(useTbl), "Log2.Fold"=fold, "P.Value"=pval, "Q.Value"=qval,
-			row.names=seq_len(NR), stringsAsFactors=F)
-	ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
-	out <- out[ ord, ]
-	rownames(out) <- 1:NR
+	out <- data.frame( "Kmer"=rownames(useTbl), nPos, avgCnt, "Log2.Fold"=fold, 
+			"P.Value"=pval, "Q.Value"=qval, row.names=seq_len(NR), stringsAsFactors=F)
+	#ord <- diffExpressRankOrder( out$Log2.Fold, out$P.Value)
+	#out <- out[ ord, ]
+	#rownames(out) <- 1:NR
 	return(out)
 }
 
