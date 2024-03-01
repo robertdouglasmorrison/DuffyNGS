@@ -361,7 +361,7 @@ MAX_KMERS <- 250000000
 # do differential Kmer abundance analysis using the EdgeR counts tool
 
 `pipe.KmerEdgeR` <- function( kmerTbl, sampleIDset, groupSet, levels=sort(unique(groupSet)), 
-				min.count=NULL, min.samples=NULL, n.remove=100, dispersion=NULL) {
+				min.count=NULL, min.samples=NULL, n.remove=100, dispersion=0.05) {
 
 	require( edgeR)
 
@@ -431,9 +431,13 @@ MAX_KMERS <- 250000000
 	ans <-  normLibSizes( ans)
 	
 	# step 4:  Dispersion -- EdgeR can take very long to calculate.  Allow a simple override
-	if ( is.null(dispersion)) {
+	if ( is.null(dispersion) || is.character(dispersion)) {
 		cat( "  EstimateDispersion..")
-		dispersion <- "auto"
+		if ( is.null(dispersion)) {
+			dispersion <- "auto"
+		} else {
+			dispersion <- dispersion[1]
+		}
 		ans <- estimateDisp( ans)
 	} else {
 		dispersion <- as.numeric(dispersion)
