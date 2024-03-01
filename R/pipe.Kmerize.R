@@ -408,6 +408,7 @@ MAX_KMERS <- 250000000
 
 	# drop the super high count Kmers
 	if (n.remove > 0) {
+		cat( "  Removing high count Kmers..")
 		useTbl <- remove.HighCountKmers( useTbl, n.remove=n.remove)
 		NR <- nrow(useTbl)
 	}
