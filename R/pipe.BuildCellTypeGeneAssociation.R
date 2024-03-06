@@ -327,8 +327,11 @@
 				ord <- order( bigDF$Rank)
 				bigDF <- bigDF[ ord, ]
 				for (n in smallSetCounts) {
-					if ( n > nrow(bigDF)) next
-					gNow <- bigDF$GENE_ID[ 1:n]
+					# do we not make 'top N' gene sets if there are not enough genes?
+					# no, lets make them anyway, with too few genes, just so all tools
+					# that look for a 'top 100' find some data object, instead of it being missing
+					#if ( n > nrow(bigDF)) next
+					gNow <- bigDF$GENE_ID[ 1:min(n,nrow(bigDF))]
 					nSmall <- nSmall + 1
 					smallGeneSets[[nSmall]] <- gNow
 					names(smallGeneSets)[nSmall] <- paste( bigName, ": top ", n, " genes", sep="")
