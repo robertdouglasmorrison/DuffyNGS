@@ -325,19 +325,23 @@
 	# final answer will now be actual 'proportion', not 'percentage'.  Not summing to 100% anymore.
 	mode <- match.arg( mode)
 	if ( mode == "weighted.mean") {
-		# since COD is always in 0..1, it is a better metric than RMS for doing the weights
+		# since COD is usually in 0..1, it is a better metric than RMS for doing the weights
+		# but the COD can in fact go negative...  Can we deal with that cleanly?  As there 'could'
+		# be cases where ALL are negative, but some clearly better than others...
 		cod <- codAns
-		cod[ cod <= 0] <- 0
-		cod[ is.na(cod)] <- 0
+		#cod[ cod <= 0] <- 0
+		#cod[ is.na(cod)] <- 0
+		cod[ is.na(cod)] <- min( cod, na.rm=T)
 		# Note:  there is a small chance that ALL CoD can be negative.  If so, revert to using normalized RMS deviation instead
-		if ( all( cod == 0)) {
-			cat( "\n  Warning:  all CoD are negative, reverting to using normalized RMSD instead.")
-			nrms <- min(rmsdAns,na.rm=T) / rmsdAns
-			nrms[ nrms <= 0] <- 0
-			nrms[ is.na(nrms)] <- 0
-			cod <- nrms
-		}
-		codRange <- range(cod[cod>0])
+		#if ( all( cod == 0)) {
+		#	cat( "\n  Warning:  all CoD are negative, reverting to using normalized RMSD instead.")
+		#	nrms <- min(rmsdAns,na.rm=T) / rmsdAns
+		#	nrms[ nrms <= 0] <- 0
+		#	nrms[ is.na(nrms)] <- 0
+		#	cod <- nrms
+		#}
+		#codRange <- range(cod[cod>0])
+		codRange <- range( cod)
 		if ( diff(codRange) > 0.05) {
 			# if large enough spread, treat worst as zero and prorate all others back to original scale
 			codTmp <- (cod - codRange[1])/diff(codRange)
