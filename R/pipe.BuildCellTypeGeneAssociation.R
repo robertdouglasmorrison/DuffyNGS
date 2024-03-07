@@ -275,6 +275,12 @@
 			if ( length(finalGenes) > max.genes) finalGenes <- finalGenes[ 1:max.genes]
 			return( unique( finalGenes))
 		})
+	# append the gene counts to the names for each gene set, then save it
+	for ( k in 1:length(allGeneSets)) { 
+		ng <- length( allGeneSets[[k]]); 
+		newname <- paste( names(allGeneSets)[k], " (N=", ng, ")", sep="")
+		names(allGeneSets)[k] <- newname
+	}
 	save( allGeneSets, file=paste( prefix, reference, "AllGeneSets.rda", sep="."))
 
 	# and make orthologged versions of the gene sets too...
@@ -289,6 +295,13 @@
 				destGenes <- ortholog( allGeneSets[[k]], from=speciesID, to=destSpecies)
 				destGenes <- setdiff( destGenes, c("", " "))
 				allGeneSets[[k]] <- destGenes
+			}
+			# append the gene counts to the names for each gene set, then save it
+			for ( k in 1:length(allGeneSets)) { 
+				ng <- length( allGeneSets[[k]]); 
+				oldname <- sub( " \\(N=.+", "", names(allGeneSets)[k])
+				newname <- paste( oldname, " (N=", ng, ")", sep="")
+				names(allGeneSets)[k] <- newname
 			}
 			finalFile <- paste( orthoPrefix[j], reference, "AllGeneSets.rda", sep=".")
 			cat( "\n ", destSpecies, "  N_Genes =", length( unique( unlist( allGeneSets))))
