@@ -346,10 +346,10 @@
 			# if large enough spread, treat worst as zero and prorate all others back to original scale
 			codTmp <- (cod - codRange[1])/diff(codRange)
 			codTmp[ codTmp < 0] <- 0
-			wts <- codTmp ^ 2
+			wts <- codTmp ^ 4
 		} else {
 			# if minimal spread, none get zeroed
-			wts <- (cod / codRange[2]) ^ 2
+			wts <- (cod / codRange[2]) ^ 4
 		}
 		wts <- round(wts, digits=4)
 		names(wts) <- names(codAns)
