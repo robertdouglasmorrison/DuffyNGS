@@ -1672,12 +1672,11 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	#kmerTbl <- kmerTbl[ keep, ]
 	#NK <- nrow(kmerTbl)
 
-	# get the names of the two comparison groups
-	lkptmColumns <- grep( "LKPTM", toupper(colnames(kmerTbl)), value=T)
-	lkptmColumns <- sub( "^AVG_", "", lkptmColumns)
-	lkptmColumns <- sub( "_LKPTM$", "", lkptmColumns)
-	grp1Name <- lkptmColumns[1]
-	grp2Name <- lkptmColumns[2]
+	# get the names of the two comparison groups. Take it from the 'N.Samples' columns
+	groupColumns <- grep( "N.Samples", colnames(kmerTbl), value=T)
+	groupColumns <- sub( "^N.Samples.", "", groupColumns)
+	grp1Name <- groupColumns[1]
+	grp2Name <- groupColumns[2]
 
 	# we want to visit every gene in chromosomal order, so make a key that preserves that
 	# use the position of the gene's start in the annotation, not the position of the Kmer
