@@ -1663,6 +1663,12 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	gmap <- getCurrentGeneMap()
 
+	# allow use of the EdgeR Q.Value if it exists
+	if ( "Q.Value" %in% colnames(kmerTbl)) {
+		cat( "\nInfo: Using EdgeR 'Q.Value' as P.Value data..")
+		kmerTbl$P.Value <- kmerTbl$Q.Value
+	}
+
 	# only use the Kmers that did show some change
 	#cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
 	#keepFC <- which( abs( kmerTbl$Log2.Fold) >= cut.fold)
@@ -1689,6 +1695,9 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	cat( "   N_Genes=", NG, "\n")
 
 	# for each gene, we will gather a few metrics that summarize how big the fold and strong the P-value
+	# trap any zero P-values at something small but not zero
+	smallP <- min( kmerTbl$P.Value[ kmerTbl$P.Value > 0])
+	kmerTbl$P.Value[ kmerTbl$P.Value < smallP] <- smallP
 	gUpFold <- gDownFold <- rep.int( 0, NG)
 	gUpPval <- gDownPval <- rep.int( 1, NG)
 	gSID <- gName <- rep.int( "", NG)
