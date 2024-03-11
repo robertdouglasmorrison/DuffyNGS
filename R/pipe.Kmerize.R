@@ -1695,7 +1695,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	# for each gene, we will gather a few metrics that summarize how big the fold and strong the P-value
 	# trap any zero P-values at something small but not zero
 	smallP <- min( kmerTbl$P.Value[ kmerTbl$P.Value > 0])
-	cat( "\nDebug:  Smallest non-zero P-value: ", smallP)
+	if (smallP < 1e-250) smallP <- 1e-250
 	kmerTbl$P.Value[ kmerTbl$P.Value < smallP] <- smallP
 	gUpFold <- gDownFold <- rep.int( 0, NG)
 	gUpPval <- gDownPval <- rep.int( 1, NG)
@@ -1743,13 +1743,16 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	log10pvDown[ is.nan(log10pvDown) | is.infinite(log10pvDown)] <- NA
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
 	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
-	cat( "\nDebug: bigFC, bigPV: ", bigFC, bigPV)
 
 	colorRamp <- heatMapColors( 41, palette="red-white-blue", inflex=0.5, rampExponent=1.0)
 	myColorUp <- colorRamp[ 21 + round( log10pvUp*20/bigPV)]
 	myColorDown <- colorRamp[ 21 + round( log10pvDown*20/bigPV)]
-	plot( 1,1, type="n", main="Chromosomal Locations of Significant Kmers", xlab="All Genes in Chromosomal Order",
-		ylab=paste( "Log10 P-Value "), xlim=c(1,NG), ylim=c(-bigPV,bigPV))
+
+	# add some space for legends
+	bigPV <- bigPV * 1.1
+	plot( 1,1, type="n", main="Manhattan plot:  Genes with Most Significant Kmers", 
+		xlab="Genes and Intergenic Gaps, in chromosomal order",
+		ylab=paste( "Log10 of EdgeR P-Values "), xlim=c(1,NG), ylim=c(-bigPV,bigPV))
 	
 	ord <- order( log10pvUp)
 	points( (1:NG)[ord], log10pvUp[ord], pch=19, col=myColorUp[ord], cex=1)
@@ -1758,12 +1761,12 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	lines( c(-100,NG+100), c(0,0), lty=1, col=1, lwd=1)
 
 	whoShow <- order( log10pvUp, decreasing=T)[1:nGenesToLabel]
-	if ( length(whoShow)) text( whoShow, log10pvUp[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=gene.pos)
+	if ( length(whoShow)) text( whoShow, log10pvUp[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=gene.pos, offset=0.35)
 	whoShow <- order( log10pvDown, decreasing=F)[1:nGenesToLabel]
-	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos)
+	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos, offset=0.35)
 
-	legend( 'topleft', paste( "Kmers UP in", grp2Name), pch=19, col='red', bg='white', cex=1.15)
-	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, col='blue', bg='white', cex=1.15)
+	legend( 'topleft', paste( "Kmers UP in", grp2Name), pch=19, col='red', bg='white', cex=1.05)
+	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, col='blue', bg='white', cex=1.05)
 
 	return(NULL)
 }
