@@ -1668,6 +1668,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 		cat( "\nInfo: Using EdgeR 'Q.Value' as P.Value data..")
 		kmerTbl$P.Value <- kmerTbl$Q.Value
 	}
+	kmerTbl$P.Value <- as.numeric( kmerTbl$P.Value)
 
 	# only use the Kmers that did show some change
 	#cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
@@ -1697,6 +1698,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	# for each gene, we will gather a few metrics that summarize how big the fold and strong the P-value
 	# trap any zero P-values at something small but not zero
 	smallP <- min( kmerTbl$P.Value[ kmerTbl$P.Value > 0])
+	cat( "\nDebug:  Smallest non-zero P-value: ", smallP)
 	kmerTbl$P.Value[ kmerTbl$P.Value < smallP] <- smallP
 	gUpFold <- gDownFold <- rep.int( 0, NG)
 	gUpPval <- gDownPval <- rep.int( 1, NG)
@@ -1729,7 +1731,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 			gDownFold[nOut] <<- mean( myFC[ isDOWN], na.rm=T)
 			gDownPval[nOut] <<- logmean( myPV[ isDOWN], na.rm=T)
 		}
-		if ( nOut %% 100 == 0) cat( "\rDebug: ", nOut, myGene, gUpFold[nOut], gUpPval[nOut])
+		if ( nOut %% 100 == 0) cat( "\rDebug: ", nOut, myGene, gUpFold[nOut], gUpPval[nOut], gDownFold[nOut], gDownPval[nOut])
 		return(NULL)
 	})
 	length(gUpFold) <- length(gDownFold) <- nOut
@@ -1743,8 +1745,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	log10pvDown <- log10( gDownPval)
 	print( summary( log10pvUp))
 	print( summary( log10pvDown))
-	log10pvUp[ is.nan(log10pvUp)] <- NA
-	log10pvDown[ is.nan(log10pvDown)] <- NA
+	log10pvUp[ is.nan(log10pvUp) | is.infinite(log10pvUp)] <- NA
+	log10pvDown[ is.nan(log10pvDown) | is.infinite(log10pvDown)] <- NA
 	print( summary( log10pvUp))
 	print( summary( log10pvDown))
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
