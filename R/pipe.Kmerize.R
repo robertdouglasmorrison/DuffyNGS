@@ -1729,12 +1729,18 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	NG <- nOut
 
 	# now with all the values known, set up to plot and color each gene
+	cat( "\Debug: \n")
 	log10pvUp <- -log10( gUpPval)
 	log10pvDown <- log10( gDownPval)
+	print( summary( log10pvUp))
+	print( summary( log10pvDown))
 	log10pvUp[ is.nan(log10pvUp)] <- NA
 	log10pvDown[ is.nan(log10pvDown)] <- NA
+	print( summary( log10pvUp))
+	print( summary( log10pvDown))
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
 	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
+	cat( "\nDebug: bigFC, bigPV: ", bigFC, bigPV)
 
 	colorRamp <- heatMapColors( 41, palette="red-white-blue", inflex=0.5, rampExponent=1.0)
 	myColorUp <- colorRamp[ 21 + round( log10pvUp*20/bigPV)]
