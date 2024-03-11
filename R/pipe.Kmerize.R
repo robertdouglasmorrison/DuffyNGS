@@ -1769,8 +1769,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, col='blue', bg='white', cex=0.95)
 
 	# send back the summary by gene
-	out <- data.frame( "GENE_ID"=gName, "UP.Avg.FoldChange"=gUpFold, "UP.Avg.Pvalue"=gUpFold, 
-			"DOWN.Avg.FoldChange"=gDownFold, "DOWN.Avg.Pvalue"=gDownFold, stringsAsFactors=F)
+	out <- data.frame( "GENE_ID"=gName, "UP.Avg.FoldChange"=gUpFold, "UP.Avg.Log10.Pvalue"=log10pvUp, 
+			"DOWN.Avg.FoldChange"=gDownFold, "DOWN.Avg.Log10.Pvalue"=log10pvDown, stringsAsFactors=F)
 	return( invisible( out))
 }
 
