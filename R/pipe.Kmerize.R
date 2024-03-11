@@ -1765,8 +1765,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	whoShow <- order( log10pvDown, decreasing=F)[1:nGenesToLabel]
 	if ( length(whoShow)) text( whoShow, log10pvDown[whoShow], gName[whoShow], cex=gene.cex, col=1, pos=4-gene.pos, offset=0.35)
 
-	legend( 'topleft', paste( "Kmers UP in", grp2Name), pch=19, col='red', bg='white', cex=0.95)
-	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, col='blue', bg='white', cex=0.95)
+	legend( 'topleft', paste( "Kmers UP in", grp2Name), pch=19, pt.cex=1.25, col='red', bty="n", cex=0.95)
+	legend( 'bottomleft', paste( "Kmers UP in", grp1Name), pch=19, pt.cex=1.25, col='blue', bty="n", cex=0.95)
 
 	# send back the summary by gene
 	out <- data.frame( "GENE_ID"=gName, "UP.Avg.FoldChange"=gUpFold, "UP.Avg.Log10.Pvalue"=log10pvUp, 
