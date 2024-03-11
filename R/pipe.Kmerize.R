@@ -1663,12 +1663,9 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
 	gmap <- getCurrentGeneMap()
 
-	# allow use of the EdgeR Q.Value if it exists
-	if ( "Q.Value" %in% colnames(kmerTbl)) {
-		cat( "\nInfo: Using EdgeR 'Q.Value' as P.Value data..")
-		kmerTbl$P.Value <- kmerTbl$Q.Value
-	}
+	# force the data to be numeric
 	kmerTbl$P.Value <- as.numeric( kmerTbl$P.Value)
+	kmerTbl$Log2.Fold <- as.numeric( kmerTbl$Log2.Fold)
 
 	# only use the Kmers that did show some change
 	#cat( "\nDropping Kmers with minimal difference.  cut.fold=", cut.fold, "  cut.pvalue=", cut.pvalue)
@@ -1740,15 +1737,10 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	NG <- nOut
 
 	# now with all the values known, set up to plot and color each gene
-	cat( "\nDebug: \n")
 	log10pvUp <- -log10( gUpPval)
 	log10pvDown <- log10( gDownPval)
-	print( summary( log10pvUp))
-	print( summary( log10pvDown))
 	log10pvUp[ is.nan(log10pvUp) | is.infinite(log10pvUp)] <- NA
 	log10pvDown[ is.nan(log10pvDown) | is.infinite(log10pvDown)] <- NA
-	print( summary( log10pvUp))
-	print( summary( log10pvDown))
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
 	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
 	cat( "\nDebug: bigFC, bigPV: ", bigFC, bigPV)
