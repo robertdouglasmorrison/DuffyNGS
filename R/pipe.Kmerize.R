@@ -1729,7 +1729,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	NG <- nOut
 
 	# now with all the values known, set up to plot and color each gene
-	cat( "\Debug: \n")
+	cat( "\nDebug: \n")
 	log10pvUp <- -log10( gUpPval)
 	log10pvDown <- log10( gDownPval)
 	print( summary( log10pvUp))
