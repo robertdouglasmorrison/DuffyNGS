@@ -1720,7 +1720,7 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 			gDownFold[nOut] <<- mean( myFC[ isDOWN], na.rm=T)
 			gDownPval[nOut] <<- logmean( myPV[ isDOWN], na.rm=T)
 		}
-		cat( "\rDebug: ", myGene, nOut, gUpFold[nOut], gUpPval[nOut])
+		if ( nOut %% 100 == 0) cat( "\rDebug: ", nOut, myGene, gUpFold[nOut], gUpPval[nOut])
 		return(NULL)
 	})
 	length(gUpFold) <- length(gDownFold) <- nOut
@@ -1731,6 +1731,8 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 	# now with all the values known, set up to plot and color each gene
 	log10pvUp <- -log10( gUpPval)
 	log10pvDown <- log10( gDownPval)
+	log10pvUp[ is.nan(log10pvUp)] <- NA
+	log10pvDown[ is.nan(log10pvDown)] <- NA
 	bigFC <- max( gUpFold, abs(gDownFold), na.rm=T)
 	bigPV <- max( log10pvUp, abs(log10pvDown), na.rm=T)
 
