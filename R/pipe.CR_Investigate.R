@@ -255,6 +255,8 @@
 	}
 
 	# make that plot
+	savMAI <- par( "mai")
+	par( mai=c(1,1,0.8,0.4))
 	mp <- barplot( pcts, main=paste( "NoHit 'Consensus Reads' Summary:    ", sampleID), 
 			horiz=T, xlab=xLabel, xlim=xLimits, log=myLog, col=rainbow( Nshow, end=0.75))
 
@@ -268,8 +270,8 @@
 	text( myX, mp, textShow, pos=myPos, font=textFont, cex=textCex)
 
 	dev.flush()
-	pngFile <- file.path( cr.path, paste( sampleID, "CR.SummaryPlot.png", sep="."))
-	dev.print( png, pngFile, width=800)
+	printPlot( file.path( cr.path, paste( sampleID, "CR.SummaryPlot.pdf", sep="."))
+	par( mai=savMAI)
 
 	# make a text version too
 	out <- data.frame( "Blast.Explanation"=names(ans), "NoHit.Percentage"=pcts, "N_READS"=as.numeric(ans2), 
