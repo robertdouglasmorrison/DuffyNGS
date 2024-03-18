@@ -491,11 +491,15 @@ readplotCR <- function( cr, label="") {
 		toDraw <- seq( 1, N, by=2)
 		boxHght <- 2
 	}
+	if ( N > 1000) {
+		toDraw <- seq( 1, N, by=5)
+		boxHght <- 5
+	}
 	if ( N > 2000) {
 		toDraw <- seq( 1, N, by=10)
 		boxHght <- 10
 	}
-	if ( N > 20000) {
+	if ( N > 10000) {
 		toDraw <- seq( 1, N, by=50)
 		boxHght <- 50
 	}
@@ -518,7 +522,7 @@ readplotCR <- function( cr, label="") {
 		thisLen <- length( thisColors)
 		# get where theres room to draw it, then mark that space as used
 		ybeg <- findFreeSpot( freeSpots, xbeg, thisLen)
-		freeSpots[ ybeg, xbeg:(xbeg+thisLen)] <- FALSE
+		freeSpots[ ybeg:(ybeg+boxHgth-1), xbeg:(xbeg+thisLen)] <- FALSE
 		if ( ybeg > bigY) bigY <- ybeg
 		
 		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB, yheight=boxHght)
