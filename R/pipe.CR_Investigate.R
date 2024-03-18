@@ -270,7 +270,7 @@
 	text( myX, mp, textShow, pos=myPos, font=textFont, cex=textCex)
 
 	dev.flush()
-	printPlot( file.path( cr.path, paste( sampleID, "CR.SummaryPlot.pdf", sep="."))
+	printPlot( file.path( cr.path, paste( sampleID, "CR.SummaryPlot.pdf", sep=".")))
 	par( mai=savMAI)
 
 	# make a text version too
