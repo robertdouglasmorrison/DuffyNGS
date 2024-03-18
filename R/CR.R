@@ -488,20 +488,8 @@ readplotCR <- function( cr, label="") {
 	boxHght <- 1
 	addBB <- (N < 20)
 	if ( N > 200) {
-		toDraw <- seq( 1, N, by=2)
-		boxHght <- 2
-	}
-	if ( N > 1000) {
-		toDraw <- seq( 1, N, by=5)
-		boxHght <- 5
-	}
-	if ( N > 2000) {
-		toDraw <- seq( 1, N, by=10)
-		boxHght <- 10
-	}
-	if ( N > 10000) {
-		toDraw <- seq( 1, N, by=50)
-		boxHght <- 50
+		boxHght <- ceiling( N / 100)
+		toDraw <- seq( 1, N, by=boxHght)
 	}
 	
 	# we need a map of where on the plotted reads already cover
