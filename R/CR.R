@@ -522,7 +522,7 @@ readplotCR <- function( cr, label="") {
 		thisLen <- length( thisColors)
 		# get where theres room to draw it, then mark that space as used
 		ybeg <- findFreeSpot( freeSpots, xbeg, thisLen)
-		freeSpots[ ybeg:(ybeg+boxHgth-1), xbeg:(xbeg+thisLen)] <- FALSE
+		freeSpots[ ybeg:(ybeg+boxHght-1), xbeg:(xbeg+thisLen)] <- FALSE
 		if ( ybeg > bigY) bigY <- ybeg
 		
 		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB, yheight=boxHght)
