@@ -511,7 +511,7 @@ readplotCR <- function( cr, label="") {
 		main=maintxt, xlab="Consensus Sequence", ylab="Distinct USR Depth")
 
 	bigY <- 1
-	for( i in 1:length( ids)) {
+	for( i in toDraw) {
 		thisID <- ids[ visitOrd[i]]
 		xbeg <- starts[ visitOrd[i]]
 		thisColors <- cr$USRcolors[[visitOrd[i]]]
