@@ -481,6 +481,25 @@ readplotCR <- function( cr, label="") {
 	savpar <- par("mai") 
 	par("mai"=c( 0.25, savpar[2:4]))
 
+	# allow faster drawing when super deep by skipping some
+	# only do bounding boxes when few
+	N <- length(ids)
+	toDraw <- 1:N
+	boxHght <- 1
+	addBB <- (N < 20)
+	if ( N > 200) {
+		toDraw <- seq( 1, N, by=2)
+		boxHght <- 2
+	}
+	if ( N > 2000) {
+		toDraw <- seq( 1, N, by=10)
+		boxHght <- 10
+	}
+	if ( N > 20000) {
+		toDraw <- seq( 1, N, by=50)
+		boxHght <- 50
+	}
+	
 	# we need a map of where on the plotted reads already cover
 	freeSpots <- matrix( TRUE, nrow=round( max(cr$depth)*1.6), ncol=(cr$len+1))
 
@@ -492,7 +511,6 @@ readplotCR <- function( cr, label="") {
 		main=maintxt, xlab="Consensus Sequence", ylab="Distinct USR Depth")
 
 	bigY <- 1
-	addBB <- (length( ids) < 20)
 	for( i in 1:length( ids)) {
 		thisID <- ids[ visitOrd[i]]
 		xbeg <- starts[ visitOrd[i]]
@@ -503,7 +521,7 @@ readplotCR <- function( cr, label="") {
 		freeSpots[ ybeg, xbeg:(xbeg+thisLen)] <- FALSE
 		if ( ybeg > bigY) bigY <- ybeg
 		
-		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB)
+		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB, yHeight=boxHght)
 	}
 	mycex <- 1.0 * sqrt(40/cr$len)
 	text( x=1:cr$len, y=1.0, label=cr$bases, cex=mycex, pos=1)
@@ -1006,12 +1024,12 @@ findFreeSpot <- function( isFree, x, len) {
 }
 
 
-drawOneRead <- function( x, y, len, colorVec, bbox=TRUE) {
+drawOneRead <- function( x, y, len, colorVec, bbox=TRUE, yheight=1) {
 
 	# draw a colored bar at the given spot...
 	xl <- seq( x-0.5, (x+len-1.5), by=1.0)
 	xr <- xl + 1
-	yu <- y + 0.85
+	yu <- y + (0.85*yheight)
 	# we may need to leave out the black edges...
 	if (bbox) {
 		rect( xl, y, xr, yu, col=BASE_COLORS[colorVec], border=(len<75))
