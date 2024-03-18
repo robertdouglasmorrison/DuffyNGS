@@ -329,28 +329,16 @@
 		# but the COD can in fact go negative...  Can we deal with that cleanly?  As there 'could'
 		# be cases where ALL are negative, but some clearly better than others...
 		cod <- codAns
-		#cod[ cod <= 0] <- 0
-		#cod[ is.na(cod)] <- 0
-		cod[ is.na(cod)] <- min( cod, na.rm=T)
-		# Note:  there is a small chance that ALL CoD can be negative.  If so, revert to using normalized RMS deviation instead
-		#if ( all( cod == 0)) {
-		#	cat( "\n  Warning:  all CoD are negative, reverting to using normalized RMSD instead.")
-		#	nrms <- min(rmsdAns,na.rm=T) / rmsdAns
-		#	nrms[ nrms <= 0] <- 0
-		#	nrms[ is.na(nrms)] <- 0
-		#	cod <- nrms
-		#}
-		#codRange <- range(cod[cod>0])
+		cod[ is.na(cod)] <- min( c(0,cod), na.rm=T)
 		codRange <- range( cod)
-		if ( diff(codRange) > 0.05) {
-			# if large enough spread, treat worst as zero and prorate all others back to original scale
-			codTmp <- (cod - codRange[1])/diff(codRange)
-			codTmp[ codTmp < 0] <- 0
-			wts <- codTmp ^ 4
+		# set the range to allow all CoD to have some vote
+		if ( codRange[1] > 0) {
+			codRange[1] <- codRange[1] / 2
 		} else {
-			# if minimal spread, none get zeroed
-			wts <- (cod / codRange[2]) ^ 4
+			codRange[1] <- codRange[1] - abs(codRange[1]/2)
 		}
+		normCOD <- (cod - codRange[1])/diff(codRange)
+		wts <- normCOD ^ 3
 		wts <- round(wts, digits=4)
 		names(wts) <- names(codAns)
 		if (verbose) {
