@@ -521,7 +521,7 @@ readplotCR <- function( cr, label="") {
 		freeSpots[ ybeg, xbeg:(xbeg+thisLen)] <- FALSE
 		if ( ybeg > bigY) bigY <- ybeg
 		
-		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB, yHeight=boxHght)
+		drawOneRead( xbeg, ybeg, thisLen, thisColors, bbox=addBB, yheight=boxHght)
 	}
 	mycex <- 1.0 * sqrt(40/cr$len)
 	text( x=1:cr$len, y=1.0, label=cr$bases, cex=mycex, pos=1)
