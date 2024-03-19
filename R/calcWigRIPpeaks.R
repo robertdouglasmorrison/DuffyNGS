@@ -249,7 +249,6 @@
 	stops[ isMinus] <- gmap$POSITION[ isMinus]
 
 	bestGenePtr <- findInterval( centers, gmap$POSITION)
-	SAV <<- bestGenePtr
 
 	# visit each center and see exactly how it lays wrt coding genes
 	for ( j in 1:N) {

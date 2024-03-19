@@ -396,7 +396,6 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 		# label the locations so we can keep track of who's who
 		names(ans$genomic) <- names(ans$query) <- thisStart : thisStop
-		#SAVE_ANS <<- ans
 
 		# now back-deduce the AA call and location
 		genomeAA <- ans$genomic[ seq( 2, length(ans$genomic), by=3)]

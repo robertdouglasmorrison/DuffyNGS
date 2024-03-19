@@ -87,8 +87,6 @@
 		if( ! is.null(sml) && nrow(sml)) ans <- rbind( ans, sml)
 	}
 	
-	SAV_ANS <<- ans
-
 	# get the giant set of all gene sets as a flat list
 	gsObj <- gatherGeneSets( defaultGeneSets())
 	allgenesets <- gsObj[[3]][[1]]
