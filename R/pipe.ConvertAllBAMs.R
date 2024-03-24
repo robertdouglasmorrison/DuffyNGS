@@ -56,9 +56,11 @@
 
 	if ( any( c( watchRibo, watchGenomic, watchSplice))) {
 		cat( "\n\nWaiting for", nSpawn, "spawned jobs to complete")
+		# only RNA-seq should have 2+ jobs to spawn
 		timeOutCount <- 0
+		timeSleep <- if ( dataType == "RNA-seq") 60 else 5
 		repeat {
-			Sys.sleep(60)
+			Sys.sleep( timeSleep)
 			cat( ".")
 			if ( watchRibo) {
 				if ( file.exists(watchRiboFile)) {
