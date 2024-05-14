@@ -2,7 +2,7 @@
 
 # turn alignments into seperate .WIG file for each species, chromosome, and strand
 # doing it a buffer at a time, adding wiggles to small buffer files for each chromo/strand/etc.
-# using new 'baseDepthVector' method instead of looping...
+# using new 'baseDepthVector' method instead of looping..
 
 
 `alignToWig` <- function( filein, sampleID, reload=TRUE, annotationFile="Annotation.txt", optionsFile="Options.txt", 
