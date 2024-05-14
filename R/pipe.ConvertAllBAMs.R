@@ -99,6 +99,7 @@
 
 			# there is a tiny chance that one could die...  bale once genomic is done
 			timeOutCount <- timeOutCount + 1
+			timeSleep <- if ( timeSleep < 30) timeSleep*2 else 60 
 			if ( timeOutCount > 360 && !watchGenomic) {
 				cat( "\nGenome done converting..  Timed out on some others..  Continuing on..")
 				break

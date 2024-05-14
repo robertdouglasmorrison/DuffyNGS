@@ -1775,6 +1775,124 @@ kmerReadBam <- function( kmerBamFile, chunkSize=100000, verbose=T) {
 }
 
 
+`plotSignificantKmersOneGene` <- function( kmerTbl, geneID, speciesID=getCurrentSpecies(), domainMap=NULL, ...) {
+
+	neededColumns <- c( "SEQ_ID", "POSITION", "GENE_ID", "Log2.Fold", "P.Value", "DIF_FROM_REF")
+	if ( ! all( neededColumns %in% colnames(kmerTbl))) {
+		cat( "\nError: Kmer table is missing some of these needed columns: ", neededColumns)
+		return( NULL)
+	}
+
+	# make sure the table only has this one gene
+	keep <- which( kmerTbl$GENE_ID == geneID)
+	kmerTbl <- kmerTbl[ keep, ]
+	# force the data into protein and chromosomal order
+	ord <- order( as.numeric(kmerTbl$AA_POSITION), as.numeric(kmerTbl$POSITION))
+	kmerTbl <- kmerTbl[ ord, ]
+	NK <- nrow(kmerTbl)
+	if ( ! NK) {
+		cat( "\nError: no Kmers for gene: ", geneID)
+		return( NULL)
+	}
+	NAA <- max( as.numeric( kmerTbl$AA_POSITION), na.rm=T)
+
+	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
+
+	# force the data to be numeric
+	kmerTbl$P.Value <- as.numeric( kmerTbl$P.Value)
+	kmerTbl$Log2.Fold <- as.numeric( kmerTbl$Log2.Fold)
+
+	# get the names of the two comparison groups. Take it from the 'N.Samples' columns
+	groupColumns <- grep( "N.Samples", colnames(kmerTbl), value=T)
+	groupColumns <- sub( "^N.Samples.", "", groupColumns)
+	grp1Name <- groupColumns[1]
+	grp2Name <- groupColumns[2]
+
+	# for each AA, we will gather a few metrics that summarize how big the fold and strong the P-value
+	# trap any zero P-values at something small but not zero
+	smallP <- min( kmerTbl$P.Value[ kmerTbl$P.Value > 0])
+	if (smallP < 1e-100) smallP <- 1e-100
+	kmerTbl$P.Value[ kmerTbl$P.Value < smallP] <- smallP
+	aaUpFold <- aaDownFold <- aaUpPval <- aaDownPval <- rep.int( NA, NK)
+	kmerAAloc <- rep.int( NA, NK)
+	tapply( 1:nrow(kmerTbl), factor(kmerTbl$AA_POSITION), function(x) {
+		# given all the kmers that map to one AA
+		myAA <- as.numeric( kmerTbl$AA_POSITION[x[1]])
+		isUP <- x[ which( kmerTbl$Log2.Fold[x] > 0)]
+		isDOWN <- x[ which( kmerTbl$Log2.Fold[x] < 0)]
+		aaUpFold[myAA] <<- if (length(isUP)) max( kmerTbl$Log2.Fold[isUP], na.rm=T) else NA
+		aaDownFold[myAA] <<- if (length(isDOWN)) min( kmerTbl$Log2.Fold[isDOWN], na.rm=T) else NA
+		aaUpPval[myAA] <<- if (length(isUP)) -log10( min( kmerTbl$P.Value[isUP], na.rm=T)) else NA
+		aaDownPval[myAA] <<- if (length(isDOWN)) -log10( min( kmerTbl$P.Value[isDOWN], na.rm=T)) else NA
+		# stagger the X limits based on how many there are
+		kmerAAloc[x] <<- seq( myAA, myAA+0.9, length.out=length(x))
+	})
+
+	# some Kmer metrics are direction specific, others are not
+	isUP <- which( kmerTbl$Log2.Fold > 0)
+	isDOWN <- which( kmerTbl$Log2.Fold < 0)
+	bigFC <- max( aaUpFold, abs(aaDownFold), na.rm=T)
+	kmerYloc <- log10( -log10( kmerTbl$P.Value))
+	bigPV <- max( kmerYloc, na.rm=T)
+	kmerYloc[ isDOWN] <- -(kmerYloc[isDOWN])
+
+	# have the color show how far from NF54 reference the Kmer is, so
+	# first color is NF54 match (white) and gets more red with more mutations
+	colorRamp <- heatMapColors( 13, palette="red-white-blue", inflex=0.5, rampExponent=1.0)[8:13]
+
+	# add some space for legends
+	bigPVshow <- bigPV * 1.1
+	mainText <- paste( "Gene Manhattan plot:  Significant Kmer Differences in: ", geneID)
+	plot( 1,1, type="n", main=mainText, xlab="Kmer Location along Protein AA Sequence", xaxt="n", yaxt="n",
+		ylab=paste( "Log10( Log10( EdgeR P-Value))"), xlim=c(-(NAA*0.1),NAA*1.01), ylim=c(-bigPVshow,bigPVshow))
+	xTicks <- pretty( c(1,NAA))
+	if (xTicks[1] < 1) xTicks[1] <- 1
+	axis( side=1, at=xTicks)
+	yTicks <- pretty( c(-bigPVshow,bigPVshow))
+	axis( side=2, at=yTicks, abs(yTicks))
+	
+	# point scaling is by Fold Change
+	# point color is by how different from Reference AA
+	pt.cex <- (abs(kmerTbl$Log2.Fold) / bigFC) * 4
+	pt.dist <- sapply( kmerTbl$DIF_FROM_REF, function(x) { chs <- strsplit(x,split="")[[1]]; return(sum(chs != "."))})
+	pt.col <- colorRamp[ pmin( (pt.dist+1), length(colorRamp))]
+
+	# draw all the points that are big enough to see
+	toShow <- which( pt.cex > 0.2 & kmerTbl$P.Value <= 0.05) 
+	ord <- order( -pt.dist[toShow], kmerTbl$P.Value[toShow], decreasing=T)
+	#ord <- order( kmerTbl$P.Value[toShow], decreasing=T)
+	toShow <- toShow[ord]
+	points( kmerAAloc[toShow], kmerYloc[toShow], pch=21, bg=pt.col[toShow], cex=pt.cex[toShow], lwd=0.5)
+
+	# if given a domain map show it
+	ylo <- -bigPVshow * 0.075;  yhi <- bigPVshow * 0.075
+	if ( is.null( domainMap)) {
+		rect( 1, ylo, NAA+1, yhi, border=1, col='grey80', lwd=2)
+		text( NAA/2, (ylo+yhi)/2, geneID, cex=1)
+	} else {
+		rect( 1, ylo, NAA+1, yhi, border=1, col='grey80', lwd=2)
+		if ( ! ("COLOR" %in% colnames(domainMap))) domainMap$COLOR <- rainbow( nrow(domainMap), end=0.85)
+		for (k in 1:nrow(domainMap)) {
+			myXlo <- max( 1, domainMap$REF_START[k])
+			myXhi <- min( NAA, domainMap$REF_STOP[k]) + 1
+			xWide <- myXhi - myXlo + 1
+			myDID <- domainMap$DOMAIN_ID[k]
+			myColor <- domainMap$COLOR[k]
+			rect( myXlo, ylo, myXhi, yhi, border=1, col=myColor, lwd=1.5)
+			if (xWide > 10) {
+				if (nchar(myDID)) text( (myXlo+myXhi)/2, (ylo+yhi)/2, myDID, cex=0.75)
+			} else {
+				if (nchar(myDID)) text( (myXlo+myXhi)/2, yhi, myDID, cex=0.75, pos=3, offset=0.2)
+			}
+		}
+	}
+	legend( 'top', paste( "Kmers more abundant in", grp2Name), pch=1, pt.cex=1.25, col=1, bty="n", cex=0.95)
+	legend( 'bottom', paste( "Kmers more abundant in", grp1Name), pch=1, pt.cex=1.25, col=1, bty="n", cex=0.95)
+	legend( 'topleft', c( "Match Ref NF54", paste( c('1','2','3','4','5+'), "AA mutations")), fill=colorRamp, bty="o", cex=0.95)
+	legend( 'bottomleft', paste( "Log2 FC =", 1:4), pch=21, pt.cex=1:4, bty="o", cex=0.95, title="Abundance Difference")
+}
+
+
 `debugBigKmerTable` <- function( kmer.debug) {
 
 	# mine the big table for the presence of kmers
