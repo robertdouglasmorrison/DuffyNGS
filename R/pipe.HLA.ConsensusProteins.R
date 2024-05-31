@@ -1,6 +1,6 @@
 # pipe.HLA.ConsensusProteins.R -- wrapper to the Consensus Proteins tool for HLA loci
 
-`pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
+`pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA",
 				min.minor.pct=15, doPileups=FALSE, verbose=TRUE) {
 
@@ -24,6 +24,19 @@
 	HLAgeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E",
 			"HLA-DRA", "HLA-DRB1", "HLA-DQA1", "HLA-DQB1", 
 			"HLA-DPA1", "HLA-DPB1")
+
+	# allow being given a subset of HLA genes
+	if ( ! is.null( HLAgenes)) {
+		hitsID <- which( HLAgeneIDs %in% HLAgenes)
+		hitsName <- which( HLAgeneNames %in% HLAgenes)
+		hits <- sort( unique( hitsID, hitsName))
+		if ( ! length(hits)) {
+			cat( "\nWarning: HLA genes must be from: ", HLAgeneNames, HLAgeneIDs)
+			return(NULL)
+		}
+		HLAgeneIDs <- HLAgeneIDs[ hits]
+		HLAgeneNames <- HLAgeneNames[ hits]
+	}
 
 	require( Biostrings)
 	data(BLOSUM62)
