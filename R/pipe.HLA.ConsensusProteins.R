@@ -2,7 +2,7 @@
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA",
-				min.minor.pct=5, doPileups=FALSE, verbose=TRUE) {
+				min.minor.pct=15, doPileups=FALSE, verbose=TRUE) {
 
 	# path for all results
 	if ( is.null( results.path)) {
