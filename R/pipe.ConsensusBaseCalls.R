@@ -6,7 +6,8 @@
 				genomicFastaFile=NULL, genomicVector=NULL, bamfile=NULL, 
 				aaToo=TRUE, noReadCalls=c("blank","genomic"), as.cDNA=FALSE, 
 				best.frame=as.cDNA, utr.tail.length=0,
-				SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE) {
+				SNP.only=FALSE, minReadCalls=NULL, minPercentSNP=NULL, verbose=TRUE,
+				referenceAA=NULL) {
 				
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -38,7 +39,7 @@
 	# translate genomic info back to cDNA units if we want
 	if ( ! is.null(geneID) && as.cDNA) {
 		ans <- consensusBaseCallsToCDNA( ans, geneID=geneID, start=start, stop=stop, 
-					best.frame=best.frame, verbose=verbose)
+					best.frame=best.frame, verbose=verbose, referenceAA=referenceAA)
 	} else {
 		ans$callsTable <- NULL
 	}
@@ -290,7 +291,7 @@
 
 
 `consensusBaseCallsToCDNA` <- function( baseCallAns, geneID=NULL, start=NULL, stop=NULL, 
-					best.frame=TRUE, verbose=TRUE) {
+					best.frame=TRUE, verbose=TRUE, referenceAA=NULL) {
 
 	# get the gene facts we need to make cDNA
 	if ( ! is.null(geneID)) {
@@ -374,7 +375,7 @@
 	}
 
 	# the AA can't be converted, re-calc from first principles
-	aaAns <- consensusTranslation( dna.consensus)
+	aaAns <- consensusTranslation( dna.consensus, referenceAA=referenceAA)
 	if ( best.frame) {
 		aaVec <- aaAns$BestFrame
 	} else {
@@ -396,7 +397,7 @@
 	# force this table to be fully translatable, even if we have to trim a few rows
 	if (best.frame) {
 		if (verbose) cat( "  phasing reading frames..")
-		if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable, verbose=verbose)
+		if ( nrow(callsTable)) callsTable <- forceValidTranslation( callsTable, verbose=verbose, referenceAA=referenceAA)
 		if (verbose) cat( "  Done.\n")
 	}
 	baseCallAns$callsTable <- callsTable
@@ -446,7 +447,7 @@
 }
 
 
-`consensusTranslation` <- function( dna.consensus) {
+`consensusTranslation` <- function( dna.consensus, referenceAA=NULL) {
 
 	Ndna <- length( dna.consensus)
 	dnaNames <- names(dna.consensus)
@@ -460,8 +461,14 @@
 	if ( nchar(consensusDNA) < 3) return( errorOut)
 
 	consensusAA <- DNAtoAA( consensusDNA, clipAtStop=FALSE, readingFrames=1:3)
-	nStops <- base::sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
-	bestFrame <- base::which.min( nStops)
+	# how to choose the best frame:  if no hints, use number of stops, else use similarity to given reference
+	if ( is.null(referenceAA)) {
+		nStops <- base::sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
+		bestFrame <- base::which.min( nStops)
+	} else {
+		editDist <- adist( consensusAA, referenceAA[1])
+		bestFrame <- base::which.min( editDist[ ,1])
+	}
 	aaVector <- base::strsplit( consensusAA, split="")
 	for ( frame in 1:3) {
 		theseAA <- aaVector[[frame]]
@@ -478,7 +485,7 @@
 }
 
 
-`forceValidTranslation` <- function( callsTable, verbose=TRUE) {
+`forceValidTranslation` <- function( callsTable, verbose=TRUE, referenceAA=NULL) {
 
 	# we have the output of Mpileup, with all its base details and AA translations
 	# force the entire table to be a valid translation in reading frame 1
@@ -559,7 +566,7 @@
 	outDF$AA[ seq( 2, nrow(outDF), by=3)] <- aaVec
 	
 	# and restore all the reading frames
-	aaAns <- consensusTranslation( outDF$DNA)
+	aaAns <- consensusTranslation( outDF$DNA, referenceAA=referenceAA)
 	outDF[ , c("Frame1", "Frame2", "Frame3")] <- aaAns[ , c("Frame1","Frame2","Frame3")]
 
 	return( outDF)

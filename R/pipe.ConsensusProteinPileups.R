@@ -6,7 +6,8 @@
 						mode=c("normal","realigned"), plotOnly=FALSE, max.drawnPerSite=3,
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE,
-						startFromReference=FALSE, clipAtStop=TRUE, showFrameShiftPeptides=TRUE) {
+						startFromReference=FALSE, clipAtStop=TRUE, showFrameShiftPeptides=TRUE,
+						referenceAA=NULL) {
 
 	require(Biostrings)
 
@@ -33,7 +34,8 @@
 				exon=exon, maxNoHits=maxNoHits.setup, forceSetup=forceSetup,
 				trim5.aligns=trim5.aligns, trim3.aligns=trim3.aligns, 
 				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits,
-				useCutadapt=useCutadapt, startFromReference=startFromReference, clipAtStop=clipAtStop)
+				useCutadapt=useCutadapt, startFromReference=startFromReference, clipAtStop=clipAtStop,
+				referenceAA=referenceAA)
 	if ( nAA < 1) {
 		cat( "\nSetting up for CPP gave an empty protein sequence..")
 		return(NULL)
@@ -59,7 +61,8 @@
 	consensusAns <<- proteinConstructPeptidePileups( sampleID, geneName=geneName, constructFile=consensusAAfile, 
 				peptide.path=peptide.path, txt.cex=txt.cex, maxNoHits=maxNoHits.pileup, 
 				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box,
-				chunkSize=chunkSize.pileup, showFrameShiftPeptides=showFrameShiftPeptides)
+				chunkSize=chunkSize.pileup, showFrameShiftPeptides=showFrameShiftPeptides,
+				referenceAA=referenceAA)
 
 	# record metrics to the audit file
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
@@ -91,7 +94,7 @@
 					optionsFile="Options.txt", results.path=NULL, exon=NULL, 
 					trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 					forceSetup=FALSE, useCutadapt=FALSE, startFromReference=FALSE, 
-					clipAtStop=TRUE, ...) {
+					clipAtStop=TRUE, referenceAA=NULL, ...) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
@@ -195,7 +198,7 @@
 	if ( forceSetup || ! all( file.exists( c( consensusBASEfile, consensusAAfile, consensusDNAfile)))) {
 		cat( "\nTurning alignment pileups into consensus base calls..")
 		ans <- pipe.ConsensusBaseCalls( sampleID, geneID, start=exonStart, stop=exonStop, as.cDNA=TRUE, 
-				noReadCalls="blank")
+				noReadCalls="blank", referenceAA=referenceAA)
 		callsTable <- ans$callsTable
 		myAAvec <- callsTable$AA
 		myAAvec[ is.na(myAAvec)] <- ""
@@ -252,7 +255,8 @@
 
 `inspectConsensus` <- function( sampleID, geneName="Var2csa", context=NULL, extra.rows=3,
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL,
+				referenceAA=NULL) {
 
 	# the gene name is used in all filenames, force it to be clean of special characters
 	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
@@ -262,7 +266,7 @@
 	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
-	aaAns <- consensusTranslation( calls$DNA)
+	aaAns <- consensusTranslation( calls$DNA, referenceAA=referenceAA)
 	readingFrame <- match.arg( readingFrame)
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
@@ -299,7 +303,8 @@
 `modifyConsensus` <- function( sampleID, geneName="Var2csa", 
 				command=c("delete", "insert", "replace", "frameshift","append"), 
 				location=NULL, seq, readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
-				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL,
+				referenceAA=NULL) {
 
 	# the gene name is used in all filenames, force it to be clean of special characters
 	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
@@ -309,7 +314,7 @@
 	if ( is.null(peptide.path)) peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
-	aaAns <- consensusTranslation( calls$DNA)
+	aaAns <- consensusTranslation( calls$DNA, referenceAA=referenceAA)
 	readingFrame <- match.arg( readingFrame)
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
@@ -410,7 +415,7 @@
 	}
 	if ( ! is.null( newCalls)) {
 		cat( "\nUpdating sequence after edits...")
-		aaAns <- consensusTranslation( newCalls$DNA)
+		aaAns <- consensusTranslation( newCalls$DNA, referenceAA=referenceAA)
 		dnaSeq <- paste( newCalls$DNA, collapse="")
 
 		# if we did an explicit frame shift, force keeping RF 1, don't let the consensus pick the best!
@@ -457,7 +462,7 @@
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", annotationFile="Annotation.txt", results.path=NULL,
 				peptide.path=NULL, exon=NULL, extra.fastq.keyword=NULL, useCutadapt=FALSE,
-				mode=c("normal", "TargetSearch")) {
+				mode=c("normal", "TargetSearch"), referenceAA=NULL) {
 
 	require(Biostrings)
 
@@ -474,7 +479,7 @@
 	# step 1:  make sure the consensus data match the FASTA files of the same data
 	cat( "\nValidating current consensus constructs..")
 	calls <- read.delim( consensusBASEfile, as.is=T)
-	aaAns <- consensusTranslation( calls$DNA)
+	aaAns <- consensusTranslation( calls$DNA, referenceAA=referenceAA)
 	readingFrame <- match.arg( readingFrame)
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
@@ -501,7 +506,7 @@
 		cat( "\nExtracting genomic flanking regions..")
 		flankLen <- 50
 		refAns <- pipe.ConsensusBaseCalls( sampleID, geneID=geneID, start=myStart, stop=myStop, 
-				aaToo=FALSE, as.cDNA=FALSE, utr.tail.length=flankLen, noReadCalls="genomic")
+				aaToo=FALSE, as.cDNA=FALSE, utr.tail.length=flankLen, noReadCalls="genomic", referenceAA=referenceAA)
 		myRefV <- refAns$ref
 		myRefStr <- paste( myRefV, collapse="")
 		if ( gmap$STRAND[1] == "-") myRefStr <- myReverseComplement(myRefStr)
@@ -717,7 +722,8 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 
 
 `searchForMisalignedReads` <- function( sampleID, geneName="Var2csa", context=NULL, flank.size=50,
-				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL) {
+				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL,
+				referenceAA=NULL) {
 
 	# get the current consensus base calls file
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
@@ -728,7 +734,7 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 
 	consensusBASEfile <- file.path( peptide.path, paste( sampleID, geneName, "ConsensusBaseCalls.txt", sep="."))
 	calls <- read.delim( consensusBASEfile, as.is=T)
-	aaAns <- consensusTranslation( calls$DNA)
+	aaAns <- consensusTranslation( calls$DNA, referenceAA=referenceAA)
 	readingFrame <- "Frame1"
 	aaSeq <- paste( aaAns[[readingFrame]], collapse="")
 	dnaSeq <- paste( calls$DNA, collapse="")
