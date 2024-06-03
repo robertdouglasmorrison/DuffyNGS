@@ -11,6 +11,7 @@
 	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
 	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
 	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
+	if ( ! file.exists( consensusProteins.path)) dir.create( consensusProteins.path, recursive=T)
 
 	# force human as the current species
 	setCurrentSpecies( "Hs_grc")
@@ -41,6 +42,14 @@
 	require( Biostrings)
 	data(BLOSUM62)
 
+	# the HLA genes are messy, so preload the reference AA sequence as a guide
+	genomicFastaFile <- getOptionValue( optionsFile, "genomicFastaFile", notfound="Hs_genomicDNA.fasta", verbose=T)
+	HLArefAA <- vector()
+	for ( ig in 1:length(HLAgeneIDs)) {
+		hlaFA <- gene2Fasta( HLAgeneIDs[ig], genomicFastaFile, mode="aa")
+		HLArefAA[ig] <- hlaFA$seq[1]
+	}
+	
 	# we will do each HLA locus all the way through
 	outLocus <- outName <- outDist <- outSeq <- vector()
 
@@ -48,6 +57,7 @@
 	for ( i in 1:N_HLA) {
 		thisGene <- HLAgeneIDs[i]
 		thisName <- HLAgeneNames[i]
+		thisRefAA <- HLArefAA[i]
 
 		# step 1: call the Consensus Pileups tool
 		consensusFile <- paste( sampleID, thisName, "ConsensusProteinSummary.txt", sep=".")
@@ -71,7 +81,7 @@
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=80, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
-						showFrameShiftPeptides=F)
+						showFrameShiftPeptides=F, referenceAA=thisRefAA)
 		}
 		# if the file still not found, must be some error, skip it
 		if ( ! file.exists( consensusFile)) {
