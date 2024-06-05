@@ -6,7 +6,7 @@
 					constructName=paste(sampleID,geneName,sep="_"), 
 					txt.cex=0.25, maxNoHits=1000000, max.depth=60, max.drawnPerSite=3,
 					mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
-					showFrameShiftPeptides=TRUE, ...) {
+					showFrameShiftPeptides=TRUE, intronMaskFasta=NULL, ...) {
 
 	SAPPLY <- base::sapply
 	WHICH <- base::which
@@ -53,6 +53,11 @@
 		return(NULL)
 	}
 
+	# if we were given any intron masking info, set up that data
+	if ( ! is.null(intronMaskFasta)) {
+		intronMaskInfo <- IntronMaskSetup( intronMaskFasta, refAA=construct, geneName=geneName, path=peptide.path)
+	}
+	
 	# set up storage to determine the final consensus call for every AA, and the current depth on the pileup plot
 	maxDepth <- round(max.depth)
 	alignedReadsDepth <- round( maxDepth * 0.75)
@@ -135,6 +140,11 @@
 	text( 1:nAA, rep.int(-1,nAA), seqAA, cex=txt.cex)
 	lines( c(-1, nAA+2), rep.int(maxDepth+1,2), col=1, lwd=1)
 	text( 1:nAA, rep.int(maxDepth+2,nAA), seqAA, cex=txt.cex)
+
+	# if we were given any intron masking info, show it
+	if ( ! is.null(intronMaskFasta)) IntronMaskDisplay( intronMaskInfo, cex=txt.cex)
+
+	
 	# explain the coloring
 	mtext( "BLACK = 'Good' read aligned to Gene", side=3, line=0.5, adj=0, col=1, cex=txt.cex*1.5)
 	mtext( " BLUE = 'NoHit' read failed genomic alignment", side=3, line=1, adj=0, col='dodgerblue', cex=txt.cex*1.5)
@@ -401,7 +411,7 @@
 
 
 	# ready to go:
-	# get the 'var gene' peptides
+	# get the 'gene' peptides
 	if ( file.exists( alignedReadsFile)) {
 		cat( "\nReading Gene peptides file: ", alignedReadsFile)
 		vgTbl <- read.delim( alignedReadsFile, as.is=T)
@@ -443,12 +453,17 @@
 	write.table( pepTbl, pepOutfile, sep="\t", quote=F, row.names=F)
 	totalPeptides <- sum( pepTbl$Count, na.rm=T)
 
-	# summarize
+	# create final data object, and summarize
+	out <- list( "AA_Calls"=aaCalls, "AA_Weights"=aaWeights, "Construct"=seqAA, "N_Peptides"=totalPeptides)
 	cat( "\nConstruct: ", constructName, "\tN_GoodScoring_Peptides: ", 
 		formatC( totalPeptides, format="d", big.mark=","), "\n")
 	
-	out <- list( "AA_Calls"=aaCalls, "AA_Weights"=aaWeights, "Construct"=seqAA, 
-			"N_Peptides"=totalPeptides)
+	# if given intron masking, apply those corrections now to the matrix & weights
+	if ( ! is.null(intronMaskFasta)) {
+		out <- IntronMaskAdjustPileups( out, maskInfo=intronMaskInfo)
+	}
+	
 	return( out)
 }
+
 

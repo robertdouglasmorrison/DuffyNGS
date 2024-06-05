@@ -4,12 +4,30 @@
 
 proteinConstructPileupSummary <- function( constructSaveFile, sampleID, geneName="Var2csa", 
 					constructName=paste(sampleID,geneName,sep="."), txt.cex=0.25,
-					doPlot=TRUE, verbose=doPlot, summaryRange=NULL) {
+					doPlot=TRUE, verbose=doPlot, summaryRange=NULL, intronMaskFasta=NULL) {
 
 	NCHAR <- base::nchar
 
-	# grab the Consensus Answer data
+	# grab the Consensus Answer data object 
+	consensusAns <- NULL
 	load( constructSaveFile)
+	if (is.null(consensusAns)) {
+		cat( "\nError: unable to load consensus answer for summarizing.. ", sampleID, geneName)
+		return(NULL)
+	}
+	
+	# if we are given intron masking, do that now, silently
+	if ( ! is.null( intronMaskFasta)) {
+		peptide.path <- dirname(constructSaveFile)
+		refAA <- paste( consensusAns$Construct, collapse="")
+		intronMaskInfo <- IntronMaskSetup( intronMaskFasta, refAA=refAA, 
+						geneName=geneName, path=peptide.path, verbose=TRUE)
+		if ( ! is.null( intronMaskInfo)) {
+			consensusAns <- IntronMaskAdjustPileups( consensusAns, maskInfo=intronMaskInfo)
+		}
+	}
+	
+	# now grab the components and evaluate
 	aaCalls <- consensusAns$AA_Calls
 	aaWeights <- consensusAns$AA_Weights
 	seqAA <- consensusAns$Construct

@@ -7,7 +7,7 @@
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE,
 						startFromReference=FALSE, clipAtStop=TRUE, showFrameShiftPeptides=TRUE,
-						referenceAA=NULL) {
+						referenceAA=NULL, intronMaskFasta=NULL) {
 
 	require(Biostrings)
 
@@ -62,7 +62,7 @@
 				peptide.path=peptide.path, txt.cex=txt.cex, maxNoHits=maxNoHits.pileup, 
 				max.depth=max.depth, max.drawnPerSite=max.drawnPerSite, mode=mode, draw.box=draw.box,
 				chunkSize=chunkSize.pileup, showFrameShiftPeptides=showFrameShiftPeptides,
-				referenceAA=referenceAA)
+				referenceAA=referenceAA, intronMaskFasta=intronMaskFasta)
 
 	# record metrics to the audit file
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
@@ -84,7 +84,7 @@
 
 	# step 3:  summarize how the consensus differs from what it used as its construct
 	differences <- proteinConstructPileupSummary( consensusSaveFile, sampleID=sampleID, geneName=geneName, 
-						txt.cex=txt.cex)
+						txt.cex=txt.cex, intronMaskFasta=intronMaskFasta)
 	dev.print( pdf, pdfFile2, width=pdfWidth, height=pdfHeight)
 	return( invisible( differences))
 }

@@ -4,7 +4,7 @@
 
 `pipe.ConsensusProteinExtraction` <- function( sampleID, geneID="PF3D7_1200600", geneName="Var2csa", optionsFile="Options.txt",
 						results.path=NULL, max.proteins=NULL, min.minor.pct=6, min.mutation.pct=1.0, min.minor.read.count=2,
-						verbose=TRUE ) {
+						verbose=TRUE, intronMaskFasta=NULL ) {
 						
 	# min.minor.pct - at any one amino acid, how frequent must a minor AA call be to not be treated as just noise
 	# min.mutation.pct -  for the full length protein, what fraction of AA must be mutated to call it a separate protein call
@@ -36,11 +36,15 @@
 	protDF <- read.delim( summaryFile, as.is=T)
 	NAA <- nrow( protDF)
 
-	# there is a small chance that this file is old, from befoer the 'Counts' field was added.
+	# there is a small chance that this file is old, from before the 'Counts' field was added.
+	# or if we are given intron masking
 	# check and perhaps remake it
-	if ( ! "Counts" %in% colnames(protDF)) {
+	reSummarize <- FALSE
+	if ( ! "Counts" %in% colnames(protDF)) reSummarize <- TRUE
+	if ( ! is.null(intronMaskFasta)) reSummarize <- TRUE
+	if (reSummarize) {
 		sumFile <- sub( "ProteinSummary.txt$", "Answer.rda", summaryFile)
-		tmpAns <- proteinConstructPileupSummary( sumFile, sampleID=sampleID, geneName=geneName, doPlot=F)
+		tmpAns <- proteinConstructPileupSummary( sumFile, sampleID=sampleID, geneName=geneName, doPlot=F, intronMaskFasta=intronMaskFasta)
 		protDF <- read.delim( summaryFile, as.is=T)
 		NAA <- nrow( protDF)
 	}
