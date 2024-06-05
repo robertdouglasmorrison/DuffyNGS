@@ -33,12 +33,30 @@
 	# A)  length of each name (the reference sequence) matches each mask sequence (after stripping blank characters)
 	maskDesc <- gsub( " ", "", toupper(intronFA$desc))
 	maskSeq <- gsub( " ", "", toupper(intronFA$seq))
+	maskLen <- nchar( maskDesc)
 	nMask <- length( maskSeq)
-	if ( ! all( nchar(maskDesc) == nchar(maskSeq))) {
-		cat( "\nError:  length of each mask name (refAA) must exactly match length of mask pattern\n")
-		probs <- which( nchar(maskDesc) != nchar(maskSeq))
-		badDF <- data.frame( "Mask.Name"=maskDesc[probs], "Mask.Seq"=maskSeq[probs])
+	if ( ! all( maskLen == nchar(maskSeq))) {
+		cat( "\nError:  length of each reference motif must exactly match length of mask sequence\n")
+		probs <- which( maskLen != nchar(maskSeq))
+		badDF <- data.frame( "Reference.Motif"=maskDesc[probs], "Mask.Seq"=maskSeq[probs])
 		print(badDF)
+		return( NULL)
+	}
+	# B)  at each amino acid, the mask AA should never be an exact match to the expected reference AA
+	badCh <- FALSE
+	for ( i in 1:nMask) {
+		for ( j in 1:maskLen[i]) {
+			refCh <- substr( maskDesc, j, j)
+			maskCh <- substr( maskSeq, j, j)
+			if ( refCh == maskCh) {
+				cat( "\nWarning:  mask AA exactly matches reference AA at location", j, refCh, maskCH)
+				cat( "\n  Double check mask for motif: ", maskDesc[i], " <-> ", maskSeq[i])
+				badCh <- TRUE
+			}
+		}
+	}
+	if ( badCh) {
+		cat( "\nError:  correct mask sequences to not match expected reference AAs.")
 		return( NULL)
 	}
 	
@@ -54,7 +72,7 @@
 		maskStart[i] <- start( subject(pa))
 	}
 	maskInfo <- data.frame( "Reference.Motif"=maskDesc, "Mask.Seq"=maskSeq, "Mask.Start"=maskStart, 
-				"Mask.Len"=nchar(maskDesc), "ScorePerAA"=maskScore, stringsAsFactors=F)
+				"Mask.Len"=maskLen, "ScorePerAA"=maskScore, stringsAsFactors=F)
 	
 	if (verbose) {
 		cat( "\nParsed ", nrow(maskInfo), "Intron Masking fragments for gene: ", geneName, "\n")
@@ -92,7 +110,7 @@
 	nMask <- nrow( maskInfo)
 	if ( ! nMask) return(NULL)
 	nMaskedBits <- 0
-	cat( "\nDebug:  doing Intron Masking with ", nMask, "masks.")
+	if (verbose) cat( "\nDoing Intron Masking with ", nMask, "masks.")
 	for ( i in 1:nMask) {
 		myStart <- maskInfo$Mask.Start[i]
 		if (is.na(myStart)) next
@@ -103,8 +121,9 @@
 		for ( j in 1:myLen) {
 			myMaskChar <- myChars[j]
 			myColumn <- myProteinLocs[j]
+			if (myColumn > ncol(aaCalls)) next
 			myCalls <- aaCalls[ , myColumn]
-			cat( "\nDebug one mask site: ", i, myColumn, myMaskChar, "\n")
+			#cat( "\nDebug one mask site: ", i, myColumn, myMaskChar, "\n")
 			print( table( myCalls))
 			myWeights <- aaWeights[ , myColumn]
 			toMask <- which( myCalls == myMaskChar)

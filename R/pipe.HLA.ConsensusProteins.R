@@ -1,7 +1,7 @@
 # pipe.HLA.ConsensusProteins.R -- wrapper to the Consensus Proteins tool for HLA loci
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA",
+				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, 
 				min.minor.pct=15, doPileups=FALSE, verbose=TRUE) {
 
 	# path for all results
@@ -80,7 +80,7 @@
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
-						max.depth=80, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
+						max.depth=max.pileup.depth, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
 						showFrameShiftPeptides=F, referenceAA=thisRefAA)
 		}
 		# if the file still not found, must be some error, skip it
