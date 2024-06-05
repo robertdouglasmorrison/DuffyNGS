@@ -45,12 +45,14 @@
 	# B)  at each amino acid, the mask AA should never be an exact match to the expected reference AA
 	badCh <- FALSE
 	for ( i in 1:nMask) {
+		myDesc <- maskDesc[i]
+		mySeq <- maskSeq[i]
 		for ( j in 1:maskLen[i]) {
-			refCh <- substr( maskDesc, j, j)
-			maskCh <- substr( maskSeq, j, j)
+			refCh <- substr( myDesc, j, j)
+			maskCh <- substr( mySeq, j, j)
 			if ( refCh == maskCh) {
 				cat( "\nWarning:  mask AA exactly matches reference AA at location", j, refCh, maskCH)
-				cat( "\n  Double check mask for motif: ", maskDesc[i], " <-> ", maskSeq[i])
+				cat( "\n  Double check mask for motif: ", myDesc, " <-> ", mySeq)
 				badCh <- TRUE
 			}
 		}
