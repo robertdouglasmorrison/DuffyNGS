@@ -149,6 +149,8 @@
 		# overwrite if we modified anything
 		obj$AA_Calls <- aaCalls
 		obj$AA_Weights <- aaWeights
+	} else {
+		if (verbose) cat( "\n")
 	}
 	return(obj)
 }
