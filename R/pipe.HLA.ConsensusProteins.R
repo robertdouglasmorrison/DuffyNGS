@@ -2,7 +2,7 @@
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, 
-				min.minor.pct=15, doPileups=FALSE, verbose=TRUE) {
+				min.minor.pct=15, doPileups=FALSE, intronMaskFasta=NULL, verbose=TRUE) {
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -38,6 +38,16 @@
 		HLAgeneIDs <- HLAgeneIDs[ hits]
 		HLAgeneNames <- HLAgeneNames[ hits]
 	}
+	N_HLA <- length( HLAgeneIDs)
+	
+	# if given intron masking info, require the tool to only operate on a single HLA gene
+	if ( ! is.null(intronMaskFasta)) {
+		if ( N_HLA > 1) {
+			cat( "\nCaution: using an Intron Mask currently requires processing only one HLA gene at a time.")
+			cat( "\n  Use the 'HLAgenes' argument to down-select to a single HLA gene.")
+			return(NULL)
+		}
+	}
 
 	require( Biostrings)
 	data(BLOSUM62)
@@ -45,15 +55,13 @@
 	# the HLA genes are messy, so preload the reference AA sequence as a guide
 	genomicFastaFile <- getOptionValue( optionsFile, "genomicFastaFile", notfound="Hs_genomicDNA.fasta", verbose=T)
 	HLArefAA <- vector()
-	for ( ig in 1:length(HLAgeneIDs)) {
+	for ( ig in 1:N_HLA) {
 		hlaFA <- gene2Fasta( HLAgeneIDs[ig], genomicFastaFile, mode="aa")
 		HLArefAA[ig] <- hlaFA$seq[1]
 	}
 	
 	# we will do each HLA locus all the way through
 	outLocus <- outName <- outDist <- outSeq <- vector()
-
-	N_HLA <- length( HLAgeneIDs)
 	for ( i in 1:N_HLA) {
 		thisGene <- HLAgeneIDs[i]
 		thisName <- HLAgeneNames[i]
@@ -81,7 +89,7 @@
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=max.pileup.depth, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
-						showFrameShiftPeptides=F, referenceAA=thisRefAA)
+						showFrameShiftPeptides=F, referenceAA=thisRefAA, intronMaskFasta=intronMaskFasta)
 		}
 		# if the file still not found, must be some error, skip it
 		if ( ! file.exists( consensusFile)) {
@@ -93,7 +101,7 @@
 		#proteins <- top2proteins( consensusFile, min.heterozygousPct=min.heterozygousPct)
 		cat( "\n\nExtracting 'Consensus Protein Pileups' sequences..  ", sampleID, " ", thisName)
 		ans <- pipe.ConsensusProteinExtraction( sampleID, thisGene, thisNameIn, results.path=results.path,
-						min.minor.pct=min.minor.pct, max.proteins=2, verbose=FALSE)
+						min.minor.pct=min.minor.pct, max.proteins=2, verbose=FALSE, intronMaskFasta=intronMaskFasta)
 		proteins <- ans$AA.Fasta$seq
 		if ( is.null( proteins) || !length(proteins)) next
 		# the proteins may have gaps, stops, etc
