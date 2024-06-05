@@ -4,8 +4,8 @@
 
 `proteinConstructPeptidePileups` <- function( sampleID, geneName, constructFile, peptide.path=".",
 					constructName=paste(sampleID,geneName,sep="_"), 
-					txt.cex=0.25, maxNoHits=1000000, max.depth=60, max.drawnPerSite=3,
-					mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
+					txt.cex=0.25, maxNoHits=1000000, max.depth=60, pct.aligned.depth=0.75, 
+					max.drawnPerSite=3, mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
 					showFrameShiftPeptides=TRUE, intronMaskFasta=NULL, ...) {
 
 	SAPPLY <- base::sapply
@@ -60,7 +60,7 @@
 	
 	# set up storage to determine the final consensus call for every AA, and the current depth on the pileup plot
 	maxDepth <- round(max.depth)
-	alignedReadsDepth <- round( maxDepth * 0.75)
+	alignedReadsDepth <- round( maxDepth * pct.aligned.depth)
 	pepFree <- matrix( TRUE, nrow=maxDepth, ncol=nAA+30)
 	aaCalls <- matrix( "", nrow=maxDepth, ncol=nAA+30)
 	aaWeights <- matrix( 0, nrow=maxDepth, ncol=nAA+30)

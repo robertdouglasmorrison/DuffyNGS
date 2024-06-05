@@ -12,10 +12,10 @@
 		localFastaFile <- file.path( path, basename( intronMaskFasta))
 		if ( file.exists( localFastaFile)) {
 			cat( "\nUsing sample-specifc Intron Mask FASTA file: ", localFastaFile)
-			intronFA <- loadFasta( localFastaFile, verbose=F)
+			intronFA <- loadFasta( localFastaFile, verbose=F, short.desc=FALSE)
 		} else {
 			cat( "\nUsing global Intron Mask FASTA file: ", intronMaskFasta)
-			intronFA <- loadFasta( intronMaskFasta, verbose=F)
+			intronFA <- loadFasta( intronMaskFasta, verbose=F, short.desc=FALSE)
 		}
 	}
 	if ( is.list(intronMaskFasta)) {
@@ -30,8 +30,10 @@
 	}
 	
 	# step 2:  verify that all the masks meet our requirements.
-	# A)  length of each name (the reference sequence) matches each mask sequence (after stripping blank characters)
-	maskDesc <- gsub( " ", "", toupper(intronFA$desc))
+	# A)  length of each descriptor (the reference sequence) matches each mask sequence (after stripping blank characters)
+	maskDesc <- sub( " .+", "", intronFA$desc)
+	extraDescText <- sub( "^[A-Z\\*]+ ?", "", intronFA$desc)
+	maskDesc <- toupper(maskDesc)
 	maskSeq <- gsub( " ", "", toupper(intronFA$seq))
 	maskLen <- nchar( maskDesc)
 	nMask <- length( maskSeq)
@@ -74,7 +76,8 @@
 		maskStart[i] <- start( subject(pa))
 	}
 	maskInfo <- data.frame( "Reference.Motif"=maskDesc, "Mask.Seq"=maskSeq, "Mask.Start"=maskStart, 
-				"Mask.Len"=maskLen, "ScorePerAA"=maskScore, stringsAsFactors=F)
+				"Mask.Len"=maskLen, "ScorePerAA"=maskScore, "Descriptor"=extraDescText, 
+				stringsAsFactors=F)
 	
 	if (verbose) {
 		cat( "\nParsed ", nrow(maskInfo), "Intron Masking fragments for gene: ", geneName, "\n")
