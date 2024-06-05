@@ -125,8 +125,6 @@
 			myColumn <- myProteinLocs[j]
 			if (myColumn > ncol(aaCalls)) next
 			myCalls <- aaCalls[ , myColumn]
-			#cat( "\nDebug one mask site: ", i, myColumn, myMaskChar, "\n")
-			print( table( myCalls))
 			myWeights <- aaWeights[ , myColumn]
 			toMask <- which( myCalls == myMaskChar)
 			if ( length(toMask)) {
