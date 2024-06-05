@@ -2,6 +2,7 @@
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, 
+				maxNoHits.pileup=0, maxNoHits.setup=0,
 				min.minor.pct=15, doPileups=FALSE, intronMaskFasta=NULL, verbose=TRUE) {
 
 	# path for all results
@@ -9,7 +10,7 @@
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	}
 	if ( length(sampleID) > 1) {
-		cat( "\nWarning: HLA consensus requires a single 'sampleID'")
+		cat( "\nWarning: HLA consensus requires a single 'sampleID'.  Using first..\n")
 		sampleID <- sampleID[1]
 	}
 	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
@@ -57,7 +58,8 @@
 	data(BLOSUM62)
 
 	# the HLA genes are messy, so preload the reference AA sequence as a guide
-	genomicFastaFile <- getOptionValue( optionsFile, "genomicFastaFile", notfound="Hs_genomicDNA.fasta", verbose=T)
+	if (verbose) cat( "\nGathering HLA reference protein sequences..")
+	genomicFastaFile <- getOptionValue( optionsFile, "genomicFastaFile", notfound="Hs_genomicDNA.fasta", verbose=verbose)
 	HLArefAA <- vector()
 	for ( ig in 1:N_HLA) {
 		hlaFA <- gene2Fasta( HLAgeneIDs[ig], genomicFastaFile, mode="aa")
@@ -92,7 +94,8 @@
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
-						max.depth=max.pileup.depth, chunkSize.pileup=50000, maxNoHits.pileup=0, maxNoHits.setup=0,
+						max.depth=max.pileup.depth, chunkSize.pileup=50000, 
+						maxNoHits.pileup=maxNoHits.pileup, maxNoHits.setup=maxNoHits.setup,
 						showFrameShiftPeptides=F, referenceAA=thisRefAA, intronMaskFasta=intronMaskFasta)
 		}
 		# if the file still not found, must be some error, skip it
