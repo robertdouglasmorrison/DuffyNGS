@@ -50,7 +50,6 @@
 		for ( j in 1:maskLen[i]) {
 			refCh <- substr( myDesc, j, j)
 			maskCh <- substr( mySeq, j, j)
-			cat( "\nDebug: ", i,j, "|", length(myDesc), myDesc, "|", length(mySeq), mySeq, "|", refCh, "|", maskCh)
 			if ( refCh == maskCh) {
 				cat( "\nWarning:  mask AA exactly matches reference AA at location", j, refCh, maskCH)
 				cat( "\n  Double check mask for motif: ", myDesc, " <-> ", mySeq)
