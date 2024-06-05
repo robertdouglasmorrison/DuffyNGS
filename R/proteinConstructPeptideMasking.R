@@ -11,16 +11,16 @@
 	if ( is.character(intronMaskFasta)) {
 		localFastaFile <- file.path( path, basename( intronMaskFasta))
 		if ( file.exists( localFastaFile)) {
-			cat( "\n  Using sample-specifc Intron Mask FASTA file: ", localFastaFile)
+			cat( "\nUsing sample-specifc Intron Mask FASTA file: ", localFastaFile)
 			intronFA <- loadFasta( localFastaFile, verbose=F)
 		} else {
-			cat( "\n  Using global Intron Mask FASTA file: ", intronMaskFasta)
+			cat( "\nUsing global Intron Mask FASTA file: ", intronMaskFasta)
 			intronFA <- loadFasta( intronMaskFasta, verbose=F)
 		}
 	}
 	if ( is.list(intronMaskFasta)) {
 		if ( all( c("desc","seq") %in% names(intronMaskFasta))) {
-			cat( "\n  Using explicit Intron Mask FASTA object ")
+			cat( "\nUsing explicit Intron Mask FASTA object ")
 			intronFA <- intronMaskFasta
 		}
 	}
@@ -112,7 +112,7 @@
 	nMask <- nrow( maskInfo)
 	if ( ! nMask) return(NULL)
 	nMaskedBits <- 0
-	if (verbose) cat( "\nDoing Intron Masking with ", nMask, "masks.")
+	if (verbose) cat( "\nDoing Intron Masking with", nMask, "masks.")
 	for ( i in 1:nMask) {
 		myStart <- maskInfo$Mask.Start[i]
 		if (is.na(myStart)) next
@@ -140,9 +140,9 @@
 	# all done
 	if (nMaskedBits) {
 		totalBits <- nrow(aaCalls) * (ncol(aaCalls)-30)		# the extra tail at C-term end
-		pctMask <- round( nMaskedBits * 100 / totalBits, digits=4)
-		if (verbose) cat( "\nIntron Masking results:  removed ", nMaskedBits, " Intron AA calls from ", totalBits, 
-			" of pileups. (", pctMask, "%)", sep="")
+		pctMask <- round( nMaskedBits * 100 / totalBits, digits=2)
+		if (verbose) cat( "\nMasking results:  removed ", nMaskedBits, " intron AA calls from ", totalBits, 
+			" pileup locations (", pctMask, "%)\n", sep="")
 		# overwrite if we modified anything
 		obj$AA_Calls <- aaCalls
 		obj$AA_Weights <- aaWeights
