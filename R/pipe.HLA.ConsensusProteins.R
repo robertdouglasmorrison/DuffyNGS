@@ -8,6 +8,10 @@
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	}
+	if ( length(sampleID) > 1) {
+		cat( "\nWarning: HLA consensus requires a single 'sampleID'")
+		sampleID <- sampleID[1]
+	}
 	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
 	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
 	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
@@ -30,7 +34,7 @@
 	if ( ! is.null( HLAgenes)) {
 		hitsID <- which( HLAgeneIDs %in% HLAgenes)
 		hitsName <- which( HLAgeneNames %in% HLAgenes)
-		hits <- sort( unique( hitsID, hitsName))
+		hits <- sort( unique( c(hitsID, hitsName)))
 		if ( ! length(hits)) {
 			cat( "\nWarning: HLA genes must be from: ", HLAgeneNames, HLAgeneIDs)
 			return(NULL)
