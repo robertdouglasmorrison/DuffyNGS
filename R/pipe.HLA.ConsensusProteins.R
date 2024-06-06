@@ -93,6 +93,7 @@
 
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
+			cat( "\nDebug: in HLA.Consensus: (pct.aligned.depth) =", pct.aligned.depth)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=max.pileup.depth, pct.aligned.depth=pct.aligned.depth, chunkSize.pileup=50000, 
 						maxNoHits.pileup=maxNoHits.pileup, maxNoHits.setup=maxNoHits.setup,

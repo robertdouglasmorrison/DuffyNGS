@@ -60,6 +60,7 @@
 	
 	# set up storage to determine the final consensus call for every AA, and the current depth on the pileup plot
 	maxDepth <- round(max.depth)
+	cat( "\nDebug: in porteinConstructPeptidePile: (pct.aligned.depth) =", pct.aligned.depth)
 	alignedReadsDepth <- round( maxDepth * pct.aligned.depth)
 	pepFree <- matrix( TRUE, nrow=maxDepth, ncol=nAA+30)
 	aaCalls <- matrix( "", nrow=maxDepth, ncol=nAA+30)
