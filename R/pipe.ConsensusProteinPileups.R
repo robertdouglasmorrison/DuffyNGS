@@ -58,7 +58,6 @@
 	pdfHeight <- max( round( max.depth/12, digits=1), 5)
 	checkX11( bg='white', width=x11Width, height=x11Height)
 
-	cat( "\nDebug: in pipe.ConsensusProteinPile: (pct.aligned.depth) =", pct.aligned.depth)
 	consensusAns <<- proteinConstructPeptidePileups( sampleID, geneName=geneName, constructFile=consensusAAfile, 
 				peptide.path=peptide.path, txt.cex=txt.cex, maxNoHits=maxNoHits.pileup, 
 				max.depth=max.depth, pct.aligned.depth=pct.aligned.depth, max.drawnPerSite=max.drawnPerSite, 

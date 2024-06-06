@@ -150,7 +150,7 @@
 		obj$AA_Calls <- aaCalls
 		obj$AA_Weights <- aaWeights
 	} else {
-		if (verbose) cat( "\n")
+		if (verbose) cat( "\nNo intron AA calls were masked off.\n")
 	}
 	return(obj)
 }
