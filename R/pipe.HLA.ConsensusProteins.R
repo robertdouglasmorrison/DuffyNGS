@@ -1,9 +1,19 @@
-# pipe.HLA.ConsensusProteins.R -- wrapper to the Consensus Proteins tool for HLA loci
+# pipe.HLA.ConsensusProteins.R -- functions to examine HLA locus genes, using the
+#				Consensus Proteins Pileups (CPP) tool
+
+# globally define the universe of HLA genes we may track, as full current Human annotation names and short names
+ALL_HLA_GeneIDs <- c( "HLA-A:GI3105:06:29942470", "HLA-B:GI3106:06:31353868", "HLA-C:GI3107:06:31268749", 
+			"HLA-E:GI3133:06:30489406", "HLA-DRA:GI3122:06:32439842", "HLA-DRB1:GI3123:06:32578769", 
+			"HLA-DQA1:GI3117:06:32637396", "HLA-DQB1:GI3119:06:32659464", "HLA-DPA1:GI3113:06:33064569", 
+			"HLA-DPB1:GI3115:06:33075926")
+ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1", 
+			"HLA-DQA1", "HLA-DQB1", "HLA-DPA1", "HLA-DPB1")
+
 
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, pct.aligned.depth=0.9,
-				maxNoHits.pileup=0, maxNoHits.setup=0,
-				min.minor.pct=15, doPileups=FALSE, doExtractions=FALSE, intronMaskFasta=NULL, verbose=TRUE) {
+				maxNoHits.pileup=0, maxNoHits.setup=0, min.minor.pct=15, 
+				doPileups=FALSE, doExtractions=doPileups, intronMaskFasta=NULL, verbose=TRUE) {
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -21,15 +31,9 @@
 	# force human as the current species
 	setCurrentSpecies( "Hs_grc")
 
-	# list of Hs_grc HLA genes to harvest
-	HLAgeneIDs <- c( "HLA-A:GI3105:06:29942470", "HLA-B:GI3106:06:31353868", 
-			"HLA-C:GI3107:06:31268749", "HLA-E:GI3133:06:30489406",
-			"HLA-DRA:GI3122:06:32439842", "HLA-DRB1:GI3123:06:32578769", 
-			"HLA-DQA1:GI3117:06:32637396", "HLA-DQB1:GI3119:06:32659464", 
-			"HLA-DPA1:GI3113:06:33064569", "HLA-DPB1:GI3115:06:33075926")
-	HLAgeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E",
-			"HLA-DRA", "HLA-DRB1", "HLA-DQA1", "HLA-DQB1", 
-			"HLA-DPA1", "HLA-DPB1")
+	# start from the list of Hs_grc HLA genes to harvest
+	HLAgeneIDs <- ALL_HLA_GeneIDs
+	HLAgeneNames <- ALL_HLA_GeneNames
 
 	# allow being given a subset of HLA genes
 	if ( ! is.null( HLAgenes)) {
@@ -53,9 +57,6 @@
 			return(NULL)
 		}
 	}
-
-	require( Biostrings)
-	data(BLOSUM62)
 
 	# the HLA genes are messy, so preload the reference AA sequence as a guide
 	if (verbose) cat( "\nGathering HLA reference protein sequences..")
@@ -169,6 +170,10 @@
 
 `pipe.HLA.Calls` <- function( sampleID=NULL, HLAgene=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", verbose=TRUE) {
+
+	# set up to do fast sequence pattern comparison
+	require( Biostrings)
+	data(BLOSUM62)
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -379,4 +384,276 @@
 	out <- data.frame( "Locus"=levels(geneFac), "Allele.Calls"=namesOut, "Allele.Counts"=cntsOut, 
 			"All.Allele.Frequencies"=fullOut, stringsAsFactors=F)
 	return(out)
+}
+
+
+`pipe.HLA.Allele.Proportions.ByGroup` <- function( sampleIDset, groupColumn="Group", HLAgenes=NULL, annotationFile="Annotation.txt", 
+						optionsFile="Options.txt", results.path=NULL, max.suffix=1, col=c(2,4), 
+						nFDR=1000) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls")
+
+	# verify the grouping column exists
+	annT <- readAnnotationTable( annotationFile)
+	if ( ! (groupColumn %in% colnames(annT))) {
+		cat( "\nWarning: wanted grouping column not found in Annotation file: ", groupColumn)
+		return(NULL)
+	}
+	
+	# visit every sample, and gather up all the HLA calls
+	N <- length( sampleIDset)
+	hlaTbl <- data.frame()
+	for ( i in 1:N) {
+		sid <- sampleIDset[i]
+		grp <- annT[[ groupColumn]][ match( sid, annT$SampleID)]
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "Merged.HLA.Calls.csv", sep="."))
+		if ( ! file.exists( my.file)) {
+			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
+			next
+		}
+		smlTbl <- read.csv( my.file, as.is=T)
+		if ( ! nrow(smlTbl)) next
+		smlTbl$Group <- grp
+		hlaTbl <- rbind( hlaTbl, smlTbl)
+	}
+	# shorten the allele calls to wanted specificity
+	hlaTbl$Short_IMGT_Name <- cropHLAsuffix( hlaTbl$IMGT_Name, max.suffix=max.suffix)
+	if ( ! is.null( HLAgenes)) {
+		hlaTbl <- subset( hlaTbl, Locus %in% HLAgenes)
+	}
+	
+	# set up to know breakdowns by group
+	grpFac <- factor( hlaTbl$Group)
+	grpNames <- levels(grpFac)
+	nGrp <- nlevels(grpFac)
+	hlaNames <- sort( unique( hlaTbl$Locus))
+	nHLA <- length( hlaNames)
+	colUse <- rep( col, length.out=nGrp)
+	
+	# do each HLA gene separately
+	checkX11()
+	padFactor <- 1.5
+	for (hlagene in hlaNames) {
+		smlTbl <- subset( hlaTbl, Locus == hlagene)
+		nAlleles <- length( unique( smlTbl$Short_IMGT_Name))
+		cntsM <- tapply( 1:nrow(smlTbl), list(factor(smlTbl$Group,levels=grpNames),factor(smlTbl$Short_IMGT_Name)), FUN=length)
+		cntsM[ is.na(cntsM)] <- 0
+		colnames(cntsM) <- sub( "^HLA\\-", "", colnames(cntsM))
+		# turn counts to percentages, within each group
+		pctsM <- cntsM
+		for ( k in 1:nGrp) pctsM[ k, ] <- round( cntsM[ k, ] * 100 / sum(cntsM[k,]), digits=2)
+		
+		barAns <- barplot( pctsM, beside=T, col=colUse, ylim=c( 0, max( max(pctsM,na.rm=T)*1.2, 50)), 
+				xlim=c(0.4,(nrow(cntsM)*ncol(cntsM)*padFactor)+1),
+				main=paste( "HLA Allele Proportions:   ", hlagene), ylab="Percentage of allele calls", 
+				xlab=NA, las=3, font.axis=2, font.lab=2, cex.axis=1.1, cex.lab=1.1, yaxt="n")
+		axis( side=2, seq( 0, 100, by=20))
+		
+		# if asked for, now do FDR simulations that permute the grouping calls
+		if ( nFDR) {
+			tmpTbl <- smlTbl
+			trueDiff <- apply( pctsM, 2, function(x) diff( range(x)))
+			diffsByGrp <- matrix( NA, nrow=nFDR, ncol=nAlleles)
+			for ( ifdr in 1:nFDR) {
+				tmpTbl$Group <- sample( smlTbl$Group)
+				cntsM <- tapply( 1:nrow(tmpTbl), list(factor(tmpTbl$Group,levels=grpNames),factor(tmpTbl$Short_IMGT_Name)), FUN=length)
+				cntsM[ is.na(cntsM)] <- 0
+				colnames(cntsM) <- sub( "^HLA\\-", "", colnames(cntsM))
+				pcts2 <- cntsM
+				for ( k in 1:nGrp) pcts2[ k, ] <- round( cntsM[ k, ] * 100 / sum(cntsM[k,]), digits=2)
+				thisDiffs <<- apply( pcts2, 2, function(x) diff( range(x)))
+				diffsByGrp[ ifdr, ] <- thisDiffs
+			}
+			# now see how often random was at least this different as the real data
+			for ( j in 1:nAlleles) {
+				nRandBetter <- sum( diffsByGrp[ , j] >= trueDiff[j])
+				fdr <- round( nRandBetter / nFDR, digits=3)
+				if ( fdr <= 0.2) {
+					ptxt <- paste( "P=", fdr, sep="")
+					ytxt <- max( pctsM[ , j])
+					xtxt <- mean( barAns[ ,j])
+					if ( nGrp < 10) {
+						text( xtxt, ytxt, ptxt, cex=0.85, pos=3)
+					} else {
+						text( xtxt-(nAlleles/20), ytxt+0.25, ptxt, cex=0.85, srt=90, pos=4, offset=1)
+					}
+				}
+			}
+		}
+		
+		# show number of samples per group
+		grpIDcnts <- tapply( smlTbl$SampleID, factor(smlTbl$Group), function(x) length( unique(x)))
+		legendText <- paste( rownames(cntsM), " (N=", grpIDcnts, ")", sep="")
+		legend( 'topright', legendText, fill=colUse, bg='white', cex=1.1)
+		dev.flush();  Sys.sleep(1)
+		plotFile <- paste( "HLA.Allele.Proportions_", hlagene, "_By.", groupColumn, sep="")
+		printPlot( plotFile)
+	}
+}
+
+
+`pipe.HLA.AminoAcid.Proportions.ByGroup` <- function( sampleIDset, groupColumn="Group", HLAgenes=NULL, annotationFile="Annotation.txt", 
+						optionsFile="Options.txt", results.path=NULL) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls")
+
+	# verify the grouping column exists
+	annT <- readAnnotationTable( annotationFile)
+	if ( ! (groupColumn %in% colnames(annT))) {
+		cat( "\nWarning: wanted grouping column not found in Annotation file: ", groupColumn)
+		return(NULL)
+	}
+	
+	# visit every sample, and gather up all the HLA calls & actual AA sequences
+	N <- length( sampleIDset)
+	hlaTbl <- data.frame()
+	for ( i in 1:N) {
+		sid <- sampleIDset[i]
+		grp <- annT[[ groupColumn]][ match( sid, annT$SampleID)]
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "Merged.HLA.Calls.csv", sep="."))
+		if ( ! file.exists( my.file)) {
+			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
+			next
+		}
+		smlTbl <- read.csv( my.file, as.is=T)
+		if ( ! nrow(smlTbl)) next
+		smlTbl$Group <- grp
+		hlaTbl <- rbind( hlaTbl, smlTbl)
+	}
+	if ( ! is.null( HLAgenes)) {
+		hlaTbl <- subset( hlaTbl, Locus %in% HLAgenes)
+	}
+	
+	# set up to know breakdowns by group
+	grpFac <- factor( hlaTbl$Group)
+	grpNames <- levels(grpFac)
+	nGrp <- nlevels(grpFac)
+	hlaNames <- sort( unique( hlaTbl$Locus))
+	nHLA <- length( hlaNames)
+	
+	#  local function to assess one HLA group
+	`HLA.AA.Differences` <- function( hla="HLA-A") {
+
+		# grab the AA seqs and do the MSA
+		cat( "\nDoing MSA for: ", hla)
+		tmpFasta <- paste( hla, "AllSamples.AA.fasta", sep=".")
+		tmpALN <- paste( hla,"AllSamples.AA.aln", sep=".")
+		use <- which( hlaTbl$Locus == hla)
+		tmpFA <- as.Fasta( hlaTbl$SampleID[use], hlaTbl$Sequence[use])
+		writeFasta( tmpFA, tmpFasta, line=100)
+		aln <- mafft( tmpFasta, tmpALN, verbose=F)
+		writeALN( aln, tmpALN, line=100)
+
+		aaM <- aln$alignment
+		nAA <- ncol(aaM)
+		nSEQ <- nrow(aaM)
+		if ( ! nAA || ! nSEQ) return(NULL)
+		
+		# now we can look at the AA calls versus the group calls
+		grp <- hlaTbl$Group[use]
+		aaLevels <- sort( unique( as.character( aaM)))
+		nAAlevels <- length(aaLevels)
+		grpFac <- factor( grp)
+		grpLevels <- levels(grpFac)
+		nGrps <- length(grpLevels)
+
+		# visit every AA and assess the proprotion differences
+		outAA <- outPos <- outPval <- vector( length=nAA)
+		outPctStrs <- matrix( "", nrow=nAA, ncol=nGrps)
+		colnames(outPctStrs) <- grpLevels
+		
+		for ( i in 1:nAA) {
+			thisVec <- aaM[ , i]
+			cntsM <- tapply( thisVec, list(grpFac,factor(thisVec,levels=aaLevels)), length)
+			cntsM[ is.na(cntsM)] <- 0
+			# drop AA not seen by anyone
+			bigCnt <- apply( cntsM, 2, max)
+			cntsM <- cntsM[ , bigCnt > 0, drop=F]
+			SAV2 <<- cntsM
+			pv <- 1
+			if ( ncol(cntsM) > 1) {
+				# we got 2+ different AA detected, so we can ask if th groups are different
+				if ( nrow(cntsM) == 2) {
+					test <- suppressWarnings( prop.test( t(cntsM)))
+					pv <- test$p.value
+				} else {
+					# loop over all the pairs of groups
+					pvVec <- vector()
+					for (j in 1:(nrow(cntsM)-1)) {
+						for (k in (j+1):nrow(cntsM)) {
+							tmpM <- cntsM[ c(j,k), ]
+							bigCnt <- apply( tmpM, 2, max)
+							tmpM <- tmpM[ , bigCnt > 0, drop=F]
+							if ( ncol(tmpM) < 2) {
+								pvVec <- c( pvVec, 1)
+								next
+							}
+							test <- suppressWarnings( prop.test( t( tmpM)))
+							pvVec <- c( pvVec, test$p.value)
+						}
+					}
+					pv <- min( pvVec)
+					if ( pv < 0.05) SAV5 <<- pvVec
+				}
+			}
+			outPos[i] <- i
+			outAA[i] <- names( sort( table(thisVec), decreasing=T))[1]
+			outPval[i] <- pv
+			# let's show the top K AA calls in each group, as percentages
+			MAX_K <- 4
+			aaPctCalls <- apply( cntsM, 1, function(x) {
+					pcts <- sort( round( x * 100 / sum(x), digits=0), decreasing=T)
+					nKeep <- min( MAX_K, sum( pcts >= 2))
+					if ( length(pcts) > nKeep) pcts <- pcts[ 1:nKeep]
+					txtStr <- paste( names(pcts), ":", as.numeric(pcts), "%", sep="", collapse="; ")
+					return( txtStr)
+				})
+			outPctStrs[ i, ] <- aaPctCalls
+			if ( i %% 50 == 0) cat( "\r", hla, i, pv, aaPctCalls)
+		}
+		out <- data.frame( "Locus"=hla, "Position"=outPos, "Consensus.AA"=outAA, "Pvalue"=round(outPval,digits=5),
+				outPctStrs, stringsAsFactors=F)
+		rownames(out) <- 1:nrow(out)
+		return( out)
+	}
+
+	# now call it for each HLA locus
+	bigOut <- data.frame()
+	for (hla in hlaNames) {
+		sml <- HLA.AA.Differences( hla)
+		if ( is.null(sml)) {
+			cat( "\nError:  no rows of AA results for HLA group: ", hla)
+			next
+		}
+		bigOut <- rbind( bigOut, sml)
+	}
+	
+	# render the data as a Manhattan plot
+	colSet <- rainbow( nHLA, end=0.7)
+	ptCol <- colSet[ match( bigOut$Locus, hlaNames)]
+	y <- -log10(bigOut$Pvalue)
+	bigY <- max( y, na.rm=T) * 1.05
+	smlY <- bigY * -0.15
+	mainText <- paste( "HLA Locus Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
+	plot( 1:nrow(qq), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
+		ylim=c(smlY, bigY), pch=19, col=ptCol, cex=0.8, yaxt="n")
+	axis( side=2, at=pretty( c(0,bigY)))
+	starts <- match( hlaNames, bigOut$Locus)
+	stops <- c( (starts-1)[2:nHLA], nrow(bigOut))
+	rect( starts, smlY, stops, smlY*0.3, border='black', col=colSet, lwd=2)
+	showNames <- hlaNames
+	tooLong <- which( nchar(showNames) > 5)
+	showNames[tooLong] <- sub( "^HLA\\-", "", showNames[tooLong])
+	text( (starts+stops)/2, smlY*0.65, showNames, font=2, cex=0.85)
+	
+	# done
+	return( bigOut)
 }

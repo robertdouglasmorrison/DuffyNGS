@@ -60,6 +60,7 @@
 	
 	# set up storage to determine the final consensus call for every AA, and the current depth on the pileup plot
 	maxDepth <- round(max.depth)
+	if ( pct.aligned.depth > 1 || pct.aligned.depth < 0.5) stop( "function argument 'pct.aligned.depth' must be in range 0.5 to 1.0")
 	alignedReadsDepth <- round( maxDepth * pct.aligned.depth)
 	pepFree <- matrix( TRUE, nrow=maxDepth, ncol=nAA+30)
 	aaCalls <- matrix( "", nrow=maxDepth, ncol=nAA+30)
