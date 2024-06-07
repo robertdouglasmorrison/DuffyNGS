@@ -3,7 +3,7 @@
 `pipe.HLA.ConsensusProteins` <- function( sampleID=NULL, HLAgenes=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, pct.aligned.depth=0.9,
 				maxNoHits.pileup=0, maxNoHits.setup=0,
-				min.minor.pct=15, doPileups=FALSE, intronMaskFasta=NULL, verbose=TRUE) {
+				min.minor.pct=15, doPileups=FALSE, doExtractions=FALSE, intronMaskFasta=NULL, verbose=TRUE) {
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -91,12 +91,14 @@
 			}
 		}
 
+		didNewPileup <- FALSE
 		if ( ! file.exists( consensusFile) || doPileups) {
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=max.pileup.depth, pct.aligned.depth=pct.aligned.depth, chunkSize.pileup=50000, 
 						maxNoHits.pileup=maxNoHits.pileup, maxNoHits.setup=maxNoHits.setup,
 						showFrameShiftPeptides=F, referenceAA=thisRefAA, intronMaskFasta=intronMaskFasta)
+			didNewPileup <- TRUE
 		}
 		# if the file still not found, must be some error, skip it
 		if ( ! file.exists( consensusFile)) {
@@ -105,63 +107,139 @@
 		}
 
 		# step 2:  Extract up to 2 proteins from this one result
-		#proteins <- top2proteins( consensusFile, min.heterozygousPct=min.heterozygousPct)
-		cat( "\n\nExtracting 'Consensus Protein Pileups' sequences..  ", sampleID, " ", thisName)
-		ans <- pipe.ConsensusProteinExtraction( sampleID, thisGene, thisNameIn, results.path=results.path,
+		#  use the existing results, unless not found or if we did the pileup step
+		extractedFile <- paste( sampleID, thisName, "FinalExtractedAA.fasta", sep=".")
+		extractedFile <- file.path( consensusProteins.path, extractedFile)
+		if ( ! file.exists(extractedFile) || didNewPileup || doExtractions) {
+			cat( "\n\nExtracting 'Consensus Protein Pileups' sequences..  ", sampleID, " ", thisName)
+			ans <- pipe.ConsensusProteinExtraction( sampleID, thisGene, thisNameIn, results.path=results.path,
 						min.minor.pct=min.minor.pct, max.proteins=2, verbose=FALSE, intronMaskFasta=intronMaskFasta)
-		proteins <- ans$AA.Fasta$seq
-		if ( is.null( proteins) || !length(proteins)) next
-		# the proteins may have gaps, stops, etc
-		proteins <- gsub( "*", "", proteins, fixed=T)
-		proteins <- gsub( "-", "", proteins, fixed=T)
-		proteins <- gsub( "X", "", proteins, fixed=T)
-		# small chance of getting back just one sequence
-		if ( is.na(proteins[2])) proteins[2] <- proteins[1]
-		# bail out if we got nothing
-		if ( nchar( proteins[1]) < 10) next
-
-		# step 3:  make the HLA type calls for these
-		referenceAAfile <- paste( thisName, "AA.fasta", sep=".")
-		referenceAAfile <- file.path( IMGT.HLA.path, referenceAAfile)
-		if ( ! file.exists( referenceAAfile)) {
-			cat( "\nError:  failed to find Reference AA FASTA file: ", referenceAAfile)
-			next
 		}
-		refAA <- loadFasta( referenceAAfile, short=T, verbose=F)
-		# the IMGT names we want are the second field
-		#imgtTerms <- strsplit( refAA$desc, split=" +")
-		#imgtIDs <- sapply( imgtTerms, FUN=`[`, 2)
-		imgtIDs <- refAA$desc
-		imgtSeqs <- refAA$seq
-		# see which is closest
-		#d1 <- adist( proteins[1], imgtSeqs)
-		#best1 <- which.min( d1)
-		pa1 <- pairwiseAlignment( imgtSeqs, proteins[1], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
-		best1 <- which.max( pa1)
-		d1 <- adist( proteins[1], imgtSeqs[best1])[1]
-		nam1 <- paste( sampleID, "|", imgtIDs[best1], " EditDist=", d1, sep="")
+			
+		# step 3:  make the HLA type calls for these
+		ans3 <- pipe.HLA.Calls( sampleID, thisNameIn, results.path=results.path, IMGT.HLA.path=IMGT.HLA.path, verbose=verbose)
 
-		#d2 <- adist( proteins[2], imgtSeqs)
-		#best2 <- which.min( d2)
-		pa2 <- pairwiseAlignment( imgtSeqs, proteins[2], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
-		best2 <- which.max( pa2)
-		d2 <- adist( proteins[2], imgtSeqs[best2])[1]
-		nam2 <- paste( sampleID, "|", imgtIDs[best2], " EditDist=", d2, sep="")
-
-		# step 4:  Write the resuls
-		outFA <- as.Fasta( c( nam1, nam2), proteins)
-		outfile <- paste( sampleID, thisName, "AA.fasta", sep=".")
-		outfile <- file.path( HLAresults.path, outfile)
-		writeFasta( outFA, outfile, line=100)
-
-		outLocus <- c( outLocus, thisName, thisName)
-		outName <- c( outName, imgtIDs[best1], imgtIDs[best2])
-		outDist <- c( outDist, d1, d2)
-		outSeq <- c( outSeq, proteins[1], proteins[2])
+		# accumulate results
+		outLocus <- c( outLocus, ans3$Locus)
+		outName <- c( outName, ans3$IMGT_Name)
+		outDist <- c( outDist, ans3$EditDist)
+		outSeq <- c( outSeq, ans3$Sequence)
 	}
 
 	out <- data.frame( "SampleID"=sampleID, "Locus"=outLocus, "IMGT_Name"=outName, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
-	outfile <- paste( sampleID, "HLA.Calls.csv", sep=".")
+	
+	# since we have no idea how many HLA genes just got processed, and that each gene got written
+	# to it's own file, do not write out a 'all genes' File.  Instead, call the function to merge all
+	pipe.HLA.MergeGeneCalls( sampleID, results.path=results.path)
+	
+	return(out)
+}
+
+
+`pipe.HLA.MergeGeneCalls` <- function( sampleID=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	if ( length(sampleID) > 1) {
+		cat( "\nWarning: HLA merging requires a single 'sampleID'.  Using first..\n")
+		sampleID <- sampleID[1]
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
+	
+	# find all the single gene results
+	fset <- dir( HLAresults.path, pattern="Allele.Calls.csv$", full=T)
+	if ( ! length(fset)) {
+		cat( "\nWarning: found no HLA call files for sample: ", sampleID)
+		return(NULL)
+	}
+	out <- data.frame()
+	for ( f in fset) { 
+		tmp <- read.csv( f, as.is=T)
+		out <- rbind( out, tmp)
+	}
+	outfile <- paste( sampleID, "Merged.HLA.Calls.csv", sep=".")
+	outfile <- file.path( HLAresults.path, outfile)
+	write.csv( out, outfile, row.names=F)
+	return(out)
+}
+
+
+`pipe.HLA.Calls` <- function( sampleID=NULL, HLAgene=NULL, annotationFile="Annotation.txt", optionsFile="Options.txt",
+				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", verbose=TRUE) {
+
+	# path for all results
+	if ( is.null( results.path)) {
+		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+	}
+	if ( length(sampleID) > 1) {
+		cat( "\nWarning: HLA consensus requires a single 'sampleID'.  Using first..\n")
+		sampleID <- sampleID[1]
+	}
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
+	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
+	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
+
+	require( Biostrings)
+	data(BLOSUM62)
+
+	# do the gather of FASTA and calling of HLA locus for one gene
+	outLocus <- outName <- outDist <- outSeq <- NA
+	
+	# build the expected filenames we want/need
+	proteinFile <- file.path( consensusProteins.path, paste( sampleID, HLAgene, "FinalExtractedAA.fasta", sep="."))
+	if ( ! file.exists(proteinFile)) {
+		cat( "\nError:  final consensus HLA protein file not found.  Tried: ", proteinFile)
+		return(NULL)
+	}
+	hlaFA <- loadFasta( proteinFile, verbose=F)
+	proteins <- hlaFA$seq
+	if ( is.null( proteins) || !length(proteins)) return(NULL)
+	# the proteins may have gaps, stops, etc.  And never let more than top 2 alleles through
+	if ( length(proteins) > 2) proteins <- proteins[ 1:2]
+	proteins <- gsub( "*", "", proteins, fixed=T)
+	proteins <- gsub( "-", "", proteins, fixed=T)
+	proteins <- gsub( "X", "", proteins, fixed=T)
+	# small chance of getting back just one sequence
+	if ( is.na(proteins[2])) proteins[2] <- proteins[1]
+	# bail out if we got nothing
+	if ( nchar( proteins[1]) < 10) return(NULL)
+
+	# ready to make the HLA type calls for these
+	referenceAAfile <- paste( HLAgene, "AA.fasta", sep=".")
+	referenceAAfile <- file.path( IMGT.HLA.path, referenceAAfile)
+	if ( ! file.exists( referenceAAfile)) {
+		cat( "\nError:  failed to find Reference AA FASTA file: ", referenceAAfile)
+		return(NULL)
+	}
+	refAA <- loadFasta( referenceAAfile, short=T, verbose=F)
+	imgtIDs <- refAA$desc
+	imgtSeqs <- refAA$seq
+	# see which is closest match to what we have for our protein call
+	pa1 <- pairwiseAlignment( imgtSeqs, proteins[1], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
+	best1 <- which.max( pa1)
+	d1 <- adist( proteins[1], imgtSeqs[best1])[1]
+	nam1 <- paste( sampleID, "|", imgtIDs[best1], " EditDist=", d1, sep="")
+	pa2 <- pairwiseAlignment( imgtSeqs, proteins[2], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
+	best2 <- which.max( pa2)
+	d2 <- adist( proteins[2], imgtSeqs[best2])[1]
+	nam2 <- paste( sampleID, "|", imgtIDs[best2], " EditDist=", d2, sep="")
+
+	# Done:  Write the results
+	outFA <- as.Fasta( c( nam1, nam2), proteins)
+	outfile <- paste( sampleID, HLAgene, "AA.fasta", sep=".")
+	outfile <- file.path( HLAresults.path, outfile)
+	writeFasta( outFA, outfile, line=100)
+
+	outLocus <- rep.int( HLAgene, 2)
+	outName <- c( imgtIDs[best1], imgtIDs[best2])
+	outDist <- c( d1, d2)
+	outSeq <- c( proteins[1], proteins[2])
+
+	out <- data.frame( "SampleID"=sampleID, "Locus"=outLocus, "IMGT_Name"=outName, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
+	outfile <- paste( sampleID, HLAgene, "Allele.Calls.csv", sep=".")
 	outfile <- file.path( HLAresults.path, outfile)
 	write.csv( out, outfile, row.names=F)
 
@@ -201,7 +279,7 @@
 	hlaTbl <- data.frame()
 	for ( i in 1:N) {
 		sid <- sampleIDset[i]
-		my.file <- file.path( HLAresults.path, sid, paste( sid, "HLA.Calls.csv", sep="."))
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "Merged.HLA.Calls.csv", sep="."))
 		if ( ! file.exists( my.file)) {
 			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
 			next
@@ -256,7 +334,7 @@
 	hlaTbl <- data.frame()
 	for ( i in 1:N) {
 		sid <- sampleIDset[i]
-		my.file <- file.path( HLAresults.path, sid, paste( sid, "HLA.Calls.csv", sep="."))
+		my.file <- file.path( HLAresults.path, sid, paste( sid, "Merged.HLA.Calls.csv", sep="."))
 		if ( ! file.exists( my.file)) {
 			cat( "\nHLA Results file not found: ", my.file, "  Skipping..")
 			next
@@ -299,6 +377,6 @@
 	})
 	
 	out <- data.frame( "Locus"=levels(geneFac), "Allele.Calls"=namesOut, "Allele.Counts"=cntsOut, 
-			"All.Alleles.Frequencies"=fullOut, stringsAsFactors=F)
+			"All.Allele.Frequencies"=fullOut, stringsAsFactors=F)
 	return(out)
 }
