@@ -637,10 +637,10 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	}
 	
 	# render the data as a Manhattan plot
-	colSet <- rainbow( nHLA, end=0.7)
+	colSet <- rainbow( nHLA, end=0.65)
 	ptCol <- colSet[ match( bigOut$Locus, hlaNames)]
 	y <- -log10(bigOut$Pvalue)
-	bigY <- max( y, na.rm=T) * 1.05
+	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
 	mainText <- paste( "HLA Locus Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
 	plot( 1:nrow(qq), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
