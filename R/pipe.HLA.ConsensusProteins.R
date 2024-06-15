@@ -646,6 +646,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	plot( 1:nrow(bigOut), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
 		ylim=c(smlY, bigY), pch=19, col=ptCol, cex=0.8, yaxt="n")
 	axis( side=2, at=pretty( c(0,bigY)))
+	pv05 <- -log10( 0.05)
+	lines( c(-500,nrow(bigOut)*2), rep.int(pv05,2), lty=3, lwd=1, col='grey50')
+	text( nrow(bigOut)/2, pv05, "'P = 0.05' threshold", pos=3, col='grey50', cex=0.85)
 	starts <- match( hlaNames, bigOut$Locus)
 	stops <- c( (starts-1)[2:nHLA], nrow(bigOut))
 	rect( starts, smlY, stops, smlY*0.3, border='black', col=colSet, lwd=2)
