@@ -922,7 +922,7 @@ CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptio
 	gPos <- sort( c( cdsMap$POSITION, cdsMap$END))
 	# the very first and last are the gene ends
 	gPos <- gPos[ 2:(length(gPos)-1)]
-	# what's left should be end, beg, end, beg, etc.  Let's use jus the begin spots
+	# what's left should be end, beg, end, beg, etc.  Let's use just the begin spots
 	gPos <- gPos[ seq( 2, length(gPos), by=2)]
 	if ( !length(gPos)) return()
 

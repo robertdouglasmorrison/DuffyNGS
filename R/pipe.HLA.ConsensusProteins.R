@@ -643,7 +643,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
 	mainText <- paste( "HLA Locus Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
-	plot( 1:nrow(qq), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
+	plot( 1:nrow(bigOut), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
 		ylim=c(smlY, bigY), pch=19, col=ptCol, cex=0.8, yaxt="n")
 	axis( side=2, at=pretty( c(0,bigY)))
 	starts <- match( hlaNames, bigOut$Locus)
