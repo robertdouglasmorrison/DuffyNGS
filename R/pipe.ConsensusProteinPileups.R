@@ -416,7 +416,7 @@
 	}
 	if ( ! is.null( newCalls)) {
 		cat( "\nUpdating sequence after edits...")
-		aaAns <- consensusTranslation( newCalls$DNA, referenceAA=referenceAA)
+		aaAns <- consensusTranslation( newCalls$DNA, referenceAA=referenceAA, readingFrame=readingFrame)
 		dnaSeq <- paste( newCalls$DNA, collapse="")
 
 		# if we did an explicit frame shift, force keeping RF 1, don't let the consensus pick the best!

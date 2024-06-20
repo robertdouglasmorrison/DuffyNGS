@@ -447,7 +447,7 @@
 }
 
 
-`consensusTranslation` <- function( dna.consensus, referenceAA=NULL) {
+`consensusTranslation` <- function( dna.consensus, referenceAA=NULL, readingFrame=NULL) {
 
 	Ndna <- length( dna.consensus)
 	dnaNames <- names(dna.consensus)
@@ -462,12 +462,19 @@
 
 	consensusAA <- DNAtoAA( consensusDNA, clipAtStop=FALSE, readingFrames=1:3)
 	# how to choose the best frame:  if no hints, use number of stops, else use similarity to given reference
-	if ( is.null(referenceAA)) {
+	# note that choice 'BestFrame' is the default
+	if ( ! is.null(readingFrame) && readingFrame == "BestFrame") readingFrame <- NULL
+	if ( is.null(referenceAA) && is.null(readingFrame)) {
 		nStops <- base::sapply( gregexpr( STOP_CODON, consensusAA, fixed=T), length)
 		bestFrame <- base::which.min( nStops)
-	} else {
+	} else if ( ! is.null(referenceAA)) {
 		editDist <- adist( consensusAA, referenceAA[1])
 		bestFrame <- base::which.min( editDist[ ,1])
+	} else if ( ! is.null(readingFrame)) {
+		bestFrame <- base::match( readingFrame, c("Frame1","Frame2","Frame3"), nomatch=NA)
+		if (is.na(bestFrame)) stop( paste( "Invalid explicit reading frame: ", readingFrame))
+	} else {
+		bestFrame <- 1
 	}
 	aaVector <- base::strsplit( consensusAA, split="")
 	for ( frame in 1:3) {
