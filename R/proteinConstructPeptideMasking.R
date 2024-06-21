@@ -53,7 +53,7 @@
 			refCh <- substr( myDesc, j, j)
 			maskCh <- substr( mySeq, j, j)
 			if ( refCh == maskCh) {
-				cat( "\nWarning:  mask AA exactly matches reference AA at location", j, refCh, maskCH)
+				cat( "\nWarning:  mask AA exactly matches reference AA at location", j, refCh, maskCh)
 				cat( "\n  Double check mask for motif: ", myDesc, " <-> ", mySeq)
 				badCh <- TRUE
 			}
@@ -70,7 +70,7 @@
 		pa <- pairwiseAlignment( maskDesc[i], refAA, type='global-local', scoreOnly=FALSE)
 		maskScore[i] <- scorePerAA <- round( score(pa) / nchar(maskDesc[i]), digits=3)
 		if ( scorePerAA < 1) {
-			cat( "\nWarning:  mask name ", maskDesc[i], "has no good scoring match to Reference AA")
+			cat( "\nWarning:  mask name ", maskDesc[i], "has no good scoring match to Consensus AA")
 			next
 		} 
 		maskStart[i] <- start( subject(pa))
