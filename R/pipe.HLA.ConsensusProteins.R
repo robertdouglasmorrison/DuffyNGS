@@ -173,6 +173,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 
 	# set up to do fast sequence pattern comparison
 	require( Biostrings)
+	require( pwalign)
 	data(BLOSUM62)
 
 	# path for all results
@@ -186,9 +187,6 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
 	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
 	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
-
-	require( Biostrings)
-	data(BLOSUM62)
 
 	# do the gather of FASTA and calling of HLA locus for one gene
 	outLocus <- outName <- outDist <- outSeq <- NA

@@ -44,6 +44,7 @@
 	}
 
 	require( Biostrings)
+	require( pwalign)
 
 	# get the genome into vectors of bases
 	genomicFastaFile <- getOptionValue( optionsFile, "genomicFastaFile", verbose=verbose)
@@ -237,6 +238,7 @@
 	details <- rep.int( "", NG)
 
 	require( Biostrings)
+	require( pwalign)
 	data( BLOSUM62)
 
 	if (verbose) cat( "\n")

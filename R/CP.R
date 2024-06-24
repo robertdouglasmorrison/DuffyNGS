@@ -1,6 +1,7 @@
 # CP.R - Consensus Peptides
 
 require( Biostrings)
+require( pwalign)
 
 # constants for the Amino Acid residues
 N_RESIDUES <- 26

@@ -20,6 +20,7 @@ MAX_KMERS <- 250000000
 			"\nKmer Size:         \t", kmer.size, "\n")
 	}
 	require(Biostrings)
+	require( pwalign)
 
 	# file(s) to process comes from annotation and options...
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
@@ -54,6 +55,7 @@ MAX_KMERS <- 250000000
 
 	# let's try refactoring how we do this, to minimize memory usage, by switching to use Biostrings DNAString package
 	require( Biostrings)
+	require( pwalign)
 
 	# use one GLOBAL list of DNA strings and counts
 	bigKmerStrings <<- bigKmerCounts <<- vector( mode="list")
@@ -115,6 +117,7 @@ MAX_KMERS <- 250000000
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	kmer.path <- file.path( results.path, "Kmers")
 	require(Biostrings)
+	require( pwalign)
 
 	fileSet <- file.path( kmer.path, paste( sampleIDset, "Kmer", kmer.size, "Table.rda", sep="."))
 	found <- file.exists( fileSet)
@@ -648,6 +651,7 @@ MAX_KMERS <- 250000000
 		return( NULL)
 	}
 	require( Biostrings)
+	require( pwalign)
 	
 	# prep the cds protein sequence we will search for hits to
 	cds.seq <- as.character( cds.seq[1])
@@ -897,6 +901,7 @@ MAX_KMERS <- 250000000
 	# visit them in gene order to make it faster
 	geneFac <- factor( kmerAlignments$GENE_ID[ geneHits])
 	require(Biostrings)
+	require( pwalign)
 	data(BLOSUM62)
 
 	geneMap <- getCurrentGeneMap()
@@ -985,6 +990,7 @@ MAX_KMERS <- 250000000
 	# visit them in gene order to make it faster
 	geneFac <- factor( kmerAlignments$GENE_ID[ geneHits])
 	require(Biostrings)
+	require( pwalign)
 	data(BLOSUM62)
 
 	geneMap <- getCurrentGeneMap()
@@ -1065,6 +1071,7 @@ MAX_KMERS <- 250000000
 	conIn <- openCompressedFile( filein, open="r")
 	on.exit( close( conIn))
 	require(Biostrings)
+	require( pwalign)
 
 	# 4 lines per read
 	chunkSize <- buffer.size
@@ -1277,6 +1284,7 @@ mergeKmerChunks <- function( min.count) {
 	# the Kmers may be from both strands, and we only want to keep one form of each
 	# so merge those where both are present
 	require(Biostrings)
+	require( pwalign)
 	
 	# faster memory efficient to operate on one global vector
 	# stored as a list of DNASTrings and Counts

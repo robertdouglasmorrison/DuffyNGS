@@ -9,6 +9,7 @@
 	GAP <<- "-"
 	if ( is.null(substitutionMatrix)) {
 		require(Biostrings)
+		require( pwalign)
 		data( PAM70)
 		substitutionMatrix <- PAM70
 	}

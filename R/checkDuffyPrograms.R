@@ -23,7 +23,7 @@
 		Nfail <- Nfail + 1
 	} else {
 		ans <- system( "samtools --version", intern=T)
-		if ( length(ans) == 3) {
+		if ( length(ans) >= 3) {
 			cat( "\nsamtools:  version =", sub("samtools ","",ans[1]), "       path =", exe)
 			Nfound <- Nfound + 1
 		} else {
@@ -61,6 +61,21 @@
 			Nfound <- Nfound + 1
 		} else {
 			cat( "\npython2:  unexpected reply;\n", ans)
+			Nfail <- Nfail + 1
+		}
+	}
+	exe <- Sys.which( "python3")
+	if ( exe == "") {
+		cat( "\n'python3' is not in the current search path..")
+		Nfail <- Nfail + 1
+	} else {
+		ans <- system( "python3 --version  2>&1", intern=T)
+		#cat( "\nDebug: ", exe, "|", length(ans), "|", ans, "\n")
+		if ( length(ans) == 1) {
+			cat( "\npython3:   version =", sub("Python ","",ans[1]), "       path =", exe)
+			Nfound <- Nfound + 1
+		} else {
+			cat( "\npython3:  unexpected reply;\n", ans)
 			Nfail <- Nfail + 1
 		}
 	}

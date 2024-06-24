@@ -73,6 +73,7 @@
 	}
 	
 	require( Biostrings)
+	require( pwalign)
 	data( BLOSUM62)
 
 	if (verbose) cat( "\nExtracting cDNA from BAM consensus pileups:  N_Genes =", length(geneIDset), "\n")
