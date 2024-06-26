@@ -690,5 +690,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	text( (starts+stops)/2, smlY*0.65, showNames, font=2, cex=0.85)
 	
 	# done
+	outFile <- paste( "HLA.AminoAcid.Proportions_By.", groupColumn, ".csv", sep="")
+	write.csv( bigOut, outFile, row.names=F)
 	return( bigOut)
 }
