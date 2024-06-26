@@ -437,7 +437,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	padFactor <- 1.5
 	outLocus <- outAllele <- outPval <- vector()
 	outPcts <- matrix( NA, nrow=0, ncol=nGrp)
-	colnames(outPcts) <- grpNames
+	colnames(outPcts) <- paste( "Pct", grpNames, sep="_")
 	
 	for (hlagene in hlaNames) {
 		smlTbl <- subset( hlaTbl, Locus == hlagene)
@@ -488,7 +488,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 					}
 				}
 				outLocus <- c( outLocus, hlagene)
-				outAllele <- c( outAllele, alleleNames[j])
+				outAllele <- c( outAllele, colnames(pctsM)[j])
 				outPval <- c( outPval, fdr)
 				outPcts <- rbind( outPcts, t( pctsM[ , j, drop=FALSE]))
 			}
@@ -506,6 +506,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	# if we did the FDR, we have something to return
 	if (nFDR) {
 		out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outAllele, outPcts, "P.Value"=outPval, stringsAsFactors=F)
+		rownames(out) <- 1:nrow(out)
+		outFile <- paste( "HLA.Allele.Proportions_By.", groupColumn, ".csv", sep="")
+		write.csv( out, outFile, row.names=F)
 		return( out)
 	}
 }
