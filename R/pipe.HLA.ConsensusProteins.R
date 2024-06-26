@@ -436,6 +436,8 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	checkX11()
 	padFactor <- 1.5
 	outLocus <- outAllele <- outPval <- vector()
+	outPcts <- matrix( NA, nrow=0, ncol=nGrp)
+	colnames(outPcts) <- grpNames
 	
 	for (hlagene in hlaNames) {
 		smlTbl <- subset( hlaTbl, Locus == hlagene)
@@ -486,8 +488,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 					}
 				}
 				outLocus <- c( outLocus, hlagene)
-				outAllele <- c( outAllele, alleleName[j])
+				outAllele <- c( outAllele, alleleNames[j])
 				outPval <- c( outPval, fdr)
+				outPcts <- rbind( outPcts, t( pctM[ , j, drop=FALSE]))
 			}
 		}
 		
@@ -502,7 +505,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	
 	# if we did the FDR, we have something to return
 	if (nFDR) {
-		out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outAllele, "P.Value"=outPval, stringsAsFactors=F)
+		out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outAllele, outPcts, "P.Value"=outPval, stringsAsFactors=F)
 		return( out)
 	}
 }
