@@ -435,9 +435,12 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	# do each HLA gene separately
 	checkX11()
 	padFactor <- 1.5
+	outLocus <- outAllele <- outPval <- vector()
+	
 	for (hlagene in hlaNames) {
 		smlTbl <- subset( hlaTbl, Locus == hlagene)
-		nAlleles <- length( unique( smlTbl$Short_IMGT_Name))
+		alleleNames <- sort( unique( smlTbl$Short_IMGT_Name))
+		nAlleles <- length(alleleNames)
 		cntsM <- tapply( 1:nrow(smlTbl), list(factor(smlTbl$Group,levels=grpNames),factor(smlTbl$Short_IMGT_Name)), FUN=length)
 		cntsM[ is.na(cntsM)] <- 0
 		colnames(cntsM) <- sub( "^HLA\\-", "", colnames(cntsM))
@@ -482,6 +485,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 						text( xtxt-(nAlleles/20), ytxt+0.25, ptxt, cex=0.85, srt=90, pos=4, offset=1)
 					}
 				}
+				outLocus <- c( outLocus, hlagene)
+				outAllele <- c( outAllele, alleleName[j])
+				outPval <- c( outPval, fdr)
 			}
 		}
 		
@@ -492,6 +498,12 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		dev.flush();  Sys.sleep(1)
 		plotFile <- paste( "HLA.Allele.Proportions_", hlagene, "_By.", groupColumn, sep="")
 		printPlot( plotFile)
+	}
+	
+	# if we did the FDR, we have something to return
+	if (nFDR) {
+		out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outAllele, "P.Value"=outPval, stringsAsFactors=F)
+		return( out)
 	}
 }
 
