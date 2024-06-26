@@ -610,10 +610,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			# drop AA not seen by anyone
 			bigCnt <- apply( cntsM, 2, max)
 			cntsM <- cntsM[ , bigCnt > 0, drop=F]
-			SAV2 <<- cntsM
 			pv <- 1
 			if ( ncol(cntsM) > 1) {
-				# we got 2+ different AA detected, so we can ask if th groups are different
+				# we got 2+ different AA detected, so we can ask if the groups are different
 				if ( nrow(cntsM) == 2) {
 					test <- suppressWarnings( prop.test( t(cntsM)))
 					pv <- test$p.value
@@ -633,8 +632,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 							pvVec <- c( pvVec, test$p.value)
 						}
 					}
-					pv <- min( pvVec)
-					if ( pv < 0.05) SAV5 <<- pvVec
+					pv <- min( pvVec, na.rm=T)
 				}
 			}
 			outPos[i] <- i
@@ -652,7 +650,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			outPctStrs[ i, ] <- aaPctCalls
 			if ( i %% 50 == 0) cat( "\r", hla, i, pv, aaPctCalls)
 		}
-		out <- data.frame( "GENE_ID"=hla, "Position"=outPos, "Consensus.AA"=outAA, "P.Value"=round(outPval,digits=5),
+		out <- data.frame( "GENE_ID"=hla, "Position"=outPos, "Consensus.AA"=outAA, "P.Value"=outPval,
 				outPctStrs, stringsAsFactors=F)
 		rownames(out) <- 1:nrow(out)
 		return( out)
@@ -672,7 +670,11 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	# render the data as a Manhattan plot
 	colSet <- rainbow( nHLA, end=0.65)
 	ptCol <- colSet[ match( bigOut$GENE_ID, hlaNames)]
-	y <- -log10(bigOut$P.Value)
+	yData <- bigOut$P.Value
+	yData[ is.na(yData) | is.nan(yData)] <- 1
+	yData[ yData < 1e-10] <- 1e-10
+	SAV_YDATA <<- yData
+	y <- -log10( yData)
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
 	mainText <- paste( "HLA Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
