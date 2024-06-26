@@ -204,11 +204,11 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		proteinFile <- file.path( consensusProteins.path, paste( sampleID, HLAgene, "FinalExtractedAA.fasta", sep="."))
 		if ( ! file.exists(proteinFile)) {
 			cat( "\nError:  final consensus HLA protein file not found.  Tried: ", proteinFile)
-			return(NULL)
+			next
 		}
 		hlaFA <- loadFasta( proteinFile, verbose=F)
 		proteins <- hlaFA$seq
-		if ( is.null( proteins) || !length(proteins)) return(NULL)
+		if ( is.null( proteins) || !length(proteins)) next
 		# the proteins may have gaps, stops, etc.  And never let more than top 2 alleles through
 		if ( length(proteins) > 2) proteins <- proteins[ 1:2]
 		proteins <- gsub( "*", "", proteins, fixed=T)
@@ -217,7 +217,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		# small chance of getting back just one sequence
 		if ( is.na(proteins[2])) proteins[2] <- proteins[1]
 		# bail out if we got nothing
-		if ( nchar( proteins[1]) < 10) return(NULL)
+		if ( nchar( proteins[1]) < 10) next
 
 		# ready to make the HLA type calls for these
 		referenceAAfile <- paste( HLAgene, "AA.fasta", sep=".")
@@ -486,7 +486,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			# now see how often random was at least this different as the real data
 			for ( j in 1:nAlleles) {
 				nRandBetter <- sum( diffsByGrp[ , j] >= trueDiff[j])
-				fdr <- round( nRandBetter / nFDR, digits=3)
+				fdr <- round( nRandBetter / nFDR, digits=4)
 				if ( fdr <= 0.2) {
 					ptxt <- paste( "P=", fdr, sep="")
 					ytxt <- max( pctsM[ , j])
