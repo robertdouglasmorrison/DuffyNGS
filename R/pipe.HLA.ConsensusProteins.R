@@ -581,6 +581,8 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		tmpFA <- as.Fasta( desc, hlaTbl$Sequence[use])
 		writeFasta( tmpFA, tmpFasta, line=100)
 		aln <- mafft( tmpFasta, tmpALN, verbose=F)
+		# put the true full allele names into the MAFFT result
+		rownames(aln$alignment) <- desc
 		writeALN( aln, tmpALN, line=100)
 
 		aaM <- aln$alignment
