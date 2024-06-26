@@ -650,7 +650,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			outPctStrs[ i, ] <- aaPctCalls
 			if ( i %% 50 == 0) cat( "\r", hla, i, pv, aaPctCalls)
 		}
-		out <- data.frame( "GENE_ID"=hla, "Position"=outPos, "Consensus.AA"=outAA, "Pvalue"=round(outPval,digits=5),
+		out <- data.frame( "GENE_ID"=hla, "Position"=outPos, "Consensus.AA"=outAA, "P.Value"=round(outPval,digits=5),
 				outPctStrs, stringsAsFactors=F)
 		rownames(out) <- 1:nrow(out)
 		return( out)
@@ -670,7 +670,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	# render the data as a Manhattan plot
 	colSet <- rainbow( nHLA, end=0.65)
 	ptCol <- colSet[ match( bigOut$GENE_ID, hlaNames)]
-	y <- -log10(bigOut$Pvalue)
+	y <- -log10(bigOut$P.Value)
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
 	mainText <- paste( "HLA Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
