@@ -188,65 +188,75 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
 	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
 
-	# do the gather of FASTA and calling of HLA Gene for one gene
-	outGene <- outAllele <- outDist <- outSeq <- NA
+	if ( is.null( HLAgene)) {
+		HLAgeneSet <- ALL_HLA_GeneNames
+	} else {
+		HLAgeneSet <- HLAgene
+	}
 	
-	# build the expected filenames we want/need
-	proteinFile <- file.path( consensusProteins.path, paste( sampleID, HLAgene, "FinalExtractedAA.fasta", sep="."))
-	if ( ! file.exists(proteinFile)) {
-		cat( "\nError:  final consensus HLA protein file not found.  Tried: ", proteinFile)
-		return(NULL)
+	bigOut <- data.frame()
+	for ( HLAgene in HLAgeneSet) {
+	
+		# do the gather of FASTA and calling of HLA Gene for one gene
+		outGene <- outAllele <- outDist <- outSeq <- NA
+	
+		# build the expected filenames we want/need
+		proteinFile <- file.path( consensusProteins.path, paste( sampleID, HLAgene, "FinalExtractedAA.fasta", sep="."))
+		if ( ! file.exists(proteinFile)) {
+			cat( "\nError:  final consensus HLA protein file not found.  Tried: ", proteinFile)
+			return(NULL)
+		}
+		hlaFA <- loadFasta( proteinFile, verbose=F)
+		proteins <- hlaFA$seq
+		if ( is.null( proteins) || !length(proteins)) return(NULL)
+		# the proteins may have gaps, stops, etc.  And never let more than top 2 alleles through
+		if ( length(proteins) > 2) proteins <- proteins[ 1:2]
+		proteins <- gsub( "*", "", proteins, fixed=T)
+		proteins <- gsub( "-", "", proteins, fixed=T)
+		proteins <- gsub( "X", "", proteins, fixed=T)
+		# small chance of getting back just one sequence
+		if ( is.na(proteins[2])) proteins[2] <- proteins[1]
+		# bail out if we got nothing
+		if ( nchar( proteins[1]) < 10) return(NULL)
+
+		# ready to make the HLA type calls for these
+		referenceAAfile <- paste( HLAgene, "AA.fasta", sep=".")
+		referenceAAfile <- file.path( IMGT.HLA.path, referenceAAfile)
+			if ( ! file.exists( referenceAAfile)) {
+			cat( "\nError:  failed to find Reference AA FASTA file: ", referenceAAfile)
+			return(NULL)
+		}
+		refAA <- loadFasta( referenceAAfile, short=T, verbose=F)
+		imgtIDs <- refAA$desc
+		imgtSeqs <- refAA$seq
+		# see which is closest match to what we have for our protein call
+		pa1 <- pairwiseAlignment( imgtSeqs, proteins[1], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
+		best1 <- which.max( pa1)
+		d1 <- adist( proteins[1], imgtSeqs[best1])[1]
+		nam1 <- paste( sampleID, "|", imgtIDs[best1], " EditDist=", d1, sep="")
+		pa2 <- pairwiseAlignment( imgtSeqs, proteins[2], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
+		best2 <- which.max( pa2)
+		d2 <- adist( proteins[2], imgtSeqs[best2])[1]
+		nam2 <- paste( sampleID, "|", imgtIDs[best2], " EditDist=", d2, sep="")
+
+		# Done:  Write the results
+		outFA <- as.Fasta( c( nam1, nam2), proteins)
+		outfile <- paste( sampleID, HLAgene, "AA.fasta", sep=".")
+		outfile <- file.path( HLAresults.path, outfile)
+		writeFasta( outFA, outfile, line=100)
+
+		outGene <- rep.int( HLAgene, 2)
+		outAllele <- c( imgtIDs[best1], imgtIDs[best2])
+		outDist <- c( d1, d2)
+		outSeq <- c( proteins[1], proteins[2])
+		out <- data.frame( "SampleID"=sampleID, "GENE_ID"=outGene, "Allele"=outAllele, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
+		outfile <- paste( sampleID, HLAgene, "Allele.Calls.csv", sep=".")
+		outfile <- file.path( HLAresults.path, outfile)
+		write.csv( out, outfile, row.names=F)
+		
+		bigOut <- rbind( bigOut, out)
 	}
-	hlaFA <- loadFasta( proteinFile, verbose=F)
-	proteins <- hlaFA$seq
-	if ( is.null( proteins) || !length(proteins)) return(NULL)
-	# the proteins may have gaps, stops, etc.  And never let more than top 2 alleles through
-	if ( length(proteins) > 2) proteins <- proteins[ 1:2]
-	proteins <- gsub( "*", "", proteins, fixed=T)
-	proteins <- gsub( "-", "", proteins, fixed=T)
-	proteins <- gsub( "X", "", proteins, fixed=T)
-	# small chance of getting back just one sequence
-	if ( is.na(proteins[2])) proteins[2] <- proteins[1]
-	# bail out if we got nothing
-	if ( nchar( proteins[1]) < 10) return(NULL)
-
-	# ready to make the HLA type calls for these
-	referenceAAfile <- paste( HLAgene, "AA.fasta", sep=".")
-	referenceAAfile <- file.path( IMGT.HLA.path, referenceAAfile)
-	if ( ! file.exists( referenceAAfile)) {
-		cat( "\nError:  failed to find Reference AA FASTA file: ", referenceAAfile)
-		return(NULL)
-	}
-	refAA <- loadFasta( referenceAAfile, short=T, verbose=F)
-	imgtIDs <- refAA$desc
-	imgtSeqs <- refAA$seq
-	# see which is closest match to what we have for our protein call
-	pa1 <- pairwiseAlignment( imgtSeqs, proteins[1], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
-	best1 <- which.max( pa1)
-	d1 <- adist( proteins[1], imgtSeqs[best1])[1]
-	nam1 <- paste( sampleID, "|", imgtIDs[best1], " EditDist=", d1, sep="")
-	pa2 <- pairwiseAlignment( imgtSeqs, proteins[2], type="local", scoreOnly=T, substitutionMatrix=BLOSUM62)
-	best2 <- which.max( pa2)
-	d2 <- adist( proteins[2], imgtSeqs[best2])[1]
-	nam2 <- paste( sampleID, "|", imgtIDs[best2], " EditDist=", d2, sep="")
-
-	# Done:  Write the results
-	outFA <- as.Fasta( c( nam1, nam2), proteins)
-	outfile <- paste( sampleID, HLAgene, "AA.fasta", sep=".")
-	outfile <- file.path( HLAresults.path, outfile)
-	writeFasta( outFA, outfile, line=100)
-
-	outGene <- rep.int( HLAgene, 2)
-	outAllele <- c( imgtIDs[best1], imgtIDs[best2])
-	outDist <- c( d1, d2)
-	outSeq <- c( proteins[1], proteins[2])
-
-	out <- data.frame( "SampleID"=sampleID, "GENE_ID"=outGene, "Allele"=outAllele, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
-	outfile <- paste( sampleID, HLAgene, "Allele.Calls.csv", sep=".")
-	outfile <- file.path( HLAresults.path, outfile)
-	write.csv( out, outfile, row.names=F)
-
-	return(out)
+	return( bigOut)
 }
 
 
