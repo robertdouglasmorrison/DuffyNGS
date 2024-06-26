@@ -73,7 +73,7 @@
 	}
 	
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	data( BLOSUM62)
 
 	if (verbose) cat( "\nExtracting cDNA from BAM consensus pileups:  N_Genes =", length(geneIDset), "\n")

@@ -199,7 +199,7 @@
 	# a version of the CPP tool, specialized for our arbitrary "TargetSearch" workflow
 	
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# make sure we were given valid parameters..
 	if ( length(sampleID) > 1) {

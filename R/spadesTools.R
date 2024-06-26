@@ -46,7 +46,7 @@
 `makeSpadesPeptides` <- function( sampleID, outpath, keyword="Spades", short.desc=FALSE, verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# grab the final set of contigs from the Spades run
 	contigFile <- file.path( outpath, "contigs.fasta")
@@ -89,7 +89,7 @@
 `bestSpadesProteins` <- function( sampleID, outpath, keyword="Spades", proteinFastaFile, verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	data( PAM70)
 
 	# grab the set of peptides from the Velvet run

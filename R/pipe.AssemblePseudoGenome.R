@@ -19,7 +19,7 @@
 	}
 	startT <- proc.time()
 	require(Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# FASTQ file(s) to process comes from annotation and options...
 	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)

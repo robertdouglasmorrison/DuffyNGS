@@ -49,7 +49,7 @@
 	gc()
 	
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	startT <- proc.time()
 
@@ -163,7 +163,7 @@
 				nTermsBlastHit=4, useLog=NULL) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)

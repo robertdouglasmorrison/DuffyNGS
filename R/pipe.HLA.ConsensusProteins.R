@@ -673,7 +673,6 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	yData <- bigOut$P.Value
 	yData[ is.na(yData) | is.nan(yData)] <- 1
 	yData[ yData < 1e-10] <- 1e-10
-	SAV_YDATA <<- yData
 	y <- -log10( yData)
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15

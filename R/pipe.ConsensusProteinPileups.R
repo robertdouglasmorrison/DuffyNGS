@@ -10,7 +10,7 @@
 						referenceAA=NULL, intronMaskFasta=NULL) {
 
 	require(Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# make sure we were given valid parameters..
 	if ( length(sampleID) > 1) {
@@ -467,7 +467,7 @@
 				mode=c("normal", "TargetSearch"), referenceAA=NULL) {
 
 	require(Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# the gene name is used in all filenames, force it to be clean of special characters
 	geneName <- file.cleanSpecialCharactersFromFileName( geneName)
@@ -783,7 +783,7 @@ mergePeptideFiles <- function( infile1, infile2, outfile, mergeCountsMode=c("Fil
 	# find the best hits of this DNA context to any gene in the genome
 	cat( "\nSearching DNA of all genes..")
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	submat <- nucleotideSubstitutionMatrix()
 	scores1 <- pairwiseAlignment( fa$seq, dnaContext, type="local", substitutionMatrix=submat, scoreOnly=T)
 	names(scores1) <- fa$desc
@@ -944,7 +944,7 @@ CPP.AuditSummary <- function( sampleID, geneName="Varcsa", results.path=getOptio
 	if ( is.na(refProtein)) return()
 
 	require(Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	data( BLOSUM62)
 	myExonFrags <- substr( rep.int( refProtein,length(aaPos)), aaPos, aaPos+8)
 	myPA <- pairwiseAlignment( myExonFrags, refProtein, type="global-local", scoreOnly=F, 

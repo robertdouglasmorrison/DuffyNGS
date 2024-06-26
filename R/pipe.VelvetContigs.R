@@ -8,7 +8,7 @@
 		kmer.subfolder=FALSE, makePeptides=TRUE, keyword="Velvet", verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	if (verbose) {
 		cat( verboseOutputDivider)
@@ -82,7 +82,7 @@
 	if ( NK < 1) stop( "'kmerSizes' must be a vector of kmer lengths for Velvet")
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	optT <- readOptionsTable( optionsFile)
 	if ( is.null( results.path)) {
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)

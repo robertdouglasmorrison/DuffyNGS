@@ -8,7 +8,7 @@
 		kmerSizes=NULL, makePeptides=TRUE, folderName=NULL, keyword="Spades", verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	if (verbose) {
 		cat( verboseOutputDivider)

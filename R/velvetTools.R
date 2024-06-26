@@ -178,7 +178,7 @@
 `makeVelvetPeptides` <- function( sampleID, outpath, keyword="Velvet", verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# grab the final set of contigs from the Velvet run
 	contigFile <- file.path( outpath, "contigs.fa")
@@ -220,7 +220,7 @@
 `bestVelvetProteins` <- function( sampleID, outpath, keyword="Velvet", proteinFastaFile, verbose=TRUE) {
 
 	require( Biostrings)
-	require( pwalign)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 	data( PAM70)
 
 	# grab the set of peptides from the Velvet run
