@@ -67,8 +67,8 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		HLArefAA[ig] <- hlaFA$seq[1]
 	}
 	
-	# we will do each HLA locus all the way through
-	outLocus <- outName <- outDist <- outSeq <- vector()
+	# we will do each HLA gene all the way through
+	outGene <- outAllele <- outDist <- outSeq <- vector()
 	for ( i in 1:N_HLA) {
 		thisGene <- HLAgeneIDs[i]
 		thisName <- HLAgeneNames[i]
@@ -121,13 +121,13 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		ans3 <- pipe.HLA.Calls( sampleID, thisNameIn, results.path=results.path, IMGT.HLA.path=IMGT.HLA.path, verbose=verbose)
 
 		# accumulate results
-		outLocus <- c( outLocus, ans3$Locus)
-		outName <- c( outName, ans3$IMGT_Name)
+		outGene <- c( outGene, ans3$GENE_ID)
+		outAllele <- c( outAllele, ans3$Allele)
 		outDist <- c( outDist, ans3$EditDist)
 		outSeq <- c( outSeq, ans3$Sequence)
 	}
 
-	out <- data.frame( "SampleID"=sampleID, "Locus"=outLocus, "IMGT_Name"=outName, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
+	out <- data.frame( "SampleID"=sampleID, "GENE_ID"=outGene, "Allele"=outAllele, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
 	
 	# since we have no idea how many HLA genes just got processed, and that each gene got written
 	# to it's own file, do not write out a 'all genes' File.  Instead, call the function to merge all
@@ -188,8 +188,8 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	if ( ! file.exists( HLAresults.path)) dir.create( HLAresults.path, recursive=T)
 	consensusProteins.path <- file.path( results.path, "ConsensusProteins", sampleID)
 
-	# do the gather of FASTA and calling of HLA locus for one gene
-	outLocus <- outName <- outDist <- outSeq <- NA
+	# do the gather of FASTA and calling of HLA Gene for one gene
+	outGene <- outAllele <- outDist <- outSeq <- NA
 	
 	# build the expected filenames we want/need
 	proteinFile <- file.path( consensusProteins.path, paste( sampleID, HLAgene, "FinalExtractedAA.fasta", sep="."))
@@ -236,12 +236,12 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	outfile <- file.path( HLAresults.path, outfile)
 	writeFasta( outFA, outfile, line=100)
 
-	outLocus <- rep.int( HLAgene, 2)
-	outName <- c( imgtIDs[best1], imgtIDs[best2])
+	outGene <- rep.int( HLAgene, 2)
+	outAllele <- c( imgtIDs[best1], imgtIDs[best2])
 	outDist <- c( d1, d2)
 	outSeq <- c( proteins[1], proteins[2])
 
-	out <- data.frame( "SampleID"=sampleID, "Locus"=outLocus, "IMGT_Name"=outName, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
+	out <- data.frame( "SampleID"=sampleID, "GENE_ID"=outGene, "Allele"=outAllele, "EditDist"=outDist, "Sequence"=outSeq, stringsAsFactors=F)
 	outfile <- paste( sampleID, HLAgene, "Allele.Calls.csv", sep=".")
 	outfile <- file.path( HLAresults.path, outfile)
 	write.csv( out, outfile, row.names=F)
@@ -293,7 +293,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	}
 
 	# Ok, now summmarize each HLA gene by what alleles were seen.
-	geneFac <- factor( hlaTbl$Locus)
+	geneFac <- factor( hlaTbl$GENE_ID)
 	hlaGenes <- levels(geneFac)
 	NG <- length( hlaGenes)
 
@@ -307,9 +307,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		if ( ! nrow(smlTbl)) next
 		for (j in 1:NG) {
 			myGID <- hlaGenes[j]
-			tiny <- subset( smlTbl, Locus == myGID)
+			tiny <- subset( smlTbl, GENE_ID == myGID)
 			if ( ! nrow(tiny)) next
-			imgtNames <- tiny$IMGT_Name
+			imgtNames <- tiny$Allele
 			# remove the HLA prefix?...
 			imgtNames <- sub( "^HLA\\-", "", imgtNames)
 			imgtNames <- cropHLAsuffix( imgtNames, max.suffix=max.suffix)
@@ -348,10 +348,10 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	}
 
 	# Ok, now summmarize each HLA gene by what alleles were most often seen.
-	geneFac <- factor( hlaTbl$Locus)
+	geneFac <- factor( hlaTbl$GENE_ID)
 	namesOut <- cntsOut <- fullOut <- vector()
 	nOut <- 0
-	tapply( hlaTbl$IMGT_Name, geneFac, function(x) {
+	tapply( hlaTbl$Allele, geneFac, function(x) {
 		# given all the IMGT allele names for one gene from one subject
 		
 		# the alleles can have any number of ":xx:xx" suffix specifiers, that make calling common hits 
@@ -379,7 +379,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 					sep="", collapse="; ")
 	})
 	
-	out <- data.frame( "Locus"=levels(geneFac), "Allele.Calls"=namesOut, "Allele.Counts"=cntsOut, 
+	out <- data.frame( "GENE_ID"=levels(geneFac), "Allele.Calls"=namesOut, "Allele.Counts"=cntsOut, 
 			"All.Allele.Frequencies"=fullOut, stringsAsFactors=F)
 	return(out)
 }
@@ -419,31 +419,31 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		hlaTbl <- rbind( hlaTbl, smlTbl)
 	}
 	# shorten the allele calls to wanted specificity
-	hlaTbl$Short_IMGT_Name <- cropHLAsuffix( hlaTbl$IMGT_Name, max.suffix=max.suffix)
+	hlaTbl$Short_Allele <- cropHLAsuffix( hlaTbl$Allele, max.suffix=max.suffix)
 	if ( ! is.null( HLAgenes)) {
-		hlaTbl <- subset( hlaTbl, Locus %in% HLAgenes)
+		hlaTbl <- subset( hlaTbl, GENE_ID %in% HLAgenes)
 	}
 	
 	# set up to know breakdowns by group
 	grpFac <- factor( hlaTbl$Group)
 	grpNames <- levels(grpFac)
 	nGrp <- nlevels(grpFac)
-	hlaNames <- sort( unique( hlaTbl$Locus))
+	hlaNames <- sort( unique( hlaTbl$GENE_ID))
 	nHLA <- length( hlaNames)
 	colUse <- rep( col, length.out=nGrp)
 	
 	# do each HLA gene separately
 	checkX11()
 	padFactor <- 1.5
-	outLocus <- outAllele <- outPval <- vector()
+	outGene <- outAllele <- outPval <- vector()
 	outPcts <- matrix( NA, nrow=0, ncol=nGrp)
 	colnames(outPcts) <- paste( "Pct", grpNames, sep="_")
 	
 	for (hlagene in hlaNames) {
-		smlTbl <- subset( hlaTbl, Locus == hlagene)
-		alleleNames <- sort( unique( smlTbl$Short_IMGT_Name))
+		smlTbl <- subset( hlaTbl, GENE_ID == hlagene)
+		alleleNames <- sort( unique( smlTbl$Short_Allele))
 		nAlleles <- length(alleleNames)
-		cntsM <- tapply( 1:nrow(smlTbl), list(factor(smlTbl$Group,levels=grpNames),factor(smlTbl$Short_IMGT_Name)), FUN=length)
+		cntsM <- tapply( 1:nrow(smlTbl), list(factor(smlTbl$Group,levels=grpNames),factor(smlTbl$Short_Allele)), FUN=length)
 		cntsM[ is.na(cntsM)] <- 0
 		colnames(cntsM) <- sub( "^HLA\\-", "", colnames(cntsM))
 		# turn counts to percentages, within each group
@@ -465,7 +465,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			diffsByGrp <- matrix( NA, nrow=nFDR, ncol=nAlleles)
 			for ( ifdr in 1:nFDR) {
 				tmpTbl$Group <- sample( smlTbl$Group)
-				cntsM <- tapply( 1:nrow(tmpTbl), list(factor(tmpTbl$Group,levels=grpNames),factor(tmpTbl$Short_IMGT_Name)), FUN=length)
+				cntsM <- tapply( 1:nrow(tmpTbl), list(factor(tmpTbl$Group,levels=grpNames),factor(tmpTbl$Short_Allele)), FUN=length)
 				cntsM[ is.na(cntsM)] <- 0
 				colnames(cntsM) <- sub( "^HLA\\-", "", colnames(cntsM))
 				pcts2 <- cntsM
@@ -487,7 +487,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 						text( xtxt-(nAlleles/20), ytxt+0.25, ptxt, cex=0.85, srt=90, pos=4, offset=1)
 					}
 				}
-				outLocus <- c( outLocus, hlagene)
+				outGene <- c( outGene, hlagene)
 				outAllele <- c( outAllele, colnames(pctsM)[j])
 				outPval <- c( outPval, fdr)
 				outPcts <- rbind( outPcts, t( pctsM[ , j, drop=FALSE]))
@@ -505,7 +505,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	
 	# if we did the FDR, we have something to return
 	if (nFDR) {
-		out <- data.frame( "Locus"=outLocus, "IMGT_Name"=outAllele, outPcts, "P.Value"=outPval, stringsAsFactors=F)
+		out <- data.frame( "GENE_ID"=outGene, "Allele"=outAllele, outPcts, "P.Value"=outPval, stringsAsFactors=F)
 		rownames(out) <- 1:nrow(out)
 		outFile <- paste( "HLA.Allele.Proportions_By.", groupColumn, ".csv", sep="")
 		write.csv( out, outFile, row.names=F)
@@ -547,14 +547,14 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		hlaTbl <- rbind( hlaTbl, smlTbl)
 	}
 	if ( ! is.null( HLAgenes)) {
-		hlaTbl <- subset( hlaTbl, Locus %in% HLAgenes)
+		hlaTbl <- subset( hlaTbl, GENE_ID %in% HLAgenes)
 	}
 	
 	# set up to know breakdowns by group
 	grpFac <- factor( hlaTbl$Group)
 	grpNames <- levels(grpFac)
 	nGrp <- nlevels(grpFac)
-	hlaNames <- sort( unique( hlaTbl$Locus))
+	hlaNames <- sort( unique( hlaTbl$GENE_ID))
 	nHLA <- length( hlaNames)
 	
 	#  local function to assess one HLA group
@@ -564,9 +564,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		cat( "\nDoing MSA for: ", hla)
 		tmpFasta <- paste( hla, "AllSamples.AA.fasta", sep=".")
 		tmpALN <- paste( hla,"AllSamples.AA.aln", sep=".")
-		use <- which( hlaTbl$Locus == hla)
+		use <- which( hlaTbl$GENE_ID == hla)
 		# combine the sample ID and the IMGT allele name into the descriptor
-		desc <- paste( hlaTbl$SampleID[use], sub( "^HLA\\-", "", hlaTbl$IMGT_Name[use]), sep="_")
+		desc <- paste( hlaTbl$SampleID[use], sub( "^HLA\\-", "", hlaTbl$Allele[use]), sep="_")
 		tmpFA <- as.Fasta( desc, hlaTbl$Sequence[use])
 		writeFasta( tmpFA, tmpFasta, line=100)
 		aln <- mafft( tmpFasta, tmpALN, verbose=F)
@@ -639,13 +639,13 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			outPctStrs[ i, ] <- aaPctCalls
 			if ( i %% 50 == 0) cat( "\r", hla, i, pv, aaPctCalls)
 		}
-		out <- data.frame( "Locus"=hla, "Position"=outPos, "Consensus.AA"=outAA, "Pvalue"=round(outPval,digits=5),
+		out <- data.frame( "GENE_ID"=hla, "Position"=outPos, "Consensus.AA"=outAA, "Pvalue"=round(outPval,digits=5),
 				outPctStrs, stringsAsFactors=F)
 		rownames(out) <- 1:nrow(out)
 		return( out)
 	}
 
-	# now call it for each HLA locus
+	# now call it for each HLA Gene
 	bigOut <- data.frame()
 	for (hla in hlaNames) {
 		sml <- HLA.AA.Differences( hla)
@@ -658,7 +658,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	
 	# render the data as a Manhattan plot
 	colSet <- rainbow( nHLA, end=0.65)
-	ptCol <- colSet[ match( bigOut$Locus, hlaNames)]
+	ptCol <- colSet[ match( bigOut$GENE_ID, hlaNames)]
 	y <- -log10(bigOut$Pvalue)
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
@@ -670,7 +670,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	pv05 <- -log10( 0.05)
 	lines( c(-500,nrow(bigOut)*2), rep.int(pv05,2), lty=3, lwd=1, col='grey50')
 	text( nrow(bigOut)/2, pv05, "P=0.05 threshold", pos=3, col='grey50', cex=0.85)
-	starts <- match( hlaNames, bigOut$Locus)
+	starts <- match( hlaNames, bigOut$GENE_ID)
 	stops <- c( (starts-1)[2:nHLA], nrow(bigOut))
 	rect( starts, smlY, stops, smlY*0.3, border='black', col=colSet, lwd=2)
 	showNames <- hlaNames
