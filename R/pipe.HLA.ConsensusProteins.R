@@ -387,7 +387,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 
 `pipe.HLA.Allele.Proportions.ByGroup` <- function( sampleIDset, groupColumn="Group", HLAgenes=NULL, annotationFile="Annotation.txt", 
 						optionsFile="Options.txt", results.path=NULL, max.suffix=1, col=c(2,4), 
-						nFDR=1000) {
+						nFDR=1000, label=NULL) {
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -445,9 +445,11 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		pctsM <- cntsM
 		for ( k in 1:nGrp) pctsM[ k, ] <- round( cntsM[ k, ] * 100 / sum(cntsM[k,]), digits=2)
 		
+		mainText <- paste( "HLA Allele Proportions:   ", hlagene)
+		if ( ! is.null(label)) mainText <- paste( mainText, label, sep="\n")
 		barAns <- barplot( pctsM, beside=T, col=colUse, ylim=c( 0, max( max(pctsM,na.rm=T)*1.2, 50)), 
 				xlim=c(0.4,(nrow(cntsM)*ncol(cntsM)*padFactor)+1),
-				main=paste( "HLA Allele Proportions:   ", hlagene), ylab="Percentage of allele calls", 
+				main=mainText, ylab="Percentage of allele calls", 
 				xlab=NA, las=3, font.axis=2, font.lab=2, cex.axis=1.1, cex.lab=1.1, yaxt="n")
 		axis( side=2, seq( 0, 100, by=20))
 		
@@ -495,7 +497,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 
 
 `pipe.HLA.AminoAcid.Proportions.ByGroup` <- function( sampleIDset, groupColumn="Group", HLAgenes=NULL, annotationFile="Annotation.txt", 
-						optionsFile="Options.txt", results.path=NULL) {
+						optionsFile="Options.txt", results.path=NULL, label=NULL) {
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -643,6 +645,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	bigY <- max( c( 3, y), na.rm=T) * 1.05
 	smlY <- bigY * -0.15
 	mainText <- paste( "HLA Locus Amino Acid Differences by: ", groupColumn, "\n(", paste( grpNames, collapse=" .vs. "), ")")
+	if ( ! is.null(label)) mainText <- paste( mainText, label, sep="\n")
 	plot( 1:nrow(bigOut), y, main=mainText, xlab="Amino Acid location with each HLA Locus", ylab="-Log10( P.value)", 
 		ylim=c(smlY, bigY), pch=19, col=ptCol, cex=0.8, yaxt="n")
 	axis( side=2, at=pretty( c(0,bigY)))
