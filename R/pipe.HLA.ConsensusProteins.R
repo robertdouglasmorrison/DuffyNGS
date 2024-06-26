@@ -487,7 +487,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			for ( j in 1:nAlleles) {
 				nRandBetter <- sum( diffsByGrp[ , j] >= trueDiff[j])
 				fdr <- nRandBetter / nFDR
-				fdrText <- round( nRandBetter / nFDR, digits=4)
+				fdrText <- round( fdr, digits=4)
 				if ( fdr <= 0.2) {
 					ptxt <- paste( "P=", fdrText, sep="")
 					ytxt <- max( pctsM[ , j])
