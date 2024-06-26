@@ -490,7 +490,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 				outLocus <- c( outLocus, hlagene)
 				outAllele <- c( outAllele, alleleNames[j])
 				outPval <- c( outPval, fdr)
-				outPcts <- rbind( outPcts, t( pctM[ , j, drop=FALSE]))
+				outPcts <- rbind( outPcts, t( pctsM[ , j, drop=FALSE]))
 			}
 		}
 		
