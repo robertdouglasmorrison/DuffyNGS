@@ -476,7 +476,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 					ptxt <- paste( "P=", fdr, sep="")
 					ytxt <- max( pctsM[ , j])
 					xtxt <- mean( barAns[ ,j])
-					if ( nGrp < 10) {
+					if ( nAlleles <= 12) {
 						text( xtxt, ytxt, ptxt, cex=0.85, pos=3)
 					} else {
 						text( xtxt-(nAlleles/20), ytxt+0.25, ptxt, cex=0.85, srt=90, pos=4, offset=1)
