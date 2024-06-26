@@ -691,7 +691,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 	showNames[tooLong] <- sub( "^HLA\\-", "", showNames[tooLong])
 	text( (starts+stops)/2, smlY*0.65, showNames, font=2, cex=0.85)
 	dev.flush(); Sys.sleep(0.1)
-	plotFile <- paste( "HLA.AminoAcid.Proportions_By.", groupColumn, ".pdf", sep="")
+	plotFile <- paste( "HLA.AminoAcid.Proportions.ManhattanPlot_By.", groupColumn, ".pdf", sep="")
 	printPlot( plotFile)
 	
 	
