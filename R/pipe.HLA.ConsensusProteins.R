@@ -545,7 +545,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 		tmpFasta <- paste( hla, "AllSamples.AA.fasta", sep=".")
 		tmpALN <- paste( hla,"AllSamples.AA.aln", sep=".")
 		use <- which( hlaTbl$Locus == hla)
-		tmpFA <- as.Fasta( hlaTbl$SampleID[use], hlaTbl$Sequence[use])
+		# combine the sample ID and the IMGT allele name into the descriptor
+		desc <- paste( hlaTbl$SampleID[use], sub( "^HLA\\-", "", hlaTbl$IMGT_Name[use]), sep="_")
+		tmpFA <- as.Fasta( desc, hlaTbl$Sequence[use])
 		writeFasta( tmpFA, tmpFasta, line=100)
 		aln <- mafft( tmpFasta, tmpALN, verbose=F)
 		writeALN( aln, tmpALN, line=100)
