@@ -8,7 +8,7 @@
 
 
 `pipe.HLA.Expression` <- function( sampleIDset, hlaFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
-				results.path=NULL, verbose=TRUE) {
+				results.path=NULL, max.suffix=2, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
@@ -62,9 +62,13 @@
 	file.delete( bowtieFastaInputFile)
 	
 	# before we visit each sample, set up the storage and expression scaling info we will need
-	exprM <- matrix( NA, nrow=nAlleles, ncol=nSamples)
+	# note that for output of alleles, we allow combining of closely related alleles
+	allelesOut <- cropHLAsuffix( allelesSeen, max.suffix=max.suffix)
+	alleleNamesOut <- sort( unique( allelesOut))
+	nAllelesOut <- length( alleleNamesOut)
+	exprM <- matrix( NA, nrow=nAllelesOut, ncol=nSamples)
 	colnames(exprM) <- sampleIDset
-	rownames(exprM) <- allelesSeen
+	rownames(exprM) <- alleleNamesOut
 	nBasesPerAllele <- nchar( alleleFasta$seq)
 	
 	for ( j in 1:nSamples) {
@@ -92,8 +96,12 @@
 		
 		# step 4:  normalize and store
 		tpmUnits <- tpm( as.numeric( countsAns), geneLen=nBasesPerAllele)
-		wh <- match( allelesSeen, names(countsAns), nomatch=0)
-		exprM[ wh > 0, j] <- tpmUnits[ wh]
+		# map from the Bowtie naming back to our alleles
+		where <- match( names(countsAns), allelesSeen)
+		countNames <- allelesOut[where]
+		# sum by allele, to combine variants
+		tpmUnitsOut <- tapply( tpmUnits, factor( countNames, levels=alleleNamesOut), FUN=sum, na.rm=T)
+		exprM[ , j] <- tpmUnitsOut
 		
 		# step 5: clean up after each sample
 		file.delete( bamFile)
