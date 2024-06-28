@@ -109,7 +109,7 @@
 	# step 6: clean up after all samples
 	file.delete( c( bowtieFastaInputFile, bowtieTargetFile))
 
-	out <- data.frame( "Allele"=allelesSeen, round(exprM, digits=3), stringsAsFactors=F)
+	out <- data.frame( "Allele"=alleleNamesOut, round(exprM, digits=2), stringsAsFactors=F)
 	rownames(out) <- 1:nrow(out)
 	return(out)
 }
