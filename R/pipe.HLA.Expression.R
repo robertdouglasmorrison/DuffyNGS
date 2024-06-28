@@ -57,8 +57,8 @@
 	where <- match( allelesSeen, hlaFA$desc, nomatch=0)
 	alleleFasta <- as.Fasta( hlaFA$desc[where], hlaFA$seq[where])
 	writeFasta( alleleFasta, bowtieFastaInputFile, line=100)
-	buildCmd <- buildBowtie2BuildCommandLine( bowtieFastaInputFile, bowtieTargetFile, optionsFile="Options.txt", verbose=verbose)
-	catch.system( command=buildCmd, wait=T)
+	cmdLine <- buildBowtie2BuildCommandLine( bowtieFastaInputFile, bowtieTargetFile, optionsFile="Options.txt", verbose=verbose)
+	catch.system( command=paste( cmdLine, "  2>&1 "), intern=TRUE, wait=T)
 	file.delete( bowtieFastaInputFile)
 	
 	# before we visit each sample, set up the storage and expression scaling info we will need
