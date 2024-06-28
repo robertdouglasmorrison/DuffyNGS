@@ -21,7 +21,7 @@
 	hlaFA <- loadFasta( hlaFastaFile, verbose=verbose)
 
 	# path for all inputs and results
-	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls", sampleID)
+	HLAresults.path <- file.path( results.path, "HLA.ProteinCalls")
 	if ( ! file.exists( HLAresults.path)) {
 		cat( "\nError: Unable to find needed HLA allele calls directory: ", HLAresults.path)
 		return(NULL)
