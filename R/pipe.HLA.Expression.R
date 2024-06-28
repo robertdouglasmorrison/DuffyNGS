@@ -57,7 +57,7 @@
 	where <- match( allelesSeen, hlaFA$desc, nomatch=0)
 	alleleFasta <- as.Fasta( hlaFA$desc[where], hlaFA$seq[where])
 	writeFasta( alleleFasta, bowtieFastaInputFile, line=100)
-	cmdLine <- buildBowtie2BuildCommandLine( bowtieFastaInputFile, bowtieTargetFile, optionsFile="Options.txt", verbose=verbose)
+	cmdLine <- buildBowtie2BuildCommandLine( bowtieFastaInputFile, bowtieTargetFile, optionsFile="Options.txt", verbose=F)
 	catch.system( command=paste( cmdLine, "  2>&1 "), intern=TRUE, wait=T)
 	file.delete( bowtieFastaInputFile)
 	
@@ -107,8 +107,10 @@
 		file.delete( bamFile)
 	}
 	# step 6: clean up after all samples
-	file.delete( c( bowtieFastaInputFile, bowtieTargetFile))
-
+	file.delete( bowtieFastaInputFile)
+	bowtieTargetFiles <- paste( bowtieTargetFile, c("1.bt2","2.bt2","rev.1.bt2","rev.2.bt2","3.bt2","4.bt2"), sep=".")
+	file.delete( bowtieTargetFiles)
+	
 	out <- data.frame( "Allele"=alleleNamesOut, round(exprM, digits=2), stringsAsFactors=F)
 	rownames(out) <- 1:nrow(out)
 	return(out)
