@@ -93,7 +93,7 @@
 		# step 4:  normalize and store
 		tpmUnits <- tpm( as.numeric( countsAns), geneLen=nBasesPerAllele)
 		wh <- match( allelesSeen, names(countsAns), nomatch=0)
-		exprM[ wh > 0, j] <- tmpUnits[ wh]
+		exprM[ wh > 0, j] <- tpmUnits[ wh]
 		
 		# step 5: clean up after each sample
 		file.delete( bamFile)
