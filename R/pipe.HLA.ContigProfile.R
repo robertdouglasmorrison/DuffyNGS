@@ -13,7 +13,7 @@
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
 				notfound=".", verbose=F)
 
-	# make sure the reference file of var genes is readable
+	# make sure the reference file of HLA genes is readable
 	if ( ! file.exists( hlaFastaFile)) {
 		cat( "\nError: 'hlaFastaFile' of reference proteins not found: ", hlaFastaFile)
 		return(NULL)

@@ -7,7 +7,7 @@
 # expression
 
 
-`pipe.HLA.Expression` <- function( sampleIDset, hlaFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
+`pipe.HLA.Allele.Expression` <- function( sampleIDset, hlaFastaFile, annotationFile="Annotation.txt", optionsFile="Options.txt",
 				results.path=NULL, max.suffix=2, verbose=TRUE) {
 
 	if ( is.null( results.path)) results.path <- getOptionValue( optionsFile, "results.path", 
