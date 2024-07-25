@@ -870,6 +870,8 @@
 		alnFile <- file.path( outPath, paste( geneID, "BAM.Proteins.aln", sep="."))
 		#aln <- mafft( faFile, alnFile, mode='local', mafftArgs=" --anysymbol ", verbose=verbose)
 		aln <- mafft( faFile, alnFile, mode='local', mafftArgs="", verbose=verbose)
+		# put the true full allele names into the MAFFT result
+		rownames(aln$alignment) <- descs
 		writeALN( aln, alnFile, line.width=100)
 	}
 

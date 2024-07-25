@@ -310,6 +310,7 @@
 	}
 	finalSuffix <- paste( round( finalProportions), "%", sep="")
 	finalNames <- paste( finalNames, finalSuffix, sep="_")
+	names(finalAAseqs) <- finalNames
 	
 	if (verbose) cat( "\nFinal Extraction: \n", finalNames, "\nFinal Distance: ", finalDist)
 
@@ -320,6 +321,8 @@
 	alnFile <- file.path( peptide.path, paste( sampleID, geneName, "FinalExtractedAA.aln", sep="."))
 	if ( NPROT > 1) {
 		aln <- mafft( finalFile, alnFile)
+		# put the true full allele names into the MAFFT result
+		rownames(aln$alignment) <- finalNames
 		writeALN( aln, alnFile, line=100)	
 	} else {
 		# make sure any earlier result gets removed
@@ -424,5 +427,8 @@
 	
 	# now redo the MSA alignment again
 	aln <- mafft( finalFile, alnFile)
+	# put the true full allele names into the MAFFT result
+	tmpFA <- loadFasta( finalFile, verbose=F)
+	rownames(aln$alignment) <- tmpFA$desc
 	writeALN( aln, alnFile, line=100)	
 }

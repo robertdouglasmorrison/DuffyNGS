@@ -121,6 +121,8 @@
 }
 
 
+# as of recent SAMTOOLS version, the 2 ways for getting mpileup info are more distinct.
+# this one call SAMTOOLS version, to get raw base calls
 `BAM.mpileup` <- function( files, seqID, fastaFile, start=NULL, stop=NULL, min.depth=1, max.depth=10000,
 			min.gap.fraction=0.25, mpileupArgs="", summarize.calls=FALSE, verbose=TRUE) {
 
@@ -160,10 +162,9 @@
 	if ( ! is.null( stop)) region <- paste( region, as.integer(stop), sep="-")
 
 	samtools <- Sys.which( "samtools")
+	cmdline <- paste( samtools, " mpileup -A -B -r ", region, " -f ", fastaFile, 
+			" -d ", max.depth, mpileupArgs, " ", fileArg, " > ", tmpFile)
 	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
-	cmdline <- paste( samtools, " mpileup -A -B -r ", region, " -f ", fastaFile, " -m ", min.depth, 
-			" -d ", max.depth, " -F ", min.gap.fraction, " -L ", max.depth, 
-			" ", mpileupArgs, " ", fileArg, " > ", tmpFile)
 	if ( !verbose) cmdline <- paste( cmdline, "  2> /dev/null")
 
 	if (verbose) cat( "\nGenerating Pileups for ", region, " of:  ", basename(files), "\n")
@@ -223,10 +224,8 @@
 	if ( ! is.null( start)) region <- paste( region, as.integer(start), sep=":")
 	if ( ! is.null( stop)) region <- paste( region, as.integer(stop), sep="-")
 
-	samtools <- Sys.which( "samtools")
-	if ( samtools == "") stop( "Executable not found on search path:  'samtools'")
 	bcftools <- Sys.which( "bcftools")
-	if ( samtools == "") stop( "Executable not found on search path:  'bcftools'")
+	if ( bcftools == "") stop( "Executable not found on search path:  'bcftools'")
 
 	# as of SAMTOOLS ~1.6, the ploidy is not numeric again...
 	ploidyArg <- if ( ploidy == 1) " --ploidy 1 " else ""
@@ -239,10 +238,6 @@
 	out <- data.frame()
 	for (thisCallMode in callModes) {
 
-		# as of SAMTOOLS ~1.6 and up, the MPILEUP call for doing variant calling has changed!
-		#cmdline <- paste( samtools, " mpileup -A -B -v -u -t DP -r ", region, " -f ", fastaFile, 
-		#		" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
-		#		" -L", max.depth, mpileupArgs, "  ", fileArg, 
 		cmdline <- paste( bcftools, " mpileup -A -B -r ", region, " -f ", fastaFile, " -Q ", min.qual, " -x ",
 				" -d ", max.depth, " -m ", min.depth, " -F", min.gap.fraction,
 				" -L", max.depth, " --no-version ", mpileupArgs, "  ", fileArg, 
