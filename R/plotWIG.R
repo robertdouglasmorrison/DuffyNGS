@@ -352,6 +352,7 @@
 	totalReadsPerWIG <- vector( length=nWIG)
 	medianDepthPerWIG <- vector( length=nWIG)
 	MIN_TOTAL_READS_SCALING <- 100000
+	MIN_MEDIAN_READS_SCALING <- 10
 	if ( dataType == "DNA-seq") {
 	    for( i in 1:nWIG) {
 		thisInfo <- WIGlist[[i]]$Info
@@ -361,7 +362,8 @@
 			stop( "All WIG datasets are not the same speicesID")
 		}
 		thisDepthM <- thisInfo$MedianDepth
-		medianDepthPerWIG[i] <- median( apply( thisDepthM, MARGIN=1, sum, na.rm=T))
+		# don't let very low counts turn into very high scaling...
+		medianDepthPerWIG[i] <- median( pmax( apply( thisDepthM, MARGIN=1, sum, na.rm=T), MIN_MEDIAN_READS_SCALING))
 	    }
 	} else {
 	    for( i in 1:nWIG) {
