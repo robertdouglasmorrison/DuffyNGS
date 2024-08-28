@@ -251,6 +251,7 @@
 				rownames(depthM) <- c( "Plus", "Minus")
 				colnames(depthM) <- seqSet
 				depthM <- t( depthM)
+				depthM[ is.na(depthM)] <- 0
 			}
 
 			sums <- apply( countsM, MARGIN=2, sum, na.rm=T)
