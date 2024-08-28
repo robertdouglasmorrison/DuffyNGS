@@ -70,7 +70,7 @@ function( inputFastqFile, outputFile=sub( "fastq$", "bam", inputFastqFile[1]),
 	}
 	
 	# next is threads
-	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=verbose))
+	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="1", verbose=verbose))
 	out <- mypaste( out, " --threads", nCores)
 
 	# next is "other options"
@@ -132,7 +132,7 @@ function( inputFastaFile, outputIndexFile, optionsFile="Options.txt", verbose=TR
 	out <- progName
 
 	# next is threads
-	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="4", verbose=verbose))
+	nCores <- as.integer( getOptionValue( optT, "nCores", notfound="1", verbose=verbose))
 	out <- base::paste( out, " --threads", nCores)
 
 	out <- base::paste( out, " -f", paste(inputFastaFile,collapse=","))

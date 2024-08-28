@@ -16,7 +16,7 @@
 	target <- getAndSetTarget( optionsFile, sampleID=sampleID, annotationFile=annotationFile)
 	readBufferSize <- as.numeric( getOptionValue( optT, "readBufferSize", notfound="1000000"))
 	if ( multicore.currentCoreCount() < 2) {
-		nCores <- as.integer( getOptionValue( optT, "nCores", notfound=4))
+		nCores <- as.integer( getOptionValue( optT, "nCores", notfound=2))
 		multicore.setup( nCores)
 	}
 
