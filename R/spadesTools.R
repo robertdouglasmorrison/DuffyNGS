@@ -3,7 +3,7 @@
 
 `makeSpadesContigs` <- function( fastaFile, outpath, spades.path=dirname(Sys.which("spades.py")), 
 				spades.mode=c("isolate","rna","meta", "bio", "plasmid", "metaplasmid"), 
-				kmerSizes=NULL, spades.args="", doPairedEnd=FALSE, verbose=FALSE) {
+				kmerSizes=NULL, minLength=NULL, spades.args="", doPairedEnd=FALSE, verbose=FALSE) {
 
 	# in general, SPAdes wants an empty folder
 	if ( file.exists( outpath)) {
@@ -40,6 +40,19 @@
 	#SPAdes is very verbose, never show it..
 	systemAns <- catch.system( cmdline, intern=TRUE)
 	cat( "  Done.\n")
+
+	# if we asked for a minimum contig length, do that down-selection now
+	if ( ! is.null( minLength)) {
+		contigFasta <- file.path( out.path, "contigs.fasta")
+		if ( file.exists( contigFasta)) {
+			cat( "\nRemoving short contigs less than", minLength, "basepairs long..")
+			fa <- loadFasta( contigFasta, verbose=F, short.desc=F)
+			len <- nchar( fa$seq)
+			keep <- which( len >= minLength)
+			writeFasta( as.Fasta( fa$desc[keep], fa$seqi[keep]), contigFasta, line=100)
+			cat( "  Kept", length(keep), "contigs.\n")
+		}
+	}
 }
 
 

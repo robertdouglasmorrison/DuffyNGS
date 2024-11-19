@@ -5,7 +5,8 @@
 		annotationFile="Annotation.txt", optionsFile="Options.txt", 
 		results.path=NULL, spades.path=dirname(Sys.which("spades.py")),
 		spades.mode=c("isolate","rna","meta"), spades.args="", pairedEnd=NULL,
-		kmerSizes=NULL, makePeptides=TRUE, folderName=NULL, keyword="Spades", verbose=TRUE) {
+		kmerSizes=NULL, minLength=200, makePeptides=TRUE, folderName=NULL, 
+		keyword="Spades", verbose=TRUE) {
 
 	require( Biostrings)
 	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
@@ -57,7 +58,7 @@
 	}
 
 	ans <- makeSpadesContigs( fastqFile, outpath=outpath, spades.path=spades.path, 
-			spades.mode=spades.mode, kmerSizes=kmerSizes, 
+			spades.mode=spades.mode, kmerSizes=kmerSizes, minLength=minLength, 
 			spades.args=spades.args, doPairedEnd=doPairedEnd, verbose=verbose)
 
 	if ( makePeptides) {
