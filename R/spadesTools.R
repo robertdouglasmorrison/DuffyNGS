@@ -49,7 +49,7 @@
 			fa <- loadFasta( contigFasta, verbose=F, short.desc=F)
 			len <- nchar( fa$seq)
 			keep <- which( len >= minLength)
-			writeFasta( as.Fasta( fa$desc[keep], fa$seqi[keep]), contigFasta, line=100)
+			writeFasta( as.Fasta( fa$desc[keep], fa$seq[keep]), contigFasta, line=100)
 			cat( "  Kept", length(keep), "contigs.\n")
 		}
 	}
