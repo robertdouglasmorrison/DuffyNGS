@@ -43,7 +43,7 @@
 
 	# if we asked for a minimum contig length, do that down-selection now
 	if ( ! is.null( minLength)) {
-		contigFasta <- file.path( out.path, "contigs.fasta")
+		contigFasta <- file.path( outpath, "contigs.fasta")
 		if ( file.exists( contigFasta)) {
 			cat( "\nRemoving short contigs less than", minLength, "basepairs long..")
 			fa <- loadFasta( contigFasta, verbose=F, short.desc=F)
