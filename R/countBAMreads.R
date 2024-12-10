@@ -1,4 +1,4 @@
-# countUniqueAndMultiReads.R
+# countBAMReads.R -- count reads in a BAM file
 
 
 `countUniqueAndMultiReads` <- function( filein, readBufferSize=1000000, verbose=TRUE) {
