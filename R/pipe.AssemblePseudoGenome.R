@@ -15,6 +15,7 @@
 	if (verbose) {
 		cat( verboseOutputDivider)
 		cat( "\nStarting  'AssemblePseudoGenome' on Sample:     ", sampleID,
+			"\nCurrent Species: ", getCurrentSpecies(), 
 			"\nStart Date/Time:   \t", date(), "\n")
 	}
 	startT <- proc.time()

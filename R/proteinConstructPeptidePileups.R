@@ -315,6 +315,7 @@
 				aaCalls[ useY, xLoc:myEnd ] <<- myAAs[ 1:(myEnd-xLoc+1)]
 				aaWeights[ useY, xLoc:myEnd ] <<- myWts[j]
 			}
+			dev.flush()
 
 			# if we have alternate reading frame sequences, 
 			# then try to place the peptides not yet placed...
