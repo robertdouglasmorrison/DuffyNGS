@@ -1,12 +1,12 @@
 # extractRiboClearSummaryDetails.R -- pull the key values out of the summary text file
 
-`extractRiboClearSummaryDetails` <- function( sampleID, optionsFile="Options.txt", 
-			results.path=NULL, speciesID="Hs_grc", cleared=c("18S/28S", "Globin", "Mito_RNA")) {
+`extractRiboClearSummaryDetails` <- function( sampleIDset, optionsFile="Options.txt", 
+			results.path=NULL, speciesID=getCurrentSpecies(), cleared=c("18S/28S", "Globin", "Mito_RNA")) {
 
 	nRaw <- nRibo <- vector()
 	pRaw <- pRibo <- vector()
-	nCLEAR <- matrix( 0, nrow=length(sampleID), ncol=length(cleared))
-	pCLEAR <- matrix( "", nrow=length(sampleID), ncol=length(cleared))
+	nCLEAR <- matrix( 0, nrow=length(sampleIDset), ncol=length(cleared))
+	pCLEAR <- matrix( "", nrow=length(sampleIDset), ncol=length(cleared))
 	colnames(nCLEAR) <- paste( "N", cleared, sep="_")
 	colnames(pCLEAR) <- paste( "P", cleared, sep="_")
 	nout <- 0
@@ -58,8 +58,8 @@
 	}
 
 
-
-	for ( s in sampleID) {
+	sidOut <- vector()
+	for ( s in sampleIDset) {
 
 		file <- paste( s, "ribo.Summary.txt", sep=".")
 		file <- file.path( results.path, "summary", file)
@@ -102,13 +102,14 @@
 		nRibo[nout] <- nribo
 		pRibo[nout] <- as.percent( nribo, big.value=nraw, percentSign=F)
 		nCLEAR[ nout, ] <- nclears
+		sidOut[nout] <- s
 	}
-	nCLEAR <- nCLEAR[ 1:nout, ]
+	nCLEAR <- nCLEAR[ 1:nout, , drop=FALSE]
 	for (j in 1:ncol(nCLEAR)) {
 		pCLEAR[ , j] <- as.percent( nCLEAR[ ,j], big.value=nraw, percentSign=F)
 	}
 
-	out <- data.frame( "SampleID"=sampleID, "RawReads"=nRaw, 
+	out <- data.frame( "SampleID"=sidOut, "RawReads"=nRaw, 
 			 "N_RiboClear"=nRibo, "P_RiboClear"=pRibo,
 			 nCLEAR, pCLEAR, stringsAsFactors=FALSE)
 	rownames(out) <- 1:nrow(out)
