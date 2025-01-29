@@ -157,7 +157,7 @@
 	if ( geneName == "Var2csa") {
 		yLocs <- c( -2.4, maxDepth + 3.4)
 		rectHalfHt <- 0.6
-		domAns <- findVar2csaDomains( aaSeq=construct, minScorePerAA=2, one.time=F, plot.Y=yLocs, 
+		domAns <- findVar2csaDomains( aaSeq=construct, minScorePerAA=1.5, one.time=F, plot.Y=yLocs, 
 				rect.halfHeight=rectHalfHt, rect.border='white',
 				rect.lwd=0.5, rect.fill='gold', text.cex=txt.cex, text.X.repeat=35)
 	}
