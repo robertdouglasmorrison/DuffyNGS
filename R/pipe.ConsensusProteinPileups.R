@@ -255,7 +255,7 @@
 }
 
 
-`inspectConsensus` <- function( sampleID, geneName="Var2csa", context=NULL, extra.rows=3,
+`inspectConsensus` <- function( sampleID, geneName="Var2csa", context=NULL, location=NULL, extra.rows=3,
 				readingFrame=c("BestFrame","Frame1","Frame2","Frame3"), 
 				optionsFile="Options.txt", results.path=NULL, peptide.path=NULL,
 				referenceAA=NULL) {
@@ -279,19 +279,25 @@
 	# when we read in the call table
 	if ( all( is.na( calls$IndelDetails))) calls$IndelDetails <- ""
 
-	# find that AA context
-	context <- toupper( context)
-	contextStart <- gregexpr( context, aaSeq, fixed=T)[[1]]
-	if ( contextStart[1] < 1) {
-		cat( "\nFailed to find 'context' in AA sequence: ", context)
-		return(NULL)
+	# find that AA context, or use explicit location
+	if ( ! is.null(location)) {
+		contextStart <- min( as.integer(location))
+		contextStop <- max( as.integer(location))
+		if (contextStop > nchar(aaSeq)) contextStop <- nchar(aaSeq
+	} else {
+		context <- toupper( context)
+		contextStart <- gregexpr( context, aaSeq, fixed=T)[[1]]
+		if ( contextStart[1] < 1) {
+			cat( "\nFailed to find 'context' in AA sequence: ", context)
+			return(NULL)
+		}
+		if ( length(contextStart) > 1) {
+			cat( "\nNon-unique 'context' in AA sequence: ", context, "\tN_times: ", length(contextStart))
+			cat( "\nSites at: ", contextStart)
+			return(NULL)
+		}
+		contextStop <- contextStart + nchar( context) - 1
 	}
-	if ( length(contextStart) > 1) {
-		cat( "\nNon-unique 'context' in AA sequence: ", context, "\tN_times: ", length(contextStart))
-		cat( "\nSites at: ", contextStart)
-		return(NULL)
-	}
-	contextStop <- contextStart + nchar( context) - 1
 	contextStr <- substr( aaSeq, contextStart, contextStop)
 	cat( "\nContext location: ", contextStart, contextStop, contextStr)
 
