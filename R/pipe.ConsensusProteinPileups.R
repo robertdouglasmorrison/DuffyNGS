@@ -283,7 +283,7 @@
 	if ( ! is.null(location)) {
 		contextStart <- min( as.integer(location))
 		contextStop <- max( as.integer(location))
-		if (contextStop > nchar(aaSeq)) contextStop <- nchar(aaSeq
+		if (contextStop > nchar(aaSeq)) contextStop <- nchar(aaSeq)
 	} else {
 		context <- toupper( context)
 		contextStart <- gregexpr( context, aaSeq, fixed=T)[[1]]
