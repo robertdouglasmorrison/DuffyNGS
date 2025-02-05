@@ -570,6 +570,14 @@
 	# store it
 	outDF$AA <- ""
 	aaVec <- base::strsplit( testAA, split="")[[1]]
+	# we have rare chance for sizes to not match up here.  So pre-check lengths, and crop if needed
+	naa <- length(aaVec)
+	ndf <- nrow(outDF)
+	if ( naa > ndf) {
+		length(aaVec) <- ndf
+	} else if ( naa < ndf) {
+		outDF <- outDF[ 1:naa, ]
+	}
 	outDF$AA[ seq( 2, nrow(outDF), by=3)] <- aaVec
 	
 	# and restore all the reading frames

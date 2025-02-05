@@ -584,6 +584,8 @@
 		if ( ! is.null( extra.fastq.keyword)) {
 			cat( "  extra FASTQ:  ")
 			for ( keyword in extra.fastq.keyword) {
+				# don't let our gene also be in the extras
+				if ( keyword == geneName) next
 				extraFile <- file.path( results.path, "fastq", paste( sampleID, keyword, "fastq.gz", sep="."))
 				allReadsFiles <- c( allReadsFiles, extraFile)
 				cat( "  ", keyword)
