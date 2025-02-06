@@ -424,7 +424,7 @@
 			for ( extraName in extraGeneNames) {
 				extraReadsFile <- file.path( peptide.path, paste( sampleID, extraName, "RawReadPeptides.txt", sep="."))
 				if ( ! file.exists( extraReadsFile)) next
-				cat( "\nReading Extra Gene peptides file: ", extraReadsFile)
+				cat( "Reading Extra Gene peptides file: ", extraReadsFile)
 				vgTbl2 <- read.delim( extraReadsFile, as.is=T)
 				cat( "\nDone.  \tN_Extra_Peptides:  ", nrow(vgTbl2), "\n")
 				vgTbl <- rbind( vgTbl, vgTbl2)

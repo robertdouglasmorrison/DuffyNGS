@@ -173,7 +173,7 @@
 			}
 		}
 	}
-	if ( maxNoHits && (forceSetup || ! file.exists( nohitPeptidesFile))) {
+	if ( maxNoHits && ! file.exists( nohitPeptidesFile)) {
 		cat( "\nConverting 'NoHit' reads to peptides..  Takes quite a while..")
 		cat( "\nBase Trimming:     5' =", trim5.nohits, "    3' =", trim3.nohits)
 		multicore.setup(10)
