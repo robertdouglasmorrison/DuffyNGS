@@ -7,7 +7,7 @@
 						trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 						draw.box=FALSE, chunkSize.pileup=50000, useCutadapt=FALSE,
 						startFromReference=FALSE, clipAtStop=TRUE, showFrameShiftPeptides=TRUE,
-						referenceAA=NULL, intronMaskFasta=NULL) {
+						referenceAA=NULL, extraGeneIDs=NULL, extraGeneNames=NULL, intronMaskFasta=NULL) {
 
 	require(Biostrings)
 	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
@@ -36,7 +36,7 @@
 				trim5.aligns=trim5.aligns, trim3.aligns=trim3.aligns, 
 				trim5.nohits=trim5.nohits, trim3.nohits=trim3.nohits,
 				useCutadapt=useCutadapt, startFromReference=startFromReference, clipAtStop=clipAtStop,
-				referenceAA=referenceAA)
+				referenceAA=referenceAA, extraGeneIDs=extraGeneIDs, extraGeneNames=extraGeneNames)
 	if ( nAA < 1) {
 		cat( "\nSetting up for CPP gave an empty protein sequence..")
 		return(NULL)
@@ -64,7 +64,7 @@
 				max.depth=max.depth, pct.aligned.depth=pct.aligned.depth, max.drawnPerSite=max.drawnPerSite, 
 				mode=mode, draw.box=draw.box,
 				chunkSize=chunkSize.pileup, showFrameShiftPeptides=showFrameShiftPeptides,
-				referenceAA=referenceAA, intronMaskFasta=intronMaskFasta)
+				referenceAA=referenceAA, extraGeneNames=extraGeneNames, intronMaskFasta=intronMaskFasta)
 
 	# record metrics to the audit file
 	writeAuditRecord( peptide.path, sampleID, geneName, mode="Pileup", info=consensusAns)
@@ -96,7 +96,7 @@
 					optionsFile="Options.txt", results.path=NULL, exon=NULL, 
 					trim5.aligns=0, trim3.aligns=0, trim5.nohits=0, trim3.nohits=0,
 					forceSetup=FALSE, useCutadapt=FALSE, startFromReference=FALSE, 
-					clipAtStop=TRUE, referenceAA=NULL, ...) {
+					clipAtStop=TRUE, referenceAA=NULL, extraGeneIDs=NULL, extraGeneNames=NULL, ...) {
 
 	if ( is.null(results.path)) results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
 	peptide.path <- file.path( results.path, "ConsensusProteins", sampleID)
@@ -151,6 +151,23 @@
 		if (nPeptides < 1) {
 			cat( "\nGene alignments gave zero peptides..")
 			return( 0)
+		}
+		madeAnyFiles <- TRUE
+	}
+	# if we were given extra genes (high similarity to include), make peptides from them too
+	if ( ! is.null( extraGeneNames)) {
+		extraGeneIDs <- setdiff( extraGeneIDs, geneID)
+		extraGeneNames <- setdiff( extraGeneNames, geneName)
+		for ( k in 1:length(extraGeneNames)) {
+			extraID <- extraGeneIDs[k]
+			extraName <- extraGeneNames[k]
+			cat( "\nExtracting Extra Gene alignments: ", extraID)
+			extraReadsFile <- file.path( results.path, "fastq", paste( sampleID, extraName, "fastq.gz", sep="."))
+			extraPeptidesFile <- file.path( peptide.path, paste( sampleID, extraName, "RawReadPeptides.txt", sep="."))
+			nExtra <- pipe.GatherGeneAlignments( sampleID, extraID, tail=100, asFASTQ=T, fastq.keyword=extraName)
+			if ( ! nExtra) next
+			nExtraPeps <- fastqToPeptides( extraReadsFile, extraPeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
+				trim5=trim5.aligns, trim3=trim3.aligns, clipAtStop=FALSE)
 		}
 		madeAnyFiles <- TRUE
 	}

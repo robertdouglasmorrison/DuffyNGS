@@ -6,7 +6,7 @@
 					constructName=paste(sampleID,geneName,sep="_"), 
 					txt.cex=0.25, maxNoHits=1000000, max.depth=60, pct.aligned.depth=0.75, 
 					max.drawnPerSite=3, mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
-					showFrameShiftPeptides=TRUE, intronMaskFasta=NULL, ...) {
+					showFrameShiftPeptides=TRUE, extraGeneNames=NULL, intronMaskFasta=NULL, ...) {
 
 	SAPPLY <- base::sapply
 	WHICH <- base::which
@@ -418,6 +418,18 @@
 		cat( "\nReading Gene peptides file: ", alignedReadsFile)
 		vgTbl <- read.delim( alignedReadsFile, as.is=T)
 		cat( "\nDone.  \tN_Peptides:  ", nrow(vgTbl), "\n")
+		# see if we were given any extra gene names to also try to draw, like from highly similar genes
+		if ( ! is.null( extraGeneNames)) {
+			extraGeneNames <- setdiff( extraGeneNames, geneName)
+			for ( extraName in extraGeneNames) {
+				extraReadsFile <- file.path( peptide.path, paste( sampleID, extraName, "RawReadPeptides.txt", sep="."))
+				if ( ! file.exists( extraReadsFile)) next
+				cat( "\nReading Extra Gene peptides file: ", extraReadsFile)
+				vgTbl2 <- read.delim( extraReadsFile, as.is=T)
+				cat( "\nDone.  \tN_Extra_Peptides:  ", nrow(vgTbl2), "\n")
+				vgTbl <- rbind( vgTbl, vgTbl2)
+			}
+		}
 		# we can cap how many we keep, based on protein length, since we can only pile up so deep...
 		avgPepLen <- round( mean( nchar( vgTbl$Peptide)))
 		maxPeptidesNeeded <- nAA * max.depth * 1.5
