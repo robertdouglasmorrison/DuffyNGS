@@ -161,15 +161,17 @@
 		for ( k in 1:length(extraGeneNames)) {
 			extraID <- extraGeneIDs[k]
 			extraName <- extraGeneNames[k]
-			cat( "\nExtracting Extra Gene alignments: ", extraID)
 			extraReadsFile <- file.path( results.path, "fastq", paste( sampleID, extraName, "fastq.gz", sep="."))
 			extraPeptidesFile <- file.path( peptide.path, paste( sampleID, extraName, "RawReadPeptides.txt", sep="."))
-			nExtra <- pipe.GatherGeneAlignments( sampleID, extraID, tail=100, asFASTQ=T, fastq.keyword=extraName)
-			if ( ! nExtra) next
-			nExtraPeps <- fastqToPeptides( extraReadsFile, extraPeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
-				trim5=trim5.aligns, trim3=trim3.aligns, clipAtStop=FALSE)
+			if ( forceSetup || ! file.exists( extraReadsFile) || ! file.exists( extraPeptidesFile)) {
+				cat( "\nExtracting Extra Gene alignments: ", extraID)
+				nExtra <- pipe.GatherGeneAlignments( sampleID, extraID, tail=100, asFASTQ=T, fastq.keyword=extraName)
+				if ( ! nExtra) next
+				nExtraPeps <- fastqToPeptides( extraReadsFile, extraPeptidesFile, chunk=100000, lowComplexityFilter=FALSE,
+								trim5=trim5.aligns, trim3=trim3.aligns, clipAtStop=FALSE)
+				madeAnyFiles <- TRUE
+			}
 		}
-		madeAnyFiles <- TRUE
 	}
 	if ( maxNoHits && (forceSetup || ! file.exists( nohitPeptidesFile))) {
 		cat( "\nConverting 'NoHit' reads to peptides..  Takes quite a while..")

@@ -429,6 +429,19 @@
 				cat( "\nDone.  \tN_Extra_Peptides:  ", nrow(vgTbl2), "\n")
 				vgTbl <- rbind( vgTbl, vgTbl2)
 			}
+			# since we joined some peptide files, update their merge/counts
+			dups <- which( duplicated( vgTbl$Peptide))
+			if ( length( dups)) {
+				drops <- vector()
+				for ( k in dups) {
+					hits <- which( vgTbl$Peptide == vgTbl$Peptide[k])
+					keep <- hits[1]
+					vgTbl$Count[keep] <- sum( vgTbl$Count[hits])
+					drops <- c( drops, hits[2:length(hits)])
+				}
+				drops <- sort(drops)
+				vgTbl <- vgTbl[ -drops, ]
+			}
 		}
 		# we can cap how many we keep, based on protein length, since we can only pile up so deep...
 		avgPepLen <- round( mean( nchar( vgTbl$Peptide)))
