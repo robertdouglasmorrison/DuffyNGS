@@ -571,12 +571,12 @@
 	outDF$AA <- ""
 	aaVec <- base::strsplit( testAA, split="")[[1]]
 	# we have rare chance for sizes to not match up here.  So pre-check lengths, and crop if needed
-	naa <- length(aaVec)
+	ndna <- length(aaVec) * 3
 	ndf <- nrow(outDF)
-	if ( naa > ndf) {
-		length(aaVec) <- ndf
-	} else if ( naa < ndf) {
-		outDF <- outDF[ 1:naa, ]
+	if ( ndna > ndf) {
+		length(aaVec) <- floor( ndf / 3)
+	} else if ( ndna < ndf) {
+		outDF <- outDF[ 1:ndna, ]
 	}
 	outDF$AA[ seq( 2, nrow(outDF), by=3)] <- aaVec
 	
