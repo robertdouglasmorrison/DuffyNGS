@@ -4,7 +4,7 @@
 				speciesID=getCurrentSpecies(), results.path=NULL, geneUniverse=NULL, genePercentage=NULL,
 				recalculate=c("none", "all", "missing", "profile", "deconvolution", "nls", "GenSA","steep"), 
 				mode=c("weighted.mean","average","best"), makePlots=c( "final", "none", "all"),
-				verbose=TRUE, ...) {
+				dropRiboClearGenes=TRUE, verbose=TRUE, ...) {
 
 	if ( length(sampleID) > 1) {
 		cat( "\nWarning: expected a single sample ID..")
@@ -118,7 +118,7 @@
 			cat( "\n1. Cell Type Profile: Fit Dimension Proportions by Steepest Descent:\n")
 			ans1 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='steep',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans1)) {
 				pcts1 <- ans1$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts1))
@@ -131,7 +131,7 @@
 			cat( "\n2. Cell Type Profile: Fit Dimension Proportions by Nonlinear Least Squares (NLS):\n")
 			ans2 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='nls',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans2)) {
 				pcts2 <- ans2$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts2))
@@ -144,7 +144,7 @@
 			cat( "\n3. Cell Type Profile: Fit Dimension Proportions by Simulated Annealing (GenSA):\n")
 			ans3 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='GenSA',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, erbose=verbose)
 			if ( ! is.null(ans3)) {
 				pcts3 <- ans3$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts3))
@@ -157,7 +157,7 @@
 			cat( "\n4. Cell Type Deconvolution:  Fit Gene", units, "by Nonlinear Least Squares (NLS):\n")
 			ans4 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans4)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts4 <- ans4$BestFit * 100
@@ -171,7 +171,7 @@
 			cat( "\n5. Cell Type Deconvolution:  Fit Gene", units, "by Simulated Annealing (GenSA):\n")
 			ans5 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans5)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts5 <- ans5$BestFit * 100
@@ -185,7 +185,7 @@
 			cat( "\n6. Cell Type Deconvolution:  Fit Gene", units, "by Steepest Descent:\n")
 			ans6 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans6)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts6 <- ans6$BestFit * 100
@@ -210,7 +210,7 @@
 			cat( "\n7. Cell Type Profile: Fit QN Dimension Proportions by Steepest Descent:\n")
 			ans7 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, max.iterations=200, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='steep',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans7)) {
 				pcts7 <- ans7$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts7))
@@ -223,7 +223,7 @@
 			cat( "\n8. Cell Type Profile: Fit QN Dimension Proportions by Nonlinear Least Squares (NLS):\n")
 			ans8 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='nls',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans8)) {
 				pcts8 <- ans8$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts8))
@@ -236,7 +236,7 @@
 			cat( "\n9. Cell Type Profile: Fit QN Dimension Proportions by Simulated Annealing (GenSA):\n")
 			ans9 <- fitCellTypeProfileFromFile( f=transcriptFile, sid=sampleID, col=myColor, 
 						makePlots=makePlots, plot.path=celltype.path, algorithm='GenSA',
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans9)) {
 				pcts9 <- ans9$CellProportions
 				cellWhere <- match( cellTypeNames, names(pcts9))
@@ -249,7 +249,7 @@
 			cat( "\n10. Cell Type Deconvolution:  Fit QN Gene", units, "by Nonlinear Least Squares (NLS):\n")
 			ans10 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="port",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans10)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts10 <- ans10$BestFit * 100
@@ -263,7 +263,7 @@
 			cat( "\n11. Cell Type Deconvolution:  Fit QN Gene", units, "by Simulated Annealing (GenSA):\n")
 			ans11 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="GenSA",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans11)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts11 <- ans11$BestFit * 100
@@ -277,7 +277,7 @@
 			cat( "\n12. Cell Type Deconvolution:  Fit QN Gene", units, "by Steepest Descent:\n")
 			ans12 <- fileSet.TranscriptDeconvolution( files=transcriptFile, fids=sampleID, algorithm="steep",
 						useLog=FALSE, plot=deconvPlot, plot.path=celltype.path, plot.col=cellTypeColors,
-						geneUniverse=geneUniverse, verbose=verbose)
+						geneUniverse=geneUniverse, dropRiboClearGenes=dropRiboClearGenes, verbose=verbose)
 			if ( ! is.null(ans12)) {
 				# deconvolution tool returns weights.  Trun them to percentages
 				pcts12 <- ans12$BestFit * 100
