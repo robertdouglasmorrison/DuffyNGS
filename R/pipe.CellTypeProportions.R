@@ -455,9 +455,8 @@
 `pipe.CellTypeCompare` <- function( sampleIDset, groups=sampleIDset, levels=sort(unique(as.character(groups))), 
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, cellProportionsColumn="Final.Proportions", 
-				prefix=NULL, 
-				minPerGroup=3, test=t.test, plot=TRUE, plot.mode=c("bars", "auto", "pie", "lines"),
-				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, 
+				prefix=NULL, minPerGroup=3, test=t.test, plot=TRUE, plot.mode=c("bars", "auto", "pie", "lines"),
+				label="", wt.fold=1, wt.pvalue=2, min.percent=0.1, doCompares=(length(levels) <= 6), 
 				significance.scaling=TRUE, verbose=TRUE, ...) {
 
 	# get needed paths, etc. from the options file
@@ -521,10 +520,14 @@
 
 	# now with this matrix of cell type percentages, call the comparison tool
 	plot.mode <- match.arg( plot.mode)
-	ans <- compareTranscriptProportions( ctpM, groups=groups, levels=levels, col=cellTypeColors, 
+	if (doCompares) {
+		ans <- compareTranscriptProportions( ctpM, groups=groups, levels=levels, col=cellTypeColors, 
 					minPerGroup=minPerGroup, test=test, plot=plot, plot.mode=plot.mode, label=label, 
 					wt.fold=wt.fold, wt.pvalue=wt.pvalue, min.percent=min.percent, 
 					significance.scaling=significance.scaling, ...)
+	} else {
+		ans <- NULL
+	}
 
 	# if we did plot, decide what to call it...
 	dev.type <- getPlotDeviceType( optT)
@@ -540,13 +543,13 @@
 	outFile <- file.path( celltype.path, paste( "All", prefix[1], reference, "Proportion.Details.csv", sep="."))
 	write.csv( ctpM, outFile)
 
-	if ( length(levels) < 3) {
+	if ( length(levels) < 3 && !is.null(ans)) {
 		out[[2]] <- ans
 		names(out)[2] <- "Comparison.Results"
 		outFile <- file.path( celltype.path, paste( prefix[1], ".", reference, ".Compare_", levelString, "_Details.csv", sep=""))
 		write.csv( ans, outFile, row.names=F)
 	} else {
-		for (j in 1:length(ans)) {
+		if ( ! is.null(ans)) for (j in 1:length(ans)) {
 			out[[j+1]] <- ans[[j]]
 			names(out)[j+1] <- names(ans)[j]
 			outFile <- file.path( celltype.path, paste( prefix[1], ".", reference, ".Compare_", names(ans)[j], "_Details.csv", sep=""))
