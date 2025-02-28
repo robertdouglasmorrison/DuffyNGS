@@ -272,7 +272,7 @@
 	if ( mode == "all") {
 
 	    # now we can look at consensus reads
-	    blastIndex <- getOptionValue( optTbl, "blastIndex", notfound="nt")
+	    blastIndex <- getOptionValue( optTbl, "blastIndex", notfound="core_nt")
 	    dispatch.CR_Investigate( sample, annotationFile, optionsFile, mode="QuickQC", 
 		blastIndex=blastIndex, doCR=TRUE, doBlast=TRUE, pause=pause,
 		maxReads=500000, maxTime=300, maxCycles=8, nIterations=500, nBest=12, 

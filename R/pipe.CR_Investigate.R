@@ -3,7 +3,7 @@
 
 `dispatch.CR_Investigate` <- function( sampleID, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", mode="normal",
-				blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="nt"),
+				blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="core_nt"),
 				doCR=TRUE, doBlast=TRUE, maxReads=500000, maxTime=1000, maxCycles=10, 
 				ratePerCycle=1, maxCR=4000, pause=0,
 				nIterations=1000, nBest=10, results.path=NULL, makePlots=TRUE, verbose=TRUE) {
@@ -36,7 +36,7 @@
 
 `pipe.CR_Investigate` <- function( sampleID, annotationFile="Annotation.txt",
 		optionsFile="Options.txt", mode=c( "normal", "QuickQC", "genomic"),
-		blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="nt"),
+		blastIndex=getOptionValue( optionsFile, "blastIndex", notfound="core_nt"),
 		doCR=FALSE, doBlast=FALSE, maxReads=500000, maxTime=1000, maxCycles=10, 
 		ratePerCycle=NULL, maxCR=4000, pause=0, 
 		nIterations=1000, nBest=10, results.path=NULL, makePlots=TRUE,

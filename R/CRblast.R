@@ -4,7 +4,7 @@
 
 
 CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=TRUE,
-			optionsFile="Options.txt", blastIndex="nt",
+			optionsFile="Options.txt", blastIndex="core_nt",
 			evalue=1.0, wordsize=8, nHSP=3, verbose=TRUE) {
 
 	if ( doBlast && verbose) cat( "\n\nBlasting Consensus Reads:  ", crIDs, "\n")
