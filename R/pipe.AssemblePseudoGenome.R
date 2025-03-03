@@ -366,7 +366,7 @@
 	#		check the gap in both this map and the reference
 	myGmap$Post.Gene.Gap.Feature <- ""
 	myGmap$Post.Gene.Gap.Blast.Hit <- ""
-	# accumulate novel DNA to blast against NT
+	# accumulate novel DNA to blast against NR proteins
 	extraDesc <- extraSeq <- vector()
 	for ( ig in 1:(nrow(refGmap)-1)) {
 		g1 <- refGmap$GENE_ID[ig]
