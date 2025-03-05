@@ -152,7 +152,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			next
 		}
 		tbl <- read.delim( infile, as.is=T)
-		if ( ! all( tbl$FORMAT %in% c( "GT:PL:DP", "GT:PL"))) stop( "Required VCF format of GT:PL:DP not present...")
+		if ( ! all( tbl$FORMAT %in% c( "GT:PL:DP", "GT:PL:AD", "GT:PL"))) stop( "Required VCF format of GT:PL not present...")
 		tbl <- tbl[ , -match( c("FILTER","FORMAT"), colnames(tbl))]
 		colnames(tbl)[ ncol(tbl)] <- "GENOTYPE_CALL"
 
