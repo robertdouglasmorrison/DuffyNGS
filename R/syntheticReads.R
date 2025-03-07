@@ -1,7 +1,7 @@
 # syntheticReads.R -- make all possible overlapping reads from a region of a chromosome
 
 `syntheticReads` <- function( seqID, seqDNA, type=c("fasta", "fastq"), readSize=32, 
-			firstBase=1, nReads=100000, outfile=NULL) {
+			firstBase=1, stepSize=1, nReads=100000, outfile=NULL) {
 
 	# set up to get all N-mers for this chunk, watching for end of chromosome
 	nBase <- length( seqDNA)
@@ -12,7 +12,7 @@
 	}
 	lastBase <- firstBase + nReads - 1
 	if ( lastBase > veryLastStart) lastBase <- veryLastStart
-	fromSet <- firstBase:lastBase
+	fromSet <- seq( firstBase, lastBase, by=stepSize)
 	toSet <- fromSet + sizeM1
 
 	# make the little sequences
@@ -42,7 +42,8 @@
 }
 
 
-`syntheticReadsToFile` <- function( seqID, seqDNA, outfile, type=c("fasta", "fastq"), readSize=32, verbose=T) {
+`syntheticReadsToFile` <- function( seqID, seqDNA, outfile, type=c("fasta", "fastq"), 
+				readSize=32, stepSize=1, verbose=T) {
 
 	# set up to make a file of reads from a chunk of DNA
 	type <- match.arg( type)
@@ -63,7 +64,7 @@
 		# build a small .fasta file of N-mers
 		if (verbose) cat( "\nmaking reads..")
 		ans <- syntheticReads( seqID=seqID, seqDNA=myDNA, type=type, readSize=readSize, 
-				firstBase=ib, nReads=chunkSize, outfile=NULL)
+				firstBase=ib, stepSize=stepSize, nReads=chunkSize, outfile=NULL)
 		nReads <- ans$nReads
 		nReadsThisSeq <- nReadsThisSeq + nReads
 		if (verbose) cat( "  writing reads..")
