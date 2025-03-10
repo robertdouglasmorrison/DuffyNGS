@@ -984,29 +984,19 @@
 			cntsM <- matrix( unlist(tmpAns), nrow=length(allAA), ncol=Ngrp)
 			rownames(cntsM) <- names( tmpAns[[1]])
 			colnames(cntsM) <- grpLevels
-			SAV1 <<- cntsM
-			#cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
-			#cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
-			#outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
-			#outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
-			#outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
-			SAV2 <<- ordM <-  APPLY( cntsM, 2, order, decreasing=TRUE)
+			ordM <-  APPLY( cntsM, 2, order, decreasing=TRUE)
 			outConsen[ i, ] <-  rownames(cntsM)[ ordM[ 1, ]]
-			#cnts1 <- SORT( cnts1, decreasing=T)
-			#cnts2 <- SORT( cnts2, decreasing=T)
-			#outStr1[i] <- PASTE( names(cnts1), as.numeric(cnts1), sep=":", collapse="; ")
-			#outStr2[i] <- PASTE( names(cnts2), as.numeric(cnts2), sep=":", collapse="; ")
 			for ( k in 1:Ngrp) {
 				ptrs <- ordM[ , k]
 				outDist[i, k] <- PASTE( rownames(cntsM)[ptrs], cntsM[ , k][ptrs], sep=":", collapse="; ")
 			}
-			# for the stats, if exactly 2 groups, we can use proportions.  Otherwise, find the best 2-group
+			# for the stats, if exactly 2 groups, we can use proportions.  Otherwise, find the best 2-group P-value
 			if (Ngrp == 2) {
 				outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
 			} else {
 				smlP <- 1
 				for ( k1 in 1:(Ngrp-1)) for (k2 in (k1+1):Ngrp) {
-					SAV3 <<- tinyM <- cntsM[ ,c(k1,k2)]
+					tinyM <- cntsM[ ,c(k1,k2)]
 					# if no differences skip the test
 					if ( any( apply( tinyM, 1, max) < 1)) next
 					smlP <- min( smlP, suppressWarnings( prop.test( x=cntsM[ ,c(k1,k2)], correct=F))$p.value)
@@ -1023,10 +1013,6 @@
 	# package up the results
 	out <- data.frame( "ALN.POS"=1:NAA, "REF.POS"=outPos, "REF.AA"=refM, outConsen, outDist,
 			"P.Value"=outPval, stringsAsFactors=F)
-
-	# put the group names in explicitly
-	#colnames(out)[4:5] <- paste( "Consensus", levels(grpFac), sep="_")
-	#colnames(out)[6:7] <- paste( "Distribution", levels(grpFac), sep="_")
 
 	# done.
 	return( out)
