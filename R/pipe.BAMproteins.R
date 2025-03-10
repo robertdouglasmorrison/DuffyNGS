@@ -1006,7 +1006,8 @@
 			} else {
 				smlP <- 1
 				for ( k1 in 1:(Ngrp-1)) for (k2 in (k1+1):Ngrp) {
-					smlP <- min( smlP, suppressWarnings( prop.test( cntsM[ ,c(k1,k2)], correct=F))$p.value)
+					SAV3 <<- tinyM <- cntsM[ ,c(k1,k2)]
+					smlP <- min( smlP, suppressWarnings( prop.test( x=cntsM[ ,c(k1,k2)], correct=F))$p.value)
 				}
 				outPval[i] <- smlP
 			}
