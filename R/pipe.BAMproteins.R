@@ -441,7 +441,7 @@
 		if ( comparison == "reference") {
 			cat( "\nBuilding protein Difference data for", length(sampleIDset), "samples against reference proteome..")
 			cat( "\nUsing multicore..")
-			mcAns <- multicore.lapply( sampleIDset, FUN=pipe.BAMprotein.SampleCompare, sampleID2=NULL, optionsFile=optionsFile,
+			mcAns <- multicore.lapply( sampleIDset, FUN=pipe.BAMproteins.SampleCompare, sampleID2=NULL, optionsFile=optionsFile,
 							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
 							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
 			cat( "\nMerging..")
@@ -464,7 +464,7 @@
 					jj <- visitOrd[j]
 					s2 <- sampleIDset[jj]
 					g2 <- groupSet[jj]
-					ans <- pipe.BAMprotein.SampleCompare( s1, sampleID2=s2, optionsFile=optionsFile,
+					ans <- pipe.BAMproteins.SampleCompare( s1, sampleID2=s2, optionsFile=optionsFile,
 							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
 							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
 					sml <- data.frame( "SampleID"=s1, "Group"=g1, "Sample2"=s2, "Group2"=g2, 
