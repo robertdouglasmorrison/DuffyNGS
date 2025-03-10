@@ -909,9 +909,15 @@
 	# get the alignment rows that match the samples we want, noting that the reference is in row #1
 	# since ALN can crop sample names, be more careful finding the sample IDs
 	N <- length( sampleIDset)
-	if ( length( groupSet) != N) stop( "'groupSet' must be same length as 'sampleIDset'")
+	if ( length( groupSet) != N) {
+		cat( "'groupSet' must be same length as 'sampleIDset'")
+		return(NULL)
+	}
 	grpFac <- factor( groupSet)
-	if ( nlevels(grpFac) != 2) stop( "'groupSet' must contain exactly 2 factor levels")
+	if ( nlevels(grpFac) != 2) {
+		cat( "'groupSet' must contain exactly 2 factor levels")
+		return(NULL)
+	}
 	id2alnPtr <- rep.int( 0, N)
 	for ( i in 1:N) {
 		sid <- sampleIDset[i]
@@ -930,7 +936,10 @@
 		sampleIDset <- sampleIDset[keep]
 		groupSet <- groupSet[keep]
 		grpFac <- factor( groupSet)
-		if ( nlevels(grpFac) != 2) stop( "'groupSet' must contain exactly 2 factor levels")
+		if ( nlevels(grpFac) != 2) {
+			cat( "'groupSet' of found samples must contain exactly 2 factor levels")
+			return(NULL)
+		}
 		id2alnPtr <- id2alnPtr[keep]
 	}
 	refM <- alnM[ 1, ]
@@ -1013,7 +1022,7 @@
 		geneIDset <- unique( cmap$GENE_ID)
 	}
 
-	cat( "\nVisiting", length(geneIDset), "proteins..\n")
+	cat( "\nVisiting", length(geneIDset), "proteins to find differences..\n")
 
 	# do it as a local function so we can parallelize
 	gatherOneBamProteinGene <- function( g) {
