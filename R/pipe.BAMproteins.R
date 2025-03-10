@@ -987,7 +987,7 @@
 			SAV1 <<- cntsM
 			#cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
 			#cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
-			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
+			#outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
 			#outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
 			#outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
 			SAV2 <<- ordM <-  t( APPLY( cntsM, 1, order, decreasing=TRUE))
