@@ -990,7 +990,7 @@
 			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
 			#outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
 			#outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
-			SAV2 <<- ordM <-  APPLY( cntsM, 2, sort, decreasing=TRUE)
+			SAV2 <<- ordM <-  APPLY( cntsM, 1, sort, decreasing=TRUE)
 			outConsen[ i, ] <-  rownames(cntsM)[ ordM[ 1, ]]
 			#cnts1 <- SORT( cnts1, decreasing=T)
 			#cnts2 <- SORT( cnts2, decreasing=T)
@@ -999,6 +999,16 @@
 			for ( k in 1:Ngrp) {
 				ptrs <- ordM[ , k]
 				outDist[i, k] <- PASTE( rownames(cntsM)[ptrs], cntsM[ , k][ptrs], sep=":", collapse="; ")
+			}
+			# for the stats, if exactly 2 groups, we can use proportions.  Otherwise, find the best 2-group
+			if (Ngrp == 2) {
+				outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
+			} else {
+				smlP <- 1
+				for ( k1 in 1:(Ngrp-1)) for (k2 in (k1+1):Ngrp) {
+					smlP <- min( smlP, suppressWarnings( prop.test( cntsM[ ,c(k1,k2)], correct=F))$p.value)
+				}
+				outPval[i] <- smlP
 			}
 		} else {
 			outPval[i] <- 1
