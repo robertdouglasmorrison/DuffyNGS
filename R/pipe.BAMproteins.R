@@ -1021,7 +1021,7 @@
 
 
 `pipe.BAMproteins.FindGeneDifferences` <- function( sampleIDset, groupSet, geneIDset=NULL, optionsFile="Options.txt", 
-					results.path=NULL, speciesID=getCurrentSpecies(), 
+					results.path=NULL, speciesID=getCurrentSpecies(), doFASTA=FALSE, doALIGN=FALSE,
 					min.pvalue=0.05, verbose=F) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies(speciesID)
@@ -1054,10 +1054,10 @@
 			fastaOK <- alnOK <- FALSE
 			fa <- loadFasta( faFile, short=T, verbose=verbose)
 			expectDesc <- paste( sampleIDset, g, sep="_")
-			if ( all( expectDesc %in% fa$desc)) fastaOK <- TRUE
+			if ( all( expectDesc %in% fa$desc) && !doFASTA) fastaOK <- TRUE
 			aln <- readALN( alnFile, verbose=verbose)
 			expectDesc <- paste( sampleIDset, g, sep="_")
-			if ( all( expectDesc %in% rownames(aln$alignment))) alnOK <- TRUE
+			if ( all( expectDesc %in% rownames(aln$alignment)) && ! doALIGN) alnOK <- TRUE
 			if (all( c(fastaOK, alnOK))) needBuild <- FALSE
 		}
 		if ( needBuild) {
