@@ -963,8 +963,8 @@
 	refAApos <- 0
 	outPos <- outPval <- outCons1 <- outCons2 <- outStr1 <- outStr2 <- vector()
 	outConsen <- outDist <- matrix( "", nrow=NAA, ncol=Ngrp)
-	colnames(outConsen) <- paste( "Consensus", grpLabels, sep="_")
-	colnames(outDist) <- paste( "Distribution", grpLabels, sep="_")
+	colnames(outConsen) <- paste( "Consensus", grpLevels, sep="_")
+	colnames(outDist) <- paste( "Distribution", grpLevels, sep="_")
 	
 	APPLY <- base::apply
 	PASTE <- base::paste
@@ -1004,13 +1004,12 @@
 	}
 
 	# package up the results
-	out <- data.frame( "ALN.POS"=1:NAA, "REF.POS"=outPos, "REF.AA"=refM, "Consensus.1"=outCons1, 
-			"Consensus.2"=outCons2, "Distribution.1"=outStr1, "Distribution.2"=outStr2,
+	out <- data.frame( "ALN.POS"=1:NAA, "REF.POS"=outPos, "REF.AA"=refM, outConsen, outDist,
 			"P.Value"=outPval, stringsAsFactors=F)
 
 	# put the group names in explicitly
-	colnames(out)[4:5] <- paste( "Consensus", levels(grpFac), sep="_")
-	colnames(out)[6:7] <- paste( "Distribution", levels(grpFac), sep="_")
+	#colnames(out)[4:5] <- paste( "Consensus", levels(grpFac), sep="_")
+	#colnames(out)[6:7] <- paste( "Distribution", levels(grpFac), sep="_")
 
 	# done.
 	return( out)
