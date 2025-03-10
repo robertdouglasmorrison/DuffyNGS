@@ -1007,6 +1007,8 @@
 				smlP <- 1
 				for ( k1 in 1:(Ngrp-1)) for (k2 in (k1+1):Ngrp) {
 					SAV3 <<- tinyM <- cntsM[ ,c(k1,k2)]
+					# if no differences skip the test
+					if ( any( apply( tinyM, 1, max) < 1)) next
 					smlP <- min( smlP, suppressWarnings( prop.test( x=cntsM[ ,c(k1,k2)], correct=F))$p.value)
 				}
 				outPval[i] <- smlP
