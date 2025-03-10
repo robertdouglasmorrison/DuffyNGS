@@ -1021,7 +1021,7 @@
 
 
 `pipe.BAMproteins.FindGeneDifferences` <- function( sampleIDset, groupSet, geneIDset=NULL, optionsFile="Options.txt", 
-					results.path=NULL, speciesID=getCurrentSpecies(), doFASTA=FALSE, doALIGN=FALSE,
+					results.path=NULL, speciesID=getCurrentSpecies(), doFASTA=FALSE, doALIGN=doFASTA,
 					min.pvalue=0.05, verbose=F) {
 
 	if ( speciesID != getCurrentSpecies()) setCurrentSpecies(speciesID)
@@ -1048,6 +1048,7 @@
 		# visit each gene, using existing data if it's there
 		faFile <- file.path( bamProteinPath, paste( g, "BAM.Proteins.fasta", sep="."))
 		alnFile <- file.path( bamProteinPath, paste( g, "BAM.Proteins.aln", sep="."))
+		# see if we were asked to remake files, or that they have all needed samples
 		needBuild <- TRUE
 		if ( all( file.exists( c(faFile,alnFile)))) {
 			# make sure all the samples we want are present, as both FASTA and ALN
