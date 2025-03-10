@@ -980,13 +980,13 @@
 		aaV <- alnM[ , i]
 		allAA <- sort.default( unique.default( aaV))
 		if ( length(allAA) > 1) {
-			cntsM <- TAPPLY( aaV, grpFac, function(x) TABLE( factor( x, levels=allAA)), simplify=T)
+			SAV1 <<- cntsM <- TAPPLY( aaV, grpFac, function(x) TABLE( factor( x, levels=allAA)), simplify=T)
 			#cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
 			#cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
 			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
 			#outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
 			#outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
-			ordM <-  APPLY( cntsM, 2, sort, decreasing=TRUE)
+			SAV2 <<- ordM <-  APPLY( cntsM, 2, sort, decreasing=TRUE)
 			outConsen[ i, ] <-  rownames(cntsM)[ ordM[ 1, ]]
 			#cnts1 <- SORT( cnts1, decreasing=T)
 			#cnts2 <- SORT( cnts2, decreasing=T)
