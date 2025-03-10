@@ -907,17 +907,19 @@
 	alnM <- aln$alignment
 
 	# get the alignment rows that match the samples we want, noting that the reference is in row #1
-	# since ALN can crop sample names, be more careful finding the sample IDs
 	N <- length( sampleIDset)
 	if ( length( groupSet) != N) {
 		cat( "'groupSet' must be same length as 'sampleIDset'")
 		return(NULL)
 	}
 	grpFac <- factor( groupSet)
-	if ( nlevels(grpFac) != 2) {
-		cat( "'groupSet' must contain exactly 2 factor levels")
-		return(NULL)
-	}
+	grpLevels <- levels(grpFac)
+	Ngrp <- nlevels(grpFac)
+	#if ( nlevels(grpFac) != 2) {
+	#	cat( "'groupSet' must contain exactly 2 factor levels")
+	#	return(NULL)
+	#}
+	# since ALN can crop sample names, be more careful finding the sample IDs
 	id2alnPtr <- rep.int( 0, N)
 	for ( i in 1:N) {
 		sid <- sampleIDset[i]
@@ -936,30 +938,39 @@
 		sampleIDset <- sampleIDset[keep]
 		groupSet <- groupSet[keep]
 		grpFac <- factor( groupSet)
-		if ( nlevels(grpFac) != 2) {
-			cat( "'groupSet' of found samples must contain exactly 2 factor levels")
-			return(NULL)
-		}
+		grpLevels <- levels(grpFac)
+		Ngrp <- nlevels(grpFac)
+		#if ( nlevels(grpFac) != 2) {
+		#	cat( "'groupSet' of found samples must contain exactly 2 factor levels")
+		#	return(NULL)
+		#}
 		id2alnPtr <- id2alnPtr[keep]
 	}
 	refM <- alnM[ 1, ]
 	alnM <- alnM[ id2alnPtr, ]
 
 	# set up to do AA comparisons at every location along the protein, using the reference for AA counting 
-	is1 <- which( as.numeric(grpFac) == 1)
-	is2 <- which( as.numeric(grpFac) == 2)
-	if ( length(is1) < 2 || length(is2) < 2) {
-		cat( "\nNot enough samples in some groups. Unable to compare:\n")
-		print( table( groupSet))
-		return(NULL)
-	}
+	grpPtr <- tapply( 1:N, grpFac, FUN=NULL)
+	grpCnts <- as.numeric( table( grpPtr))
+	#is1 <- which( as.numeric(grpFac) == 1)
+	#is2 <- which( as.numeric(grpFac) == 2)
+	#if ( length(is1) < 2 || length(is2) < 2) {
+	#	cat( "\nNot enough samples in some groups. Unable to compare:\n")
+	#	print( table( groupSet))
+	#	return(NULL)
+	#}
 	NAA <- ncol( alnM)
 	refAApos <- 0
 	outPos <- outPval <- outCons1 <- outCons2 <- outStr1 <- outStr2 <- vector()
+	outConsen <- outDist <- matrix( "", nrow=NAA, ncol=Ngrp)
+	colnames(outConsen) <- paste( "Consensus", grpLabels, sep="_")
+	colnames(outDist) <- paste( "Distribution", grpLabels, sep="_")
 	
+	APPLY <- base::apply
 	PASTE <- base::paste
 	SORT <- sort.default
 	TABLE <- base::table
+	TAPPLY <- base::tapply
 	WHICH.MAX <- base::which.max
 
 	for ( i in 1:NAA) {
@@ -969,21 +980,26 @@
 		aaV <- alnM[ , i]
 		allAA <- sort.default( unique.default( aaV))
 		if ( length(allAA) > 1) {
-			cnts1 <- TABLE( factor( aaV[ is1], levels=allAA))
-			cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
-			cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
+			cntsM <- TAPPLY( aaV, grpFac, function(x) TABLE( factor( x, levels=allAA)), simplify=T)
+			#cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
+			#cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
 			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
-			outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
-			outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
-			cnts1 <- SORT( cnts1, decreasing=T)
-			cnts2 <- SORT( cnts2, decreasing=T)
-			outStr1[i] <- PASTE( names(cnts1), as.numeric(cnts1), sep=":", collapse="; ")
-			outStr2[i] <- PASTE( names(cnts2), as.numeric(cnts2), sep=":", collapse="; ")
+			#outCons1[i] <- names(cnts1)[WHICH.MAX(cnts1)]
+			#outCons2[i] <- names(cnts2)[WHICH.MAX(cnts2)]
+			ordM <-  APPLY( cntsM, 2, sort, decreasing=TRUE)
+			outConsen[ i, ] <-  rownames(cntsM)[ ordM[ 1, ]]
+			#cnts1 <- SORT( cnts1, decreasing=T)
+			#cnts2 <- SORT( cnts2, decreasing=T)
+			#outStr1[i] <- PASTE( names(cnts1), as.numeric(cnts1), sep=":", collapse="; ")
+			#outStr2[i] <- PASTE( names(cnts2), as.numeric(cnts2), sep=":", collapse="; ")
+			for ( k in 1:Ngrp) {
+				ptrs <- ordM[ , k]
+				outDist[i, k] <- PASTE( rownames(cntsM)[ptrs], cntsM[ , k][ptrs], sep=":", collapse="; ")
+			}
 		} else {
 			outPval[i] <- 1
-			outCons1[i] <- outCons2[i] <- allAA
-			outStr1[i] <- PASTE( allAA,  length(is1), sep=":")[1]
-			outStr2[i] <- PASTE( allAA,  length(is2), sep=":")[1]
+			outConsen[i, ] <- allAA
+			outDist[i, ] <- PASTE( allAA,  grpCnts, sep=":")
 		}
 	}
 
