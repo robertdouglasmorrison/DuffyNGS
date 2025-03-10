@@ -1050,10 +1050,15 @@
 		alnFile <- file.path( bamProteinPath, paste( g, "BAM.Proteins.aln", sep="."))
 		needBuild <- TRUE
 		if ( all( file.exists( c(faFile,alnFile)))) {
-			# make sure all the sample we want are present
+			# make sure all the samples we want are present, as both FASTA and ALN
+			fastaOK <- alnOK <- FALSE
 			fa <- loadFasta( faFile, short=T, verbose=verbose)
 			expectDesc <- paste( sampleIDset, g, sep="_")
-			if ( all( expectDesc %in% fa$desc)) needBuild <- FALSE
+			if ( all( expectDesc %in% fa$desc)) fastaOK <- TRUE
+			aln <- readALN( alnFile, verbose=verbose)
+			expectDesc <- paste( sampleIDset, g, sep="_")
+			if ( all( expectDesc %in% rownames(aln$alignment))) alnOK <- TRUE
+			if (all( c(fastaOK, alnOK))) needBuild <- FALSE
 		}
 		if ( needBuild) {
 			ans1 <- pipe.BAMproteins.GatherOneGene( sampleIDset, geneID=g, optionsFile=optionsFile, 
