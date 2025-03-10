@@ -980,7 +980,7 @@
 		aaV <- alnM[ , i]
 		allAA <- sort.default( unique.default( aaV))
 		if ( length(allAA) > 1) {
-			SAV1 <<- cntsM <- TAPPLY( aaV, grpFac, function(x) TABLE( factor( x, levels=allAA)), simplify=T)
+			SAV1 <<- cntsM <- TAPPLY( aaV, grpFac, function(x) as.numeric(TABLE( factor( x, levels=allAA))), simplify=T)
 			#cnts2 <- TABLE( factor( aaV[ is2], levels=allAA))
 			#cntsM <- matrix( c(cnts1,cnts2), nrow=length(allAA), ncol=2)
 			outPval[i] <- suppressWarnings( prop.test( cntsM, correct=F))$p.value
