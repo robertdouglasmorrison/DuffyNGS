@@ -1056,7 +1056,13 @@
 	}
 
 	# accumulate results from all genes
-	bigAns <- multicore.lapply( geneIDset, gatherOneBamProteinGene)
+	if ( length(geneIDset) > 1) {
+		bigAns <- multicore.lapply( geneIDset, gatherOneBamProteinGene)
+	} else {
+		smlAns <- gatherOneBamProteinGene( geneIDset[1])
+		bigAns <- vector( mode="list", length=1)
+		bigAns[[1]] <- smlAns
+	}
 	bigOut <- data.frame()
 	for ( k in 1:length(geneIDset)) {
 		smlAns <- bigAns[[k]]
