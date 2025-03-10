@@ -441,7 +441,7 @@
 		if ( comparison == "reference") {
 			cat( "\nBuilding protein Difference data for", length(sampleIDset), "samples against reference proteome..")
 			cat( "\nUsing multicore..")
-			mcAns <- multicore.lapply( sampleIDset, FUN=pipe.BAMprotein.Difference, sampleID2=NULL, optionsFile=optionsFile,
+			mcAns <- multicore.lapply( sampleIDset, FUN=pipe.BAMprotein.SampleCompare, sampleID2=NULL, optionsFile=optionsFile,
 							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
 							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
 			cat( "\nMerging..")
@@ -464,7 +464,7 @@
 					jj <- visitOrd[j]
 					s2 <- sampleIDset[jj]
 					g2 <- groupSet[jj]
-					ans <- pipe.BAMprotein.Difference( s1, sampleID2=s2, optionsFile=optionsFile,
+					ans <- pipe.BAMprotein.SampleCompare( s1, sampleID2=s2, optionsFile=optionsFile,
 							results.path=results.path, geneIDset=geneIDset, dropGenes=dropGenes, 
 							min.confidence=0, min.editDist=0, nWorst=NG, show.details=T, verbose=F)
 					sml <- data.frame( "SampleID"=s1, "Group"=g1, "Sample2"=s2, "Group2"=g2, 
@@ -1087,6 +1087,7 @@
 		bigAns[[1]] <- smlAns
 	}
 	bigOut <- data.frame()
+	cat( "\nCombining results..\n")
 	for ( k in 1:length(geneIDset)) {
 		smlAns <- bigAns[[k]]
 		if ( is.null( smlAns)) next
@@ -1094,6 +1095,7 @@
 		g <- geneIDset[k]
 		smlOut <- data.frame( "GENE_ID"=g, "PRODUCT"=gene2Product(g), smlAns, stringsAsFactors=F)
 		bigOut <- rbind( bigOut, smlOut)
+		cat( "\r", geneIDset[k], nrow(smlOut))
 	}
 	cat( "\nDone.  Total significant protein AA difference sites: ", nrow(bigOut))
 
