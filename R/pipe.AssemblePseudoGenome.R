@@ -457,7 +457,8 @@
 			cat( "\nWarning: wanted chromosome: ", tmpSeqID, " not in Pseudo Genome for sample: ", s)
 			next
 		}
-		tmpDNA <- substr( tmpFA[who], tmpStart, tmpStop)
+		cat( "\nExtracting: ", tmpSeqID, "from", tmpStart, "to", tmpStop)
+		tmpDNA <- substr( tmpFA$seq[who], tmpStart, tmpStop)
 		seqs <- c( seqs, tmpDNA)
 		desc <- c( desc, paste(s, geneID, sep="_"))
 	}
