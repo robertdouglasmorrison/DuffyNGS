@@ -427,11 +427,20 @@
 	seqs <- desc <- vector()
 	for ( s in sampleIDset) {
 		spades.out.path <- file.path( results.path, "SpadesContigs", s, "PseudoGenome")
-		if ( ! file.exists( spades.out.path)) next
-		spadesGeneMapFile <- file.path( spades.out.path, "PseudoGenome.GeneMap.txt")
-		if ( ! file.exists( spadesGeneMapFile)) next
-		spadesGenomeFile <- file.path( spades.out.path, "PseudoGenome.fasta")
-		if ( ! file.exists( spadesGenomeFile)) next
+		if ( ! file.exists( spades.out.path)) {
+			cat( "\nWarning: path to Pseudo Genome results not found: ", spades.out.path)
+			next
+		}
+		spadesGeneMapFile <- file.path( spades.out.path, paste( s, "PseudoGenome.GeneMap.txt", sep="."))
+		if ( ! file.exists( spadesGeneMapFile)) {
+			cat( "\nWarning: Pseudo Genome Genemap file not found: ", basename(spadesGeneMapFile))
+			next
+		}
+		spadesGenomeFile <- file.path( spades.out.path, paste( s, "PseudoGenome.fasta", sep="."))
+		if ( ! file.exists( spadesGenomeFile)) {
+			cat( "\nWarning: Pseudo Genome FASTA file not found: ", basename(spadesGenomeFile))
+			next
+		}
 		# load the map to get the location
 		tmpMap <- read.delim( spadesGeneMapFile, as.is=T)
 		tmpMap <- subset( tmpMap, GENE_ID == geneID)
