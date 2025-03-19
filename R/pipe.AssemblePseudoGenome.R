@@ -416,3 +416,44 @@
 	write.table( myGmap, inGeneMap, sep="\t", quote=F, row.names=F)
 	return( invisible( myGmap))
 }
+
+
+# collect DNA from one gene in Pseudo Genome results
+`gatherOnePseudoGene` <- function( sampleIDset, geneID, annotationFile="Annotation.txt", optionsFile="Options.txt") {
+
+	results.path <- getOptionValue( optionsFile, "results.path", notfound=".", verbose=F)
+
+	# gather one gene sequence from each sample
+	seqs <- desc <- vector()
+	for ( s in sampleIDset) {
+		spades.out.path <- file.path( results.path, "SpadesContigs", s, "PseudoGenome")
+		if ( ! file.exists( spades.out.path)) next
+		spadesGeneMapFile <- file.path( spades.out.path, "PseudoGenome.GeneMap.txt")
+		if ( ! file.exists( spadesGeneMapFile)) next
+		spadesGenomeFile <- file.path( spades.out.path, "PseudoGenome.fasta")
+		if ( ! file.exists( spadesGenomeFile)) next
+		# load the map to get the location
+		tmpMap <- read.delim( spadesGeneMapFile, as.is=T)
+		tmpMap <- subset( tmpMap, GENE_ID == geneID)
+		if ( ! nrow(tmpMap)) {
+			cat( "\nWarning: wanted gene: ", geneID, " not in GeneMap for sample: ", s)
+			next
+		}
+		tmpSeqID <- tmpMap$SEQ_ID[1]
+		tmpStart <- tmpMap$POSITION[1]
+		tmpStop <- tmpMap$END[1]
+		tmpFA <- loadFasta( spadesGenomeFile)
+		who <- which( tmpFA$desc == tmpSeqID)[1]
+		if ( is.na(who)) {
+			cat( "\nWarning: wanted chromosome: ", tmpSeqID, " not in Pseudo Genome for sample: ", s)
+			next
+		}
+		tmpDNA <- substr( tmpFA[who], tmpStart, tmpStop)
+		seqs <- c( seqs, tmpDNA)
+		desc <- c( desc, paste(s, geneID, sep="_"))
+	}
+	out <- as.Fasta( desc, seqs)
+	return(out)
+}
+
+
