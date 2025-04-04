@@ -6,7 +6,7 @@
 				optionsFile="Options.txt", 
 				useMultiHits=TRUE, results.path=NULL,  folderName="", 
 				groupColumn="Group", colorColumn="Color", average.FUN=sqrtmean, 
-				tools=c("RoundRobin", "RankProduct", "SAM", "EdgeR", "DESeq"), 
+				tools=c("RoundRobin", "RankProduct", "SAM", "EdgeR", "DESeq", "LimmaVoom"), 
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, doDE=TRUE, makePlots=doDE, copyPlots=makePlots,
@@ -61,6 +61,7 @@
 	if ( "RoundRobin" %in% tools) toolFuncList <- c( toolFuncList, pipe.RoundRobin)
 	if ( "RankProduct" %in% tools) toolFuncList <- c( toolFuncList, pipe.RankProduct)
 	if ( "DESeq" %in% tools) toolFuncList <- c( toolFuncList, pipe.DESeq)
+	if ( "LimmaVoom" %in% tools) toolFuncList <- c( toolFuncList, pipe.LimmaVoom)
 	if ( "EdgeR" %in% tools) toolFuncList <- c( toolFuncList, pipe.EdgeR)
 	if ( "SAM" %in% tools) toolFuncList <- c( toolFuncList, pipe.SAM)
 
@@ -276,7 +277,7 @@
 
 			# also grab and copy any Cluster and PCA plots
 			# note that DESeq and EdgeR use raw reads, so their transcritome plots are less 'valid'
-			if (folder %in% c( "EdgeR", "DESeq")) next
+			if (folder %in% c( "EdgeR", "DESeq", "LimmaVoom")) next
 
 			pathFrom <- file.path( results.path, folder, paste( prefix, folderName, sep="."))
 			fset <- dir( pathFrom, pattern="(Cluster|PCA).+(png|pdf)$", full.name=T)
