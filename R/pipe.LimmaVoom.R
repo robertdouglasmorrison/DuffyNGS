@@ -8,7 +8,7 @@
 				altGeneMap=NULL, altGeneMapLabel=NULL, targetID=NULL,
 				Ngenes=100, geneColumnHTML=if (speciesID %in% MAMMAL_SPECIES) "NAME" else "GENE_ID", 
 				keepIntergenics=FALSE, verbose=TRUE, label="", 
-				doDE=TRUE, PLOT.FUN=NULL, adjust.lowReadCounts=FALSE, ...)
+				doDE=TRUE, PLOT.FUN=NULL, adjust.lowReadCounts=TRUE, ...)
 {
 
 	if (verbose) {
