@@ -52,7 +52,7 @@
 				x1 <- x[1]
 				nNow <<- nNow + 1
 				if ( length(x) > 1) {
-					geneIDpatterns[nNow] <<- paste( sort.int(unique.default(geneIDs[x])), collapse="|")
+					geneIDpatterns[nNow] <<- PASTE( sort.int(unique.default(geneIDs[x])), collapse="|")
 					mySpecies <- sort.int(unique.default(speciesIDs[x]))
 					nSpecies[nNow] <<- ns <- length( mySpecies)
 					if ( ns == 1) speciesIDpatterns[nNow] <<- mySpecies
@@ -136,24 +136,28 @@
 	nAllGlobin <- 0
 	if ( readStatsAlignPhase == "RiboClear") {
 
+	    cat( "\nSummarize by group..")
+
 	    if ( ! is.null(speciesTable) && ! is.null( genePattTable)) {
 		# for all gene level counts, we can count up how often each gene pattern occurs and do each once
 		gpLevels <- names( genePattTable)
 		NgpLevels <- length( genePattTable)
 		gpCnts <- genePattTable
 
+		# changing from GREP method to set overlap.  Some species have many riboclear genes, that
+		# makes grep pattern string a huge logical or.
+		gpLevelGenes <- strsplit( gpLevels, split="|", fixed=T)
 		# we may need to mask characters that have special meaning to 'grep'
-		gpLevels <- gsub( "(", ":", gpLevels, fixed=T)
-		gpLevels <- gsub( ")", ":", gpLevels, fixed=T)
-		gpLevels <- gsub( "[", ":", gpLevels, fixed=T)
-		gpLevels <- gsub( "]", ":", gpLevels, fixed=T)
+		#gpLevels <- gsub( "(", ":", gpLevels, fixed=T)
+		#gpLevels <- gsub( ")", ":", gpLevels, fixed=T)
+		#gpLevels <- gsub( "[", ":", gpLevels, fixed=T)
+		#gpLevels <- gsub( "]", ":", gpLevels, fixed=T)
 
 	    	for( i in 1:length( speciesTable)) {
 			thisSpecies <- names( speciesTable)[i]
 			setCurrentSpecies( thisSpecies)
 			rrnaMap <- getCurrentRrnaMap()
 			if ( ! ( "GROUP" %in% colnames( rrnaMap))) next
-	
 			# only report on the things we are trying to clear
 			if ( "CLEAR" %in% colnames( rrnaMap)) {
 				keep <- which( as.logical( rrnaMap$CLEAR))
@@ -161,19 +165,23 @@
 					rrnaMap <- rrnaMap[ keep, ]
 				}
 			}
-
 			rrna <- subset.data.frame( rrnaMap, subset=(GROUP != ""), select=c(GENE_ID,GROUP))
 			grps <- factor( rrna$GROUP)
 			ptrs <- tapply( 1:nrow(rrna), INDEX=grps, FUN=NULL)
+			rrnaGrpGenes <- tapply( shortGeneName(rrna$GENE_ID,keep=1), grps, c, simplify=FALSE)
 			for( ig in 1:nlevels(grps)) {
 				thisGrp <- levels(grps)[ig]
-				theseGenes <- base::paste( shortGeneName( rrna$GENE_ID[ ptrs == ig], keep=1), collapse="|")
-				# same 'grep' fix to the targets
-				theseGenes <- gsub( "(", ":", theseGenes, fixed=T)
-				theseGenes <- gsub( ")", ":", theseGenes, fixed=T)
-				theseGenes <- gsub( "[", ":", theseGenes, fixed=T)
-				theseGenes <- gsub( "]", ":", theseGenes, fixed=T)
-				hits <- which( sapply( gpLevels, function(x) return( length( grep( theseGenes, x)) > 0)))
+				cat( " ", thisGrp)
+				# changing from GREP method to set overlap.  Some species have many riboclear genes, that
+				# makes grep pattern string a huge logical or.
+				#theseGenes <- base::paste( shortGeneName( rrna$GENE_ID[ ptrs == ig], keep=1), collapse="|")
+				#theseGenes <- gsub( "(", ":", theseGenes, fixed=T)
+				#theseGenes <- gsub( ")", ":", theseGenes, fixed=T)
+				#theseGenes <- gsub( "[", ":", theseGenes, fixed=T)
+				#theseGenes <- gsub( "]", ":", theseGenes, fixed=T)
+				#hits <- which( sapply( gpLevels, function(x) return( length( grep( theseGenes, x)) > 0)))
+				thisGeneList <- rrnaGrpGenes[[ig]]
+				hits <- which( sapply( gpLevelGenes, function(x) return( sum( x %in% thisGeneList) > 0)))
 				nhits <- sum( gpCnts[hits])
 				outText <- base::append( outText, base::paste( "\nCleared: ", format(thisSpecies, width=8), " ",
 						format( thisGrp, width=10), "\t", 
