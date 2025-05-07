@@ -126,6 +126,10 @@
 	ord <- order( -(out$AVG_DEPTH), out$SEQ_ID, out$GENE_ID, decreasing=F)
 	out <- out[ ord, ]
 	rownames(out) <- 1:nrow(out)
-	out
+
+	# assign a rough copy number to every gene
+	out$COPY_NUMBER <- round( out$AVG_DEPTH / median(out$AVG_DEPTH), digits=2)
+
+	return( out)
 }
 
