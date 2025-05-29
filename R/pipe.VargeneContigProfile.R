@@ -189,7 +189,10 @@
 	for ( i in 1:N) {
 		thisSID <- sampleIDset[i]
 		this.path <- file.path( spades.path, thisSID, keyword)
-		if ( ! file.exists(this.path)) next
+		if ( ! file.exists(this.path)) {
+			cat( "\nWarn: no Spades vargene results folder found for:", thisSID)
+			next
+		}
 		domainTextFiles[i] <- file.path( this.path, paste( thisSID, keyword, "DomainDetails.txt", sep="."))
 		proteinTextFiles[i] <- file.path( this.path, paste( thisSID, keyword, "BestProteinHits.txt", sep="."))
 		domainFastaFiles[i] <- file.path( this.path, paste( thisSID, keyword, "Domains.fasta", sep="."))
@@ -203,7 +206,7 @@
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
 		sml <- read.delim( f, as.is=T)
-		cat( "\r", basename(f), " ", nrow(sml))
+		cat( "  ", basename(f), "=", nrow(sml),sep="")
 		if ( ! nrow(sml)) next
 		protDF <- rbind( protDF, sml)
 	}
@@ -217,7 +220,7 @@
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
 		sml <- read.delim( f, as.is=T)
-		cat( "\r", basename(f), " ", nrow(sml))
+		cat( "  ", basename(f), "=", nrow(sml),sep="")
 		if ( ! nrow(sml)) next
 		domDF <- rbind( domDF, sml)
 	}
@@ -231,7 +234,7 @@
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
 		sml <- loadFasta( f, short=F, verbose=F)
-		cat( "\r", basename(f), " ", length(sml$desc))
+		cat( "  ", basename(f), "=", length(sml$desc),sep="")
 		if ( ! length(sml$desc)) next
 		desc <- c( desc, sml$desc)
 		seq <- c( seq, sml$seq)
@@ -246,7 +249,7 @@
 		if ( is.na(f)) next
 		if ( ! file.exists(f)) next
 		sml <- loadFasta( f, short=F, verbose=F)
-		cat( "\r", basename(f), " ", length(sml$desc))
+		cat( "  ", basename(f), "=", length(sml$desc),sep="")
 		if ( ! length(sml$desc)) next
 		desc <- c( desc, sml$desc)
 		seq <- c( seq, sml$seq)
