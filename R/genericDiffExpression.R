@@ -262,7 +262,7 @@
 	
 	if ( ! is.na( fileout)) {
 		if ( getCurrentSpecies() %in% MAMMAL_SPECIES) out <- addHumanIDterms( out)
-		if ( getCurrentSpecies() %in% ORIGID_PARASITE_SPECIES) out <- addOrigIDterms( out)
+		#if ( getCurrentSpecies() %in% ORIGID_PARASITE_SPECIES) out <- addOrigIDterms( out)
 		if ( getCurrentSpecies() %in% BACTERIA_SPECIES) out <- addNameIDterms( out)
 
 		write.table( out, file=fileout, sep="\t", quote=FALSE, row.names=FALSE)

@@ -129,10 +129,10 @@
 			out <- addHumanIDterms( out)
 			extraCols <- 2
 		}
-		if ( RP_prefix %in% ORIGID_PARASITE_PREFIXES) {
-			out <- addOrigIDterms( out)
-			extraCols <- 1
-		}
+		#if ( RP_prefix %in% ORIGID_PARASITE_PREFIXES) {
+		#	out <- addOrigIDterms( out)
+		#	extraCols <- 1
+		#}
 		if ( RP_prefix %in% BACTERIA_PREFIXES) {
 			out <- addNameIDterms( out)
 			extraCols <- 1

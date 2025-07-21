@@ -150,7 +150,7 @@
 		# make the text file version
 		outDF <- out
 		if ( speciesID %in% MAMMAL_SPECIES) outDF <- addHumanIDterms( outDF)
-		if ( speciesID %in% ORIGID_PARASITE_SPECIES) outDF <- addOrigIDterms( outDF)
+		#if ( speciesID %in% ORIGID_PARASITE_SPECIES) outDF <- addOrigIDterms( outDF)
 		if ( speciesID %in% BACTERIA_SPECIES) outDF <- addNameIDterms( outDF)
 
 		fileout <- paste( grp, prefix, "Meta", direction, "txt", sep=".")
@@ -195,7 +195,7 @@
 		}
 
 		#if ( speciesID %in% c("Hs_grc", "Mmu_grc", "MacMu")) out <- addHumanIDterms( out)
-		if ( speciesID %in% ORIGID_PARASITE_SPECIES) out <- addOrigIDterms( out)
+		#if ( speciesID %in% ORIGID_PARASITE_SPECIES) out <- addOrigIDterms( out)
 		if ( speciesID %in% BACTERIA_SPECIES) out <- addNameIDterms( out)
 
 		Nshow <- Ngenes
