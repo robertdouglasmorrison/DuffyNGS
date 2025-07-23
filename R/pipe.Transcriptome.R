@@ -43,12 +43,12 @@
 	strandSpecific <- getAnnotationTrue( annT, origSampleID, "StrandSpecific", notfound=FALSE)
 	useBothStrands <- ! strandSpecific
 	if ( is.null( keepIntergenics)) {
-		keepIntergenics <- getAnnotationTrue( annT, origSampleID, "KeepIntergenics", notfound=TRUE)
+		keepIntergenics <- getAnnotationTrue( annT, origSampleID, "KeepIntergenics", notfound=FALSE)
 	} else {
 		cat( "\nExplicit 'KeepIntergenics' argument:  \t", sampleID, ": \t", keepIntergenics, sep="")
 	}
 	if ( is.null( exonsOnly)) {
-		exonsOnly <- getAnnotationTrue( annT, origSampleID, "ExonsOnly", notfound=FALSE)
+		exonsOnly <- getAnnotationTrue( annT, origSampleID, "ExonsOnly", notfound=TRUE)
 	} else {
 		cat( "\nExplicit 'ExonsOnly' argument:  \t", sampleID, ": \t", exonsOnly, sep="")
 	}

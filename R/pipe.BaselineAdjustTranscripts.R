@@ -35,7 +35,7 @@
 	# grab all the original transcriptomes into a matrix to aid calculations
 	cat( "\nGathering original transcriptomes..")
 	expressM <- expressionFileSetToMatrix( fileSet, sampleIDs, intensityColumn=expression.units,
-					missingGenes="na", keepIntergenic=T, verbose=T)
+					missingGenes="na", keepIntergenic=F, verbose=T)
 	
 	# deduce the median Day 0 expression level for each gene
 	whoTime0 <- which( timeIDs == baselineID)

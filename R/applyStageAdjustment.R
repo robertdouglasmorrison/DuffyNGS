@@ -173,7 +173,7 @@
 		readSense <- getReadSense( sampleID, annotationFile)
 		originalID <- originalSamplePairID( sampleID, annotationFile)
 		useBothStrands <- ! getAnnotationTrue( annT, originalID, "StrandSpecific", notfound=TRUE)
-		keepIntergenics <- getAnnotationTrue( annT, originalID, "KeepIntergenics", notfound=TRUE)
+		keepIntergenics <- getAnnotationTrue( annT, originalID, "KeepIntergenics", notfound=FALSE)
 		fileOutTrans <- paste( sampleID, myPrefix, "Transcript.txt", sep=".")
 		fileOutTrans <- file.path( newResultsPath, "transcript", fileOutTrans)
 		trans <- calcWigTranscriptome( wiggles, useBothStrands=useBothStrands, 
