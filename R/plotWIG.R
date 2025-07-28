@@ -17,6 +17,7 @@
 	seqMap <- getCurrentSeqMap()
 	geneMap <- getCurrentGeneMap()
 	exonMap <- getCurrentExonMap()
+	cdsMap <- getCurrentCdsMap()
 
 	# this may be used for detectability....
 	WB_setBinSizeBySpecies( curSpecies)
@@ -25,6 +26,7 @@
 	if ( ! is.null( altGeneMap)) {
 		geneMap <- altGeneMap
 		exonMap <- altGeneMap
+		cdsMap <- altGeneMap
 	}
 
 	# use the gene if given...allow partial matches
@@ -198,6 +200,7 @@
 	seqMap <- getCurrentSeqMap()
 	geneMap <- getCurrentGeneMap()
 	exonMap <- getCurrentExonMap()
+	cdsMap <- getCurrentCdsMap()
 	WB_setBinSizeBySpecies( curSpecies)
 
 	smap <- subset.data.frame( seqMap, SEQ_ID==seqid)
@@ -388,6 +391,7 @@
 	seqMap <- getCurrentSeqMap()
 	geneMap <- getCurrentGeneMap()
 	exonMap <- getCurrentExonMap()
+	cdsMap <- getCurrentCdsMap()
 	WB_setBinSizeBySpecies( curSpecies)
 
 	# allow alternate gene map
@@ -618,6 +622,7 @@
 	seqMap <- getCurrentSeqMap()
 	geneMap <- getCurrentGeneMap()
 	exonMap <- getCurrentExonMap()
+	cdsMap <- getCurrentCdsMap()
 	WB_setBinSizeBySpecies( curSpecies)
 
 	# allow alternate gene map
@@ -1132,12 +1137,14 @@ dashedLine <- function( xb, xe, y, ...) {
 	seqid <- seqID
 	geneMap <- getCurrentGeneMap()
 	exonMap <- getCurrentExonMap()
+	cdsMap <- getCurrentCdsMap()
 
 	# get all the genes we cover
 	gmap <- subset.data.frame( geneMap, ((SEQ_ID == seqid) & (POSITION <= rightBase) & 
 				(END >= leftBase) & REAL_G == TRUE))
 	if ( nrow(gmap) == 0 && !showDetectability) return()
 	emap <- subset.data.frame( exonMap, ((SEQ_ID == seqid) & (POSITION <= rightBase) & (END >= leftBase)))
+	cmap <- subset.data.frame( cdsMap, ((SEQ_ID == seqid) & (POSITION <= rightBase) & (END >= leftBase)))
 
 	# there are some things that don't apply when the # of bases gets to high
 	dx <- rightBase - leftBase
@@ -1158,6 +1165,7 @@ dashedLine <- function( xb, xe, y, ...) {
 			if ( length(drops) > 0) {
 				gmap <- gmap[ -drops, ]
 				emap <- subset.data.frame( emap, GENE_ID %in% gmap$GENE_ID)
+				cmap <- subset.data.frame( cmap, GENE_ID %in% gmap$GENE_ID)
 			}
 		}
 	}
@@ -1202,21 +1210,22 @@ dashedLine <- function( xb, xe, y, ...) {
 	}
 
 	# exons get filled box
-	if ( nrow( emap) > 0) {
-	   	if ( nrow( emap) > 1) {
-			allsizes <- base::pmin( rightBase,emap$END) - base::pmax( leftBase,emap$POSITION)
+	# as of summer 2025, most genome annotations are good enough, to support drawing CDS regions instead of exons
+	if ( nrow( cmap) > 0) {
+	   	if ( nrow( cmap) > 1) {
+			allsizes <- base::pmin( rightBase,cmap$END) - base::pmax( leftBase,cmap$POSITION)
 			isOversize <- which( allsizes >= (rightBase-leftBase-10))
-			if ( (length(isOversize) > 0) && !is.null(gene) && !(gene %in% emap$GENE_ID)) {
-				if ( length( isOversize) < nrow( emap)) {
-					emap <- emap[ -isOversize, ]
+			if ( (length(isOversize) > 0) && !is.null(gene) && !(gene %in% cmap$GENE_ID)) {
+				if ( length( isOversize) < nrow( cmap)) {
+					cmap <- cmap[ -isOversize, ]
 				} else {
-					emap <- emap[ -isOVersize[ which.max(allsizes)], ]
+					cmap <- cmap[ -isOVersize[ which.max(allsizes)], ]
 				}
 			}
 	   	}
-		xleft <- emap$POSITION
-		xright <- emap$END
-		strand <- ifelse( is.na(emap$STRAND), " ", emap$STRAND)
+		xleft <- cmap$POSITION
+		xright <- cmap$END
+		strand <- ifelse( is.na(cmap$STRAND), " ", cmap$STRAND)
 		exonYlo <- ifelse( strand %in% c( "+", " "), exonYloPlus, exonYloMinus)
 		exonYhi <- ifelse( strand %in% c( "+", " "), exonYhiPlus, exonYhiMinus)
 		rect( xleft, exonYlo, xright, exonYhi, col=1)
