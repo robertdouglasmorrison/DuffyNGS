@@ -1211,6 +1211,8 @@ dashedLine <- function( xb, xe, y, ...) {
 
 	# exons get filled box
 	# as of summer 2025, most genome annotations are good enough, to support drawing CDS regions instead of exons
+	# if there are no coding CDS entries, show the exons instead
+	if ( ! nrow(cmap)) cmap <- emap
 	if ( nrow( cmap) > 0) {
 	   	if ( nrow( cmap) > 1) {
 			allsizes <- base::pmin( rightBase,cmap$END) - base::pmax( leftBase,cmap$POSITION)
