@@ -79,7 +79,7 @@
 				seq[ contigSet] <<- ""
 				desc[ contigSet[1]] <<- myLongCID
 				seq[ contigSet[1]] <<- contigDNA
-				# and adjust all there FASTA location data
+				# and adjust all their FASTA location data
 				tmpSeqBeg <- as.numeric( seqBeg[contigSet])
 				tmpSeqEnd <- as.numeric( seqEnd[contigSet])
 				tmpFaBeg <- as.numeric( faBeg[contigSet])
@@ -168,14 +168,18 @@
 		# if this gene has exon splices, build that construct too
 		exPtrs <- which( emap$GENE_ID == gene)
 		if ( length( exPtrs) < 2) next
+		# make sure the exons are in forward strand ordering
+		smlEmap <- emap[ exPtrs, ]
+		ord <- order( smlEmap$POSITION)
+		smlEmap <- smlEmap[ ord, ]
 
 		# but never let the multi-exon construct go into a contig
 		contigify()
 
 		geneDNA <- ""
 		gGroup <- paste( gGroup, "splice", sep="_")
-		for ( j in exPtrs) {
-			smallDNA <- as.character( base::substr( curSeqDNA, emap$POSITION[j], emap$END[j]))
+		for ( j in 1:nrow(smlEmap)) {
+			smallDNA <- as.character( base::substr( curSeqDNA, smlEmap$POSITION[j], smlEmap$END[j]))
 			# when the exon is long enough, 'N' out the interior so we end up with just the splice boundaries
 			firstN <- tailSize + 5
 			lastN <- nchar( smallDNA) - tailSize - 5
@@ -191,8 +195,8 @@
 		desc[nout] <- base::paste( seqid, gene, gGroup, sep="::")
 		seq[nout] <- geneDNA
 		grp[nout] <- gGroup
-		seqBeg[nout] <- as.character( emap$POSITION[ exPtrs[1]])
-		seqEnd[nout] <- as.character( emap$END[ exPtrs[ length(exPtrs)]])
+		seqBeg[nout] <- as.character( smlEmap$POSITION[1])
+		seqEnd[nout] <- as.character( smlEmap$END[ nrow(smlEmap)])
 		faBeg[nout] <- as.character( 1)
 		faEnd[nout] <- as.character( nchar( geneDNA))
 	}
