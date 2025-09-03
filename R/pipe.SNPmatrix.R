@@ -1018,7 +1018,7 @@ pipe.BuildSNP.FreqMatrix <- function( sampleIDset, outfileKeyword="AllSamples", 
 
 	# make the base call percentags table
 	pctTable <- table( moiTbl$ALLELES)
-	pctTable <- round( pctTable * 100 / sum(pctTable),, digits=2)
+	pctTable <- round( pctTable * 100 / sum(pctTable), digits=2)
 	return( list( "Score"=score, "Counts"=counts, "Weights"=weights, "Histogram"=pctHist, 
 			"Percentages"=pctTable))
 }
