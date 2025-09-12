@@ -109,12 +109,17 @@
 		newtbl$SIGMA_M <- ifelse( newtbl$SIGMA_M < minSigma, minSigma, newtbl$SIGMA_M)
 		newtbl$SIGMA_U <- ifelse( newtbl$SIGMA_U < minSigma, minSigma, newtbl$SIGMA_U)
 
-		# force the TPM units to sum to a million
+		# perhaps re-force the TPM units to sum to a million?
+		# this seems to "undo" the effect of the adjustment.  Turn back off for now...
 		#if ( "TPM_M" %in% colnames(newtbl)) {
 			#newtbl$TPM_M <- tpm( newtbl$READS_M, newtbl$N_EXON_BASES)
 			#newtbl$TPM_U <- tpm( newtbl$READS_U, newtbl$N_EXON_BASES)
 		#}
-	
+		if ( all( c("TPM_M","RANK_M") %in% colnames(newtbl))) {
+        	newtbl$RANK_M <- rank( newtbl$TPM_M, ties.method="min")
+        	newtbl$RANK_U <- rank( newtbl$TPM_U, ties.method="min")
+		}
+		
 		# inspect details about some genes?
 		if ( ! is.null(debug.genes)) {
 			for (dbgG in debug.genes) {
