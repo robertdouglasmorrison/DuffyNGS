@@ -18,7 +18,7 @@
 
 	# get existing transcriptome
 	trans.path <- file.path( results.path, "transcript")
-	file <- file.path( trans.path, paste( sampleIDs, speciesPrefix, "Transcript.txt", sep="."))
+	file <- file.path( trans.path, paste( sampleID, speciesPrefix, "Transcript.txt", sep="."))
 
 	if ( ! file.exists( file)) {
 		cat( "\nError: required transciptome file not found:  ", file)
@@ -51,7 +51,7 @@
 		if ( ! (j %in% colnames(tbl))) next
 		v <- tbl[[j]]
 		vnew <- v
-		vnew[ rowsToZer0] <- 0
+		vnew[ rowsToZero] <- 0
 		newtbl[[j]] <- vnew
 	}
 	newtbl$SIGMA_M <- ifelse( newtbl$SIGMA_M < minSigma, minSigma, newtbl$SIGMA_M)
@@ -72,7 +72,9 @@
 	# put the new transcripome back into expression order
 	exOrd <- order( newtbl$RPKM_M, decreasing=T)
 	newtbl <- newtbl[ exOrd, ]
-	#W overwrite the existing transcriptome file
+	rownames(newtbl) <- 1:nrow(newtbl)
+	
+	# overwrite the existing transcriptome file
 	write.table( newtbl, file, sep="\t", quote=F, row.names=F)
 	if (verbose) cat( "\nDone.\n")
 
