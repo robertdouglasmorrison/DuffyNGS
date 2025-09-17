@@ -6,29 +6,40 @@
 # expression units metrics to adjust for the zeroing of ribo cleared genes.
 
 `pipe.ForceRiboClearedTranscriptome` <- function( sampleID, annotationFile="Annotation.txt", optionsFile="Options.txt", 
-				speciesID=getCurrentSpecies(), results.path=NULL, verbose=TRUE) {
+				speciesID=NULL, results.path=NULL, verbose=TRUE) {
 
-	if ( speciesID != getCurrentSpecies()) setCurrentSpecies( speciesID)
-	speciesPrefix <- getCurrentSpeciesFilePrefix()
-
+	# get the set of species we are targeting
+	optT <- readOptionsTable( optionsFile)
+	target <- getAndSetTarget( optionsFile, sampleID=sampleID, annotationFile=annotationFile)
+	allSpecies <- getCurrentTargetSpecies()
+	if ( ! is.null(speciesID)) allSpecies <- speciesID
+	
 	if ( is.null( results.path)) {
-		optT <- readOptionsTable( optionsFile)
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
+	
+	# do the clearing on all species
+	for ( speciesID in allSpecies) {
+	
+	setCurrentSpecies( speciesID)
+	speciesPrefix <- getCurrentSpeciesFilePrefix()
 
+	rrnaMap <- getCurrentRrnaMap()
+	
 	# get existing transcriptome
 	trans.path <- file.path( results.path, "transcript")
 	file <- file.path( trans.path, paste( sampleID, speciesPrefix, "Transcript.txt", sep="."))
-
 	if ( ! file.exists( file)) {
 		cat( "\nError: required transciptome file not found:  ", file)
 		return( NULL)
 	}
 
-	rrnaMap <- subset( getCurrentRrnaMap(), CLEAR == TRUE)
+	# only zero out the rRNA genes explicitly flagged for clearing
+	rrnaMap <- subset( rrnaMap, CLEAR == TRUE)
 	
 	# read the original transcriptome 
 	tbl <- read.delim( file, as.is=T)
+	newtbl <- tbl
 	
 	# find the genes that need zeroing out
 	rowsToZero <- match( rrnaMap$GENE_ID, tbl$GENE_ID, nomatch=0)
@@ -38,15 +49,13 @@
 		cat( "\nWarn: no RiboClear genes found in transcriptome")
 		return( NULL)
 	}
+	if (verbose) cat( "\nZeroing ", nToClear, "", speciesID, " genes flagged for RiboClearing in sample: ", sampleID)
 	
-	if (verbose) cat( "\nZeroing ", nToClear, "genes flagged for RiboClearing")
 	# we will clip the uncertainies at their lower bound
 	minSigma <- min( tbl$SIGMA_M, na.rm=T)
 	
 	# now visit every expression units column, to zero that expression value
 	ExpressColumns <- c("RPKM_M", "RPKM_U", "READS_M", "READS_U", "TPM_M", "TPM_U", "SIGMA_M", "SIGMA_U")
-	
-	newtbl <- tbl
 	for ( j in ExpressColumns) {
 		if ( ! (j %in% colnames(tbl))) next
 		v <- tbl[[j]]
@@ -76,9 +85,11 @@
 	
 	# overwrite the existing transcriptome file
 	write.table( newtbl, file, sep="\t", quote=F, row.names=F)
-	if (verbose) cat( "\nDone.\n")
 
+	}  # end of doing each species
+	
 	# pass back the new transcriptome, invisibly
 	out <- newtbl
 	return( invisible(out))
 }
+

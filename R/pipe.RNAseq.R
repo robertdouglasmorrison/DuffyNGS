@@ -21,6 +21,12 @@
 
 	# make transcriptomes for all species...
 	ans3 <- pipe.Transcriptome( sampleID, annotationFile, optionsFile, dataType="RNA-seq")
+	
+	# if we did ribo clearing, force the transcriptomes to zero out those cleared genes
+	didRiboClearing <- getOptionTrue( optionsFile, "RiboIndex")
+	if (didRiboClearing) {
+		pipe.ForceRiboClearedTranscriptome( sampleID, annotationFile, optionsFile)
+	}
 
 	# make any extra wanted display files
 	ans4 <- pipe.PostAlignTasks( sampleID, annotationFile, optionsFile, dataType="RNA-seq")
