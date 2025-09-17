@@ -1212,22 +1212,23 @@ dashedLine <- function( xb, xe, y, ...) {
 	# exons get filled box
 	# as of summer 2025, most genome annotations are good enough, to support drawing CDS regions instead of exons
 	# if there are no coding CDS entries, show the exons instead
-	if ( ! nrow(cmap)) cmap <- emap
-	if ( nrow( cmap) > 0) {
-	   	if ( nrow( cmap) > 1) {
-			allsizes <- base::pmin( rightBase,cmap$END) - base::pmax( leftBase,cmap$POSITION)
+	# NO: show the Exons regardless of annotation quality.  RPKM and TPM are relative to N_EXON_BASES.  Always show that.
+	#if ( ! nrow(cmap)) cmap <- emap
+	if ( nrow( emap) > 0) {
+	   	if ( nrow( emap) > 1) {
+			allsizes <- base::pmin( rightBase,emap$END) - base::pmax( leftBase,emap$POSITION)
 			isOversize <- which( allsizes >= (rightBase-leftBase-10))
-			if ( (length(isOversize) > 0) && !is.null(gene) && !(gene %in% cmap$GENE_ID)) {
-				if ( length( isOversize) < nrow( cmap)) {
-					cmap <- cmap[ -isOversize, ]
+			if ( (length(isOversize) > 0) && !is.null(gene) && !(gene %in% emap$GENE_ID)) {
+				if ( length( isOversize) < nrow( emap)) {
+					emap <- emap[ -isOversize, ]
 				} else {
-					cmap <- cmap[ -isOVersize[ which.max(allsizes)], ]
+					emap <- emap[ -isOVersize[ which.max(allsizes)], ]
 				}
 			}
 	   	}
-		xleft <- cmap$POSITION
-		xright <- cmap$END
-		strand <- ifelse( is.na(cmap$STRAND), " ", cmap$STRAND)
+		xleft <- emap$POSITION
+		xright <- emap$END
+		strand <- ifelse( is.na(emap$STRAND), " ", emap$STRAND)
 		exonYlo <- ifelse( strand %in% c( "+", " "), exonYloPlus, exonYloMinus)
 		exonYhi <- ifelse( strand %in% c( "+", " "), exonYhiPlus, exonYhiMinus)
 		rect( xleft, exonYlo, xright, exonYhi, col=1)
