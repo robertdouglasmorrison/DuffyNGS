@@ -20,10 +20,23 @@
 	cat( "\nGathering gene expression..")
 	files <- file.path( results.path, "transcript", paste( sids, prefix, "Transcript.txt", sep="."))
 	expM <- expressionFileSetToMatrix( files, fids=sids, intensityColumn=expressionUnits, verbose=T)
-	rownames( expM) <- shortGeneName( rownames(expM), keep=1)
-	bigM <- expM
 
-	cat( "\nCombining replicates..")
+	# since we are using the short gene names as the rownames, make sure we only keep one copy of each
+	# be smarter about reducing duplicate gene names
+	cat( "\nCombining duplicate named gene rows..")
+	longGene <- rownames( expM)
+	shortGene <- shortGeneName( longGene, keep=1)
+	keep <- which( ! duplicated( shortGene))
+	dups <- which( duplicated( shortGene))
+	bigM <- expM[ keep, ]
+	rownames(bigM) <- shortGene[ keep]
+	for (gDup in dups) {
+		myRowsIn <- which( shortGene == gDup)
+		myRowOut <- which( rownames(bigM) == gDup)
+		for ( j in 1:ncol(bigM)) bigM[ myRowOut, j] <- max( expM[ myRowsIn, j], na.rm=T)
+	}
+	
+	cat( "\nCombining replicate columns..")
 	grps <- annT[[ groupColumn]][ match( sids, annT$SampleID)]
 	cFac <- factor( grps)
 	NC <- nlevels(cFac)
@@ -40,14 +53,6 @@
 	whoTooLow <- which( maxV < min.expression)
 	targetM <- targetM[ -whoTooLow, ]
 	cat( "   N_Drop for too low expression (", expressionUnits, "<", min.expression, ") =", length( whoTooLow))
-	
-	# since we are using the short gene names as the rownames, make sure we only keep one copy of each
-	cat( "\nRemoving duplicate named genes..")
-	dups <- which( duplicated( rownames( targetM)))
-	if ( length( dups)) {
-		cat( "   N_Duplicate row names =", length( dups), "\n")
-		targetM <- targetM[ -dups, ]
-	}
 	
 	# if we are using TPM units, sum of all genes should be 1 million
 	# averaging above may have distorted that.  Reimpose that ideal.
