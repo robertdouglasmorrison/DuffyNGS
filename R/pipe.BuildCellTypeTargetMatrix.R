@@ -30,9 +30,9 @@
 	dups <- which( duplicated( shortGene))
 	bigM <- expM[ keep, ]
 	rownames(bigM) <- shortGene[ keep]
-	for (gDup in dups) {
-		myRowsIn <- which( shortGene == gDup)
-		myRowOut <- which( rownames(bigM) == gDup)
+	for (i in dups) {
+		myRowsIn <- which( shortGene == shortGene[i])
+		myRowOut <- which( rownames(bigM) == shortGene[i])
 		for ( j in 1:ncol(bigM)) bigM[ myRowOut, j] <- max( expM[ myRowsIn, j], na.rm=T)
 	}
 	
