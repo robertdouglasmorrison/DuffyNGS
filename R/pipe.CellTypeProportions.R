@@ -520,11 +520,12 @@
 
 	# now with this matrix of cell type percentages, call the comparison tool
 	plot.mode <- match.arg( plot.mode)
-	if (doCompares) {
+	if (doCompares || plot) {
 		ans <- compareTranscriptProportions( ctpM, groups=groups, levels=levels, col=cellTypeColors, 
 					minPerGroup=minPerGroup, test=test, plot=plot, plot.mode=plot.mode, label=label, 
 					wt.fold=wt.fold, wt.pvalue=wt.pvalue, min.percent=min.percent, 
 					significance.scaling=significance.scaling, ...)
+		if ( ! doCompares) ans <- NULL
 	} else {
 		ans <- NULL
 	}
