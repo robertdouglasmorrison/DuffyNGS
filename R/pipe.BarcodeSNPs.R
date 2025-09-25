@@ -625,3 +625,98 @@ extractBarcodeCalls <- function( sampleIDset, results.path="./results") {
 	out
 }
 
+
+`update.Barcode.SNP.DataObject` <- function( barcodeObj, prevMapSet, newMapSet=getCurrentMapSet()) {
+
+	# when a genome annotation changes, SNPs used for Barcodes may have moved.  Try to update...
+
+	# step 1:  make sure our inputs are as expected
+	# step 1a: the barcode object should be a data.frame with the info we need
+	neededBarcodeColumns <- c( "SNP_ID", "SEQ_ID", "POSITION", "REF_ALLELE", "GENE_ID")
+	if ( ! all( neededBarcodeColumns %in% colnames(barcodeObj))) {
+		cat( "\nError: 'barcodeObj' argument does not have expected barcode details columns");  stop()
+	}
+	nSNP <- nrow(barcodeObj)
+	# step 1b:  the old map set, either a list or a R data file 
+	neededMapSetElements <- c( "speciesID", "speciesText", "seqMap", "geneMap", "cdsMap")
+	if ( is.character(prevMapSet) && file.exists(prevMapSet)) {
+		who <- load(prevMapSet)
+		assign( "prevMapSet", get(who))
+	}
+	if ( ! all( neededMapSetElements %in% names(prevMapSet))) {
+		cat( "\nError: 'prevMapSet' argument does not have expected annotation map elements");  stop()
+	}
+	# step 1c:  the new map set, either a list or a R data file 
+	if ( is.character(newMapSet) && file.exists(newMapSet)) {
+		who <- load(newMapSet)
+		assign( "newMapSet", get(who))
+	}
+	if ( ! all( neededMapSetElements %in% names(newMapSet))) {
+		cat( "\nError: 'newMapSet' argument does not have expected annotation map elements");  stop()
+	}
+	# step 1d: verify the species is constant
+	if ( prevMapSet$speciesID != newMapSet$speciesID) {
+		cat( "\nError:  SpeciesID is not the same for previous/new map sets. Unable to update..");  stop()
+	}
+	setCurrentSpecies( newMapSet$speciesID)
+	cat( "\nReady to map", nSNP, "SNP sites from previous to new annotations for species: ", getCurrentSpecies())
+	cat( "\n  Previous: ", prevMapSet$speciesText)
+	cat( "\n  New:      ", newMapSet$speciesText)
+	
+
+	# step 2:  map all those SNPs
+	# step 2a:  set up what we will need
+	prevGeneMap <- prevMapSet$geneMap
+	newGeneMap <- newMapSet$geneMap
+	newCdsMap <- newMapSet$cdsMap
+	out <- barcodeObj
+	
+	# visit all the SNPs, by their GeneID
+	tapply( 1:nSNP, factor( barcodeObj$GENE_ID), function(x) {
+		# given all the rows shared by one gene
+		mySeqID <- barcodeObj$SEQ_ID[x[1]]
+		myGeneID <- barcodeObj$GENE_ID[x[1]]
+		myPos <- barcodeObj$POSITION[x]
+		n <- length(x)
+		cat( "\nDebug in: ", myGeneID, n, "|", myPos)
+		whereOldMap <- match( myGeneID, prevGeneMap$NAME, nomatch=0)
+		if ( whereOldMap == 0) {
+			cat( "\nWarn:  Unable to find gene", myGeneID, "in previous gene map. Skip..");  return(NULL)
+		}
+		# do the mapping from Genomic site to within the Protein AA site, using the previous map
+		convAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=myGeneID, 
+									genemap=prevMapSet$geneMap, cdsmap=prevMapSet$cdsMap)
+		# now for each of these SNP sites, map this info back to genomic in the new maps
+		# Note:  in mammalian genomes, the GeneID may contain location info that changed. Try to catch/fix
+		if ( ! (myGeneID %in% newGeneMap$GENE_ID)) {
+			gname <- shortGeneName( myGeneID, keep=1)
+			whereNewMap <- match( gname, newGeneMap$NAME, nomatch=0)
+			if ( whereNewMap == 0) {
+				cat( "\nError:  Unable to find gene", gname, "in new gene map. Skip..");  return(NULL)
+			}
+			myGeneID <- newGeneMap$GENE_ID[ whereNewMap]
+		}
+		myCDSmap <- subset( newCdsMap, GENE_ID == myGeneID)
+		for (k in 1:n) {
+			myRow <- x[k]
+			myAApos <- convAns$AA_POSITION[k]
+			myCodonPos <- convAns$CODON_POSITION[k]
+			convAns2 <- convertAApositionToGenomicDNAposition( myGeneID, AAposition=myAApos, codon.base=myCodonPos, 
+									cdsmap=myCDSmap)
+			cat( "\nDebug out: ", myGeneID, k, myAApos, myCodonPos, "|", convAns2$SEQ_POSITION)
+			# build the new facts for this SNP
+			dnaSEQID <- convAns2$SEQ_ID
+			dnaPos <- convAns2$SEQ_POSITION
+			snpID <- paste( "NGS_SNP", dnaSEQID, dnaPos, sep=".")
+			out$SNP_ID[myRow] <<- snpID
+			out$SEQ_ID[myRow] <<- dnaSEQID
+			out$POSITION[myRow] <<- dnaPos
+			out$GENE_ID[myRow] <<- myGeneID
+		}
+		# done with this gene
+		return(NULL)
+	})
+	
+	# all genes are updated...
+	return(out)
+}
