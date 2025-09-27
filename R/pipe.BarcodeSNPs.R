@@ -679,29 +679,33 @@ extractBarcodeCalls <- function( sampleIDset, results.path="./results") {
 		myPos <- barcodeObj$POSITION[x]
 		n <- length(x)
 		cat( "\nDebug in: ", myGeneID, n, "|", myPos)
+		# note that the GeneIDs are short names in the Barcode world, but we may want full names for conversions
 		whereOldMap <- match( myGeneID, prevGeneMap$NAME, nomatch=0)
 		if ( whereOldMap == 0) {
 			cat( "\nWarn:  Unable to find gene", myGeneID, "in previous gene map. Skip..");  return(NULL)
 		}
+		fullGeneID <- prevGeneMap$GENE_ID[whereOldMap]
+
 		# do the mapping from Genomic site to within the Protein AA site, using the previous map
-		convAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=myGeneID, 
+		convAns <- convertGenomicDNApositionToAAposition( mySeqID, myPos, geneID=fullGeneID, 
 									genemap=prevMapSet$geneMap, cdsmap=prevMapSet$cdsMap)
 		# now for each of these SNP sites, map this info back to genomic in the new maps
 		# Note:  in mammalian genomes, the GeneID may contain location info that changed. Try to catch/fix
-		if ( ! (myGeneID %in% newGeneMap$GENE_ID)) {
-			gname <- shortGeneName( myGeneID, keep=1)
-			whereNewMap <- match( gname, newGeneMap$NAME, nomatch=0)
+		if ( ! (fullGeneID %in% newGeneMap$GENE_ID)) {
+			myGeneID <- shortGeneName( myGeneID, keep=1)
+			whereNewMap <- match( myGeneID, newGeneMap$NAME, nomatch=0)
 			if ( whereNewMap == 0) {
-				cat( "\nError:  Unable to find gene", gname, "in new gene map. Skip..");  return(NULL)
+				cat( "\nError:  Unable to find gene", myGeneID, "in new gene map. Skip..");  return(NULL)
 			}
-			myGeneID <- newGeneMap$GENE_ID[ whereNewMap]
+			fullGeneID <- newGeneMap$GENE_ID[ whereNewMap]
+			mySeqID <- newGeneMap$SEQ_ID[ whereNewMap]
 		}
-		myCDSmap <- subset( newCdsMap, GENE_ID == myGeneID)
+		myCDSmap <- subset( newCdsMap, GENE_ID == fullGeneID)
 		for (k in 1:n) {
 			myRow <- x[k]
 			myAApos <- convAns$AA_POSITION[k]
 			myCodonPos <- convAns$CODON_POSITION[k]
-			convAns2 <- convertAApositionToGenomicDNAposition( myGeneID, AAposition=myAApos, codon.base=myCodonPos, 
+			convAns2 <- convertAApositionToGenomicDNAposition( fullGeneID, AAposition=myAApos, codon.base=myCodonPos, 
 									cdsmap=myCDSmap)
 			cat( "\nDebug out: ", myGeneID, k, myAApos, myCodonPos, "|", convAns2$SEQ_POSITION)
 			# build the new facts for this SNP

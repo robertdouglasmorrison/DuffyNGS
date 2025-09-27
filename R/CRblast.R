@@ -45,7 +45,10 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 		stdin <- vector()
 		for ( i in crIDs) {
 			stdin <- c( stdin, base::paste( ">cr_",i, sep=""))
-			stdin <- c( stdin, base::paste( CRT_List[[i]]$bases, collapse=""))
+			# grab the DNA base calls, and remove any gaps
+			baseString <- base::paste( CRT_List[[i]]$bases, collapse="")
+			baseString <- gsub( "[- ]", "", baseString)
+			stdin <- c( stdin, baseString)
 		}
 	
 		# allow for a retry if no hits
