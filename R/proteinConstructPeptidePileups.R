@@ -3,7 +3,7 @@
 
 
 `proteinConstructPeptidePileups` <- function( sampleID, geneName, constructFile, peptide.path=".",
-					constructName=paste(sampleID,geneName,sep="_"), 
+					constructName=paste(sampleID,geneName,sep="."), 
 					txt.cex=0.25, maxNoHits=1000000, max.depth=60, pct.aligned.depth=0.75, 
 					max.drawnPerSite=3, mode=c("normal", "realigned"), draw.box=FALSE, chunkSize=20000, 
 					showFrameShiftPeptides=TRUE, extraGeneNames=NULL, intronMaskFasta=NULL, ...) {

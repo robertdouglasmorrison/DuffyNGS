@@ -2,10 +2,10 @@
 #				Consensus Proteins Pileups (CPP) tool
 
 # globally define the universe of HLA genes we may track, as full current Human annotation names and short names
-ALL_HLA_GeneIDs <- c( "HLA-A:GI3105:06:29942470", "HLA-B:GI3106:06:31353868", "HLA-C:GI3107:06:31268749", 
-			"HLA-E:GI3133:06:30489406", "HLA-DRA:GI3122:06:32439842", "HLA-DRB1:GI3123:06:32578769", 
-			"HLA-DQA1:GI3117:06:32637396", "HLA-DQB1:GI3119:06:32659464", "HLA-DPA1:GI3113:06:33064569", 
-			"HLA-DPB1:GI3115:06:33075926")
+ALL_HLA_GeneIDs <- c( "HLA-A:GI3105:06:29942532", "HLA-B:GI3106:06:31353875", "HLA-C:GI3107:06:31268749", 
+			"HLA-E:GI3133:06:30489509", "HLA-DRA:GI3122:06:32439887", "HLA-DRB1:GI3123:06:32578775", 
+			"HLA-DQA1:GI3117:06:32637406", "HLA-DQB1:GI3119:06:32659467", "HLA-DPA1:GI3113:06:33064569", 
+			"HLA-DPB1:GI3115:06:33075990")
 ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1", 
 			"HLA-DQA1", "HLA-DQB1", "HLA-DPA1", "HLA-DPB1")
 
@@ -14,6 +14,9 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 				results.path=NULL, IMGT.HLA.path="~/IMGT_HLA", max.pileup.depth=80, pct.aligned.depth=0.9,
 				maxNoHits.pileup=0, maxNoHits.setup=0, min.minor.pct=15, 
 				doPileups=FALSE, doExtractions=doPileups, intronMaskFasta=NULL, verbose=TRUE) {
+
+	require( Biostrings)
+	if (version$major == "4" && as.numeric( version$minor) >= 4) require( pwalign)
 
 	# path for all results
 	if ( is.null( results.path)) {
@@ -30,6 +33,20 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 
 	# force human as the current species
 	setCurrentSpecies( "Hs_grc")
+	# and double check that our GeneIDs are valid in the current annotation
+	gmap <- getCurrentGeneMap()
+	if ( ! all( ALL_HLA_GeneIDs %in% gmap$GENE_ID)) {
+		cat( "\n\nWarning: some hard-coded HLA GeneIDs are not found in current annotation..\n  Source code for 'pipe.HLA.ConsensusProteins()' may need updating.\n\n")
+	}
+
+	# try to confirm the IMGT path of fasta files is seen...
+	imgtSeen <- file.exists( IMGT.HLA.path)
+	if (imgtSeen) {
+		aaFileHits <- dir( IMGT.HLA.path, pattern="AA.fasta$")
+		if ( length( aaFileHits) < 6) cat( "\n\nWarning: IMGT HLA path does not contain the expected 'xxx.AA.fasta' HLA protein files.", "\n")
+	} else {
+		cat( "\n\nWarning: could not find the folder of IMGT HLA protein FASTA files. Tried: ", IMGT.HLA.path, "\n")
+	}
 
 	# start from the list of Hs_grc HLA genes to harvest
 	HLAgeneIDs <- ALL_HLA_GeneIDs
@@ -97,7 +114,7 @@ ALL_HLA_GeneNames <- c( "HLA-A", "HLA-B", "HLA-C", "HLA-E", "HLA-DRA", "HLA-DRB1
 			cat( "\n\nCalling 'Consensus Protein Pileups' tool..  ", sampleID, " ", thisName)
 			pipe.ConsensusProteinPileups( sampleID, thisGene, thisNameIn, results.path=results.path,
 						max.depth=max.pileup.depth, pct.aligned.depth=pct.aligned.depth, chunkSize.pileup=50000, 
-						maxNoHits.pileup=maxNoHits.pileup, maxNoHits.setup=maxNoHits.setup,
+						maxNoHits.pileup=maxNoHits.pileup, maxNoHits.setup=maxNoHits.setup, forceSetup=TRUE, 
 						showFrameShiftPeptides=F, referenceAA=thisRefAA, intronMaskFasta=intronMaskFasta)
 			didNewPileup <- TRUE
 		}
