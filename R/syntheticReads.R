@@ -54,8 +54,14 @@
 
 	myDNA <- strsplit( seqDNA, split="")[[1]]
 
+	# create either a compressed or text file
+	useGZ <- grepl( "\\.gz$", outfile)
+	if ( useGZ) {
+		conOut <- gzfile( outfile, open="wt")
+	} else {
+		conOut <- file( outfile, open="wt")
+	}
 	# make the little sequences in chunks
-	conOut <- gzfile( outfile, open="wt")
 	chunkSize=1000000
 	nReadsThisSeq <- 0
 
