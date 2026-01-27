@@ -9,7 +9,7 @@
 		tbdb <- tbdbFile
 	} else if (is.null(tbdbFile)) {
 		# allow using the data object in DuffyNGS package
-		data( "TBDB.Mutations")
+		data( "Cleaned.TBDB.Mutations")
 		if ( ! exists( "tbdb")) stop( "Failed to load default TBDB Mutations data object from DuffyNGS package")
 	} else {
 		# allow environment variables in the file path
