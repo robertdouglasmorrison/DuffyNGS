@@ -238,8 +238,18 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	}
 	outfile <- file.path( vcfPath, outfile)
 	write.table( out, outfile, sep="\t", quote=F, na="", row.names=F)
-	cat( "\nWrote variant call summary: ", outfile, "\nN_Calls: ", nrow(snpOut), "\n")
+	cat( "\nWrote variant call summary: ", outfile, "\nN_Calls: ", nrow(out), "\n")
 
+	# allow a step to see if known drug resistance mutations were seen.
+	# do this in a species specific manner, using species specific datasets
+	if ( speciesID == "MT_H37") {
+		cat( "\n  Info: adding TBDB drug resistance mutation calls..\n")
+		out2 <- append.TBDB.Drug.Resistance.Details( snpFile=out, tbdbFile=NULL)
+		nDrugHits <- sum( out2$DrugResistanceDetails != "")
+		write.table( out2, outfile, sep="\t", quote=F, na="", row.names=F)
+		cat( "\nRe-wrote variant call summary: ", outfile, "\nN_Drug.Resistance.Calls: ", nDrugHits, "\n")
+	}
+	 
 	if ( ! is.null( geneID)) {
 		return( invisible( out))
 	}
