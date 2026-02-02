@@ -5,7 +5,7 @@
 
 `pipe.BAMgenome` <- function( sampleID, seqIDset=NULL, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL,
-				noReadCalls=NULL, verbose=TRUE) {
+				noReadCalls=NULL, chunk.size=100000, verbose=TRUE) {
 
 	# get needed paths, etc. from the options file
 	optT <- readOptionsTable( optionsFile)
@@ -62,30 +62,46 @@
 	if (verbose) cat( "\nExtracting genome from BAM consensus:  N_Chromosomes =", length(seqIDset), "\n")
 	
 	# do and write each chromosome one at a time, to save memory, etc.
+	PASTE <- base::paste
+	
 	nBaseOut <- 0
 	for ( sid in seqIDset) {
 		where <- MATCH( sid, seqMap$SEQ_ID)
-		myStop <- seqMap$LENGTH[where]		
+		seqStop <- seqMap$LENGTH[where]		
 		myBaseVecPt <- match( sid, names(baseVectors))
 
-		# get the pileups for the entire chromosome
-		cat( "\nGetting pileups for: ", sid, "  N_Bases =", myStop)
-		ans <- pipe.ConsensusBaseCalls( sampleID, geneID=NULL, seqID=sid, start=1, stop=myStop, 
-					annotationFile=annotationFile, genomicFastaFile=genomicFastaFile,
-					genomicVector=baseVectors[[myBaseVecPt]],
-					optionsFile=optionsFile, results.path=results.path, noReadCalls=noReadCalls,
-					aaToo=FALSE, as.cDNA=FALSE, best.frame=FALSE, SNP.only=FALSE, 
-					minReadCalls=NULL, minPercentSNP=NULL, verbose=verbose)
+		# get the pileups for the entire chromosome, but do it in chunks to save memory, etc.
+		cat( "\nGetting pileups for: ", sid, "  N_Bases =", seqStop)
+		
+		bigDNA <- ""
+		curStop <- 0
+		repeat {
+			curStart <- curStop + 1
+			if ( curStart > seqStop) break
+			curStop <- curStop + chunk.size
+			if ( curStop > seqStop) curStop <- seqStop
+			
+			# grab this chunk
+			ans <- pipe.ConsensusBaseCalls( sampleID, geneID=NULL, seqID=sid, start=curStart, stop=curStop, 
+						annotationFile=annotationFile, genomicFastaFile=genomicFastaFile,
+						genomicVector=baseVectors[[myBaseVecPt]],
+						optionsFile=optionsFile, results.path=results.path, noReadCalls=noReadCalls,
+						aaToo=FALSE, as.cDNA=FALSE, best.frame=FALSE, SNP.only=FALSE, 
+						minReadCalls=NULL, minPercentSNP=NULL, verbose=verbose)
 					
-		# turn it from vector back to one giant string
-		myDNA <- paste( ans$dna.consensus, collapse="")
-		rm( ans)
+			# turn it from vector back to one giant string
+			curDNA <- PASTE( ans$dna.consensus, collapse="")
+			# and join it to what we have already
+			bigDNA <- PASTE( bigDNA, curDNA, sep="")
+			cat(".")
+			rm( ans)
+		}
 
 		# write it out
-		out <- as.Fasta( "desc"=paste( sid, sampleID, sep="_"), "seq"=myDNA)
+		out <- as.Fasta( "desc"=paste( sid, sampleID, sep="_"), "seq"=bigDNA)
 		doAPPEND <- (nBaseOut > 0)
 		writeFasta( out, fa.file, line.width=100, append=doAPPEND)
-		nBaseOut <- nBaseOut + nchar( myDNA)
+		nBaseOut <- nBaseOut + nchar( bigDNA)
 	}
 	if (verbose) cat( "\nWrote Fasta Genome file: ", fa.file, "  N_Bases =", nBaseOut, "\n")
 }
