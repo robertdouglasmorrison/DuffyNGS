@@ -55,9 +55,9 @@
 	names(baseVectors) <- fa$desc
 
 	# set up where the result FASTA will be written to
-	fa.path <- file.path( results.path, "ConsensusGenomes", sampleID)
+	fa.path <- file.path( results.path, "ConsensusGenomes")
 	if ( ! file.exists( fa.path)) dir.create( fa.path, recursive=T)
-	fa.file <- file.path( fa.path, paste( "BAM.Genome", sampleID, "fasta", sep="."))
+	fa.file <- file.path( fa.path, paste( sampleID, "ConsensusGenome.fasta", sep="."))
 
 	if (verbose) cat( "\nExtracting genome from BAM consensus:  N_Chromosomes =", length(seqIDset), "\n")
 	
