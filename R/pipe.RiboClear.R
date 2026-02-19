@@ -24,7 +24,7 @@ function( inputFastqFile, sampleID, annotationFile="Annotation.txt", optionsFile
 
 	# make sure there are reads...
 	nReadsIn <- getFileLineCount( inputFastqFile[1], sampleID, verbose=TRUE, mode="quick") / 4
-	if ( nReadsIn < 1) stop( paste( "pipe.RiboCLear:  missing or empty input file:  ", inputFastqFile[1]))
+	if ( nReadsIn < 0) stop( paste( "pipe.RiboCLear:  missing or empty input file:  ", inputFastqFile[1]))
 
 	optT <- readOptionsTable( optionsFile)
 	alignIndexPath <- getOptionValue( optT, "bowtie2Index.path")

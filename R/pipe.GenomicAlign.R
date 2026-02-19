@@ -21,7 +21,7 @@
 
 	# make sure there are reads...
 	nReadsIn <- getFileLineCount( inputFastqFile[1], sampleID, verbose=TRUE, mode="quick") / 4
-	if ( nReadsIn < 1) stop( paste( "pipe.GenomicAlign:  missing or empty input file:  ", inputFastqFile[1]))
+	if ( nReadsIn < 0) stop( paste( "pipe.GenomicAlign:  missing or empty input file:  ", inputFastqFile[1]))
 
 	optT <- readOptionsTable( optionsFile)
 	resultsPath <- getOptionValue( optT, "results.path", notfound=".", verbose=F)

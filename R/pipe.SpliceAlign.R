@@ -29,7 +29,7 @@
 
 	# make sure there are reads...
 	nReadsIn <- getFileLineCount( inputFastqFile[1], sampleID, mode="quick", verbose=TRUE) / 4
-	if ( nReadsIn < 1) cat( "\npipe.SpliceAlign:  missing or empty input file:  ", inputFastqFile[1])
+	if ( nReadsIn < 0) cat( "\npipe.SpliceAlign:  missing or empty input file:  ", inputFastqFile[1])
 
 	# we need a copy of the genomic bam file for its ref data
 	genomeFile <- paste( sampleID, "genomic.bam", sep=".")
