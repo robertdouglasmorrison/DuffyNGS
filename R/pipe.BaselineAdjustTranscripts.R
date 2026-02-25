@@ -3,7 +3,7 @@
 # scale a set of transcriptomes to have identical time zero expression levels
 
 `pipe.BaselineAdjustTranscripts` <- function( sampleIDs, subjectIDs, timeIDs, baselineID=timeIDs[1], 
-				adjusted.path="adjustedResults/transcript",
+				adjusted.path="adjustedResults",
 				annotationFile="Annotation.txt", optionsFile="Options.txt", 
 				speciesID=getCurrentSpecies(), results.path=NULL, 
 				max.scale.factor=4, min.expression.for.scaling=1, expression.units=NULL,
@@ -16,13 +16,14 @@
 		optT <- readOptionsTable( optionsFile)
 		results.path <- getOptionValue( optT, "results.path", notfound=".", verbose=F)
 	}
-	if ( ! file.exists( adjusted.path)) dir.create( adjusted.path, recursive=TRUE, showWarnings=FALSE)
+	old.path <- file.path( results.path, "transcript")
+	new.path <- file.path( adjusted.path, "transcript")
+	if ( ! file.exists( new.path)) dir.create( new.path, recursive=TRUE, showWarnings=FALSE)
 
 	# get the expression units to use for scaling
 	if ( is.null( expression.units)) expression.units <- getExpressionUnitsColumn( optionsFile)
 
 	# get the set of existing transcripts
-	old.path <- file.path( results.path, "transcript")
 	fileSet <- file.path( old.path, paste( sampleIDs, speciesPrefix, "Transcript.txt", sep="."))
 
 	if ( !all( file.exists( fileSet))) {
@@ -52,7 +53,7 @@
 	for ( i in 1:length(fileSet)) {
 		thisFile <- fileSet[i]
 		thisSubj <- subjectIDs[i]
-		newFile <- sub( old.path, adjusted.path, thisFile, fixed=T)
+		newFile <- sub( old.path, new.path, thisFile, fixed=T)
 
 		cat( "\n", i, "ReadFile:", sampleIDs[i])
 		tbl <- read.delim( thisFile, as.is=T)
