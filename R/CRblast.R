@@ -176,6 +176,13 @@ CRblaster <- function( sampleID, crIDs=NULL, nBest=10, xmlOutFile=NULL, doBlast=
 
 massageHitDefinition <- function( txt) {
 
+	# as of ~2025, using 'Core_NT', we often get many different Entrez sequence names all strung together.
+	# try to limit those to ~3 max, to shorten the overall text
+	for ( k in 1:length(txt)) {
+		whGT <- gregexpr( "\\&gt;", txt[k])[[1]]
+		if ( length(whGT) >= 3) txt[k] <- substr( txt[k], 1, whGT[3]-1)
+	}
+
 	# given a set of blast hit definitions, try to get one key nickname...
 	full <- base::paste( 1:length(txt), txt, sep=")  ", collapse=" |   ")
 
