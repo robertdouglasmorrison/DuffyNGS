@@ -499,7 +499,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 `pipe.VariantComparison` <- function( sampleIDset, groupSet=sampleIDset, annotationFile="Annotation.txt",
 				optionsFile="Options.txt", speciesID=getCurrentSpecies(), results.path=NULL, 
-				min.deltaScore=40, exonOnly=TRUE, snpOnly=TRUE, AAsnpOnly=exonOnly, 
+				min.deltaScore=40, min.deltaPercent=20, exonOnly=TRUE, snpOnly=TRUE, AAsnpOnly=exonOnly, 
 				capScore=200, min.depth=1) {
 
 	# get needed paths, etc. from the options file
@@ -594,15 +594,17 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	groupFac <- factor( groupSet)
 	NG <- nlevels(groupFac)
 	groupNames <- levels(groupFac)
-	gBase <- gAA <- gScore <- gDepth <- vector( length=NG)
+	groupCounts <- as.numeric( table( groupSet))
+	gBase <- gAA <- gScore <- gDepth <- gVariCnt <- vector( length=NG)
 
 	# storage for the final answers
-	seqOut <- posOut <- geneOut <- refOut <- depthOut <- deltaOut <- vector( length=nout)
+	seqOut <- posOut <- geneOut <- refOut <- depthOut <- deltaScoreOut <- deltaPctOut <- vector( length=nout)
 	grpBaseOut <- matrix( "", nrow=nout, ncol=NG)
 	grpAAout <- matrix( "", nrow=nout, ncol=NG)
 	grpScoreOut <- matrix( 1, nrow=nout, ncol=NG)
 	grpDepthOut <- matrix( 1, nrow=nout, ncol=NG)
-	colnames(grpBaseOut) <- colnames(grpAAout) <- colnames(grpScoreOut) <- colnames(grpDepthOut) <- groupNames
+	grpVariCntOut <- matrix( 0, nrow=nout, ncol=NG)
+	colnames(grpBaseOut) <- colnames(grpAAout) <- colnames(grpScoreOut) <- colnames(grpDepthOut) <- colnames(grpVariCntOut) <- groupNames
 
 	# apply a cap on scores to temper the effect of read depth variation
 	cat( "\nCapping high SNP scores at:  ", capScore)
@@ -622,8 +624,8 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		thisAvgScore <- mean( scoreV[x])
 		myBase <- rep.int( trueRefBase, NS)
 		myAA <- rep.int( "", NS)
-		myScore <- rep.int( thisAvgScore, NS)   # used to use '1'
-		myDepth <- rep.int( thisAvgDepth, NS)   # used to use '0'
+		#myScore <- rep.int( thisAvgScore, NS)   # used to use '1'
+		#myDepth <- rep.int( thisAvgDepth, NS)   # used to use '0'
 		myScore <- rep.int( NA, NS)   # used to use '1'
 		myDepth <- rep.int( NA, NS)   # used to use '0'
 
@@ -647,12 +649,14 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			igrp <<- igrp + 1
 			thisGroupsBases <- sort.int( table( allBases), decreasing=T)
 			thisGroupsAAs <- sort.int( table( allAA), decreasing=T)
+			thisGroupsVariCnt <- sum( allBases != trueRefBase)
 			# when they all agree, easy case!
 			if ( length( thisGroupsBases) == 1) {
 				gBase[igrp] <<- names( thisGroupsBases)[1]
 				gAA[igrp] <<- names( thisGroupsAAs)[1]
 				gScore[igrp] <<- mean( allScores, na.rm=T)
 				gDepth[igrp] <<- mean( allDepths, na.rm=T)
+				gVariCnt[igrp] <<- thisGroupsVariCnt
 			} else {
 				# more than one called, so try to do a weigthed average 
 				grpWeightedScores <- tapply( allScores, factor(allBases), function(k) {
@@ -678,6 +682,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 				gAA[igrp] <<- allAA[ which( allBases == bestBase)[1]]
 				gScore[igrp] <<- grpWeightedScores[ bestOne]
 				gDepth[igrp] <<- mean( allDepths[ allBases == bestBase], na.rm=T)
+				gVariCnt[igrp] <<- thisGroupsVariCnt
 			}
 		})
 
@@ -689,42 +694,51 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 		#gDepth[ is.na(gDepth)] <- NA
 
 		# find the biggest differences between the groups
-		delta <- diff( range( gScore))
-		if (NG == 1) delta <- gScore[1]
+		deltaScore <- diff( range( gScore))
+		if (NG == 1) deltaScore <- gScore[1]
 
 		# penalize when some groups are too low depth
 		pctTooLow <- (min.depth - gDepth) / min.depth
 		pctTooLow[ pctTooLow <= 0] <- 0
 		if ( any( pctTooLow > 0)) {
 			penalty <- mean( pctTooLow, na.rm=T)
-			delta <- delta * ( 1 - penalty)
+			deltaScore <- deltaScore * ( 1 - penalty)
 		}
 		# penalize when all the base calls are the same, and all the AA calls are the same
-		if ( length( unique( gBase)) == 1) delta <- delta / 2
-		if ( length( unique( gAA)) == 1) delta <- delta / 2
-
+		if ( length( unique( gBase)) == 1) deltaScore <- deltaScore / 2
+		if ( length( unique( gAA)) == 1) deltaScore <- deltaScore / 2
+		
+		# also calc the delta in percent variant
+		pctVari <- gVariCnt * 100 / groupCounts
+		deltaPct <- diff( range( pctVari))
+		
 		# fill the results data for this loci
 		iout <<- iout + 1
 		seqOut[iout] <<- seqV[ x[1]]
 		posOut[iout] <<- posV[ x[1]]
 		geneOut[iout] <<- geneV[ x[1]]
 		refOut[iout] <<- refV[ x[1]]
-		deltaOut[iout] <<- delta
+		deltaScoreOut[iout] <<- deltaScore
+		deltaPctOut[iout] <<- deltaPct
 		grpBaseOut[ iout, ] <<- gBase
 		grpAAout[ iout, ] <<- gAA
 		grpScoreOut[ iout, ] <<- gScore
 		grpDepthOut[ iout, ] <<- gDepth
+		grpVariCntOut[ iout, ] <<- gVariCnt
 		if ( iout %% 1000 == 0) cat( "\r", iout, seqOut[iout], shortGeneName( geneOut[iout], keep=1), 
 						posOut[iout], gBase, gAA, gScore, gDepth, "      ")
 	})
 
 	# now build the final result
+	cat( "\nBuilding results..")
 	out <- data.frame( "SEQ_ID"=seqOut, "POSITION"=posOut, "GENE_ID"=geneOut, "PRODUCT"=gene2Product( geneOut),
-			"REF_BASE"=refOut, "DELTA_SCORE"=round(deltaOut, digits=2), stringsAsFactors=FALSE)
+				"REF_BASE"=refOut, "DELTA_SCORE"=round(deltaScoreOut, digits=2), "DELTA_PCT"=round(deltaPctOut, digits=2), 
+				stringsAsFactors=FALSE)
 	for ( j in 1:NG) {
 		small <- data.frame( grpBaseOut[ ,j], grpAAout[ ,j], round( grpScoreOut[ ,j], digits=2), 
-				round( grpDepthOut[ ,j]), stringsAsFactors=FALSE)
-		colnames(small) <- paste( groupNames[j], c( "BASE","AA","SCORE","DEPTH"), sep="_")
+						round( grpDepthOut[ ,j]), grpVariCntOut[ ,j], round(grpVariCntOut[ ,j]*100/groupCounts[j],digits=1), 
+						stringsAsFactors=FALSE)
+		colnames(small) <- paste( groupNames[j], c( "BASE","AA","SCORE","DEPTH","N.SAMPLES","PCT.SAMPLES"), sep="_")
 		out <- cbind( out, small, stringsAsFactors=FALSE)
 	}
 
@@ -748,8 +762,8 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	# when there are more than one different SNP base at the same loci, that should get a higher score 
 	# than returned by 'diff(range())'.
 	cat( "\nRescoring multiple alternate alleles..")
-	firstAltColumn <- 7
-	altColumnStepSize <- 4
+	firstAltColumn <- 8
+	altColumnStepSize <- 6
 	if ( NG > 1) {
 		altcolumns <- seq( firstAltColumn, ncol(out), by=altColumnStepSize)
 		for ( i in 1:nrow(out)) {
@@ -758,7 +772,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 			uniqueAlts <- setdiff( unique( alts), ref)
 			if ( length( uniqueAlts) > 1) {
 				isAlt <- which( alts %in% uniqueAlts)
-				altScores <- as.numeric( out[ i, altcolumns+1])
+				altScores <- suppressWarnings( as.numeric( out[ i, altcolumns+2]))  # score is now the 3rd 'per group' column
 				altFac <- factor( alts[ isAlt])
 				altScores <- tapply( altScores[isAlt], altFac, mean)
 				out$DELTA_SCORE[i] <- sum( altScores)
@@ -779,16 +793,22 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 	}
 
 	# final order is those most different bwtween the groups
-	keep <- which( out$DELTA_SCORE >= min.deltaScore)
+	keep <- which( out$DELTA_SCORE >= min.deltaScore | out$DELTA_PCT >= min.deltaPercent)
 	if ( length(keep)) {
 		out <- out[ keep, ]
-		ord <- order( -(out$DELTA_SCORE), out$SEQ_ID, out$POSITION)
+		N <- nrow(out)
+		# rank by both deltas
+		rankScore <- rankPct <- rep.int( 1, N)
+		rankScore[ order( -(out$DELTA_SCORE), out$SEQ_ID, out$POSITION)] <- 1:N
+		rankPct[ order( -(out$DELTA_PCT), out$SEQ_ID, out$POSITION)] <- 1:N
+		rankBoth <- (rankScore + rankPct) / 2
+		ord <- order( rankBoth)
 		out <- out[ ord, ]
 		rownames(out) <- 1:nrow(out)
 		cat( "\nDone.  N_Differential_SNPs: ", nrow(out), "\n")
 		return(out)
 	} else {
-		cat( "\nNo Differential SNPs.  Perhap loosen 'min.deltaScore' or other arguments..? \n")
+		cat( "\nNo Differential SNPs.  Perhap loosen 'min.deltaScore' or 'min.deltaPercent' or other arguments..? \n")
 		return( data.frame())
 	}
 }
