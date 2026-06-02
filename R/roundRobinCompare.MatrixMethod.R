@@ -584,9 +584,10 @@
 			pltText <- paste( "Transcriptome PCA:   ", folderName,
 					"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 			plotFile <- file.path( RR_path, paste( RR_prefix, "PCA", dev.type, sep="."))
-			matrix.PCAplot( tm, main=pltText, col=pcaColors)
+			tml2 <- log2( tm+1)
+			matrix.PCAplot( tml2, main=pltText, col=pcaColors)
 			openPlot( plotFile, bg="white")
-			matrix.PCAplot( tm, main=pltText, col=pcaColors)
+			matrix.PCAplot( tml2, main=pltText, col=pcaColors)
 			dev.off()
 		} else {
 			if (ncol(tm) < 3) cat( "\nToo few samples to make cluster plots...")

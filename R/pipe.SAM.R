@@ -313,9 +313,10 @@
 		pltText <- paste( "Transcriptome PCA:   ", folderName,
 				"\nSpecies: ", speciesID, "    Expression Units: ", intensityColumn)
 		plotFile <- file.path( SAM_path, paste( SAM_prefix,"PCA", dev.type, sep="."))
-		matrix.PCAplot( tm, main=pltText, col=SAM_colors)
+		tml2 <- log2( tm + 1)
+		matrix.PCAplot( tml2, main=pltText, col=SAM_colors)
 		openPlot( plotFile, bg='white')
-		matrix.PCAplot( tm, main=pltText, col=SAM_colors)
+		matrix.PCAplot( tml2, main=pltText, col=SAM_colors)
 		dev.off()
 
 	} else {
