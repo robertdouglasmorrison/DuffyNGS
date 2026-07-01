@@ -242,7 +242,7 @@ pipe.VariantSummary <- function( sampleID, speciesID=getCurrentSpecies(), annota
 
 	# allow a step to see if known drug resistance mutations were seen.
 	# do this in a species specific manner, using species specific datasets
-	if ( speciesID == "MT_H37") {
+	if ( speciesID %in% c( "MT_H37", "H37Rv1")) {
 		cat( "\n  Info: adding TBDB drug resistance mutation calls..\n")
 		out2 <- append.TBDB.Drug.Resistance.Details( snpFile=out, tbdbFile=NULL)
 		nDrugHits <- sum( out2$DrugResistanceDetails != "")
