@@ -149,7 +149,7 @@ WB_UNIQUE_PCT <- 2
 			otherID <- "Mmu_grc"
 		} else if ( selfID %in% c( "BCG", "Msmeg_mc2_155", "Mabsc", "Mchel")) {
 			otherID <- "Mmu_grc"
-		} else if ( selfID %in% c( "MT_H37", "MT_HN878")) {
+		} else if ( selfID %in% c( "MT_H37", "H37Rv1", "MT_HN878")) {
 			otherID <- "Hs_grc"
 		} else if ( selfID %in% c( "Mmar")) {
 			otherID <- "Drerio"
