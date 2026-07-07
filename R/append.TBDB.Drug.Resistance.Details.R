@@ -8,14 +8,14 @@
 	# step 1: make sure the mutations file of drug resistance details is readable, and 
 	# contains the fields we expect. Allow a data frame or a filename. And allow species specific versions
 	tbdb <- NULL
-	if ( is.data.frame( tbdbFile)) {
-		tbdb <- tbdbFile
-	} else if (is.null(tbdbFile)) {
+	if (is.null(tbdbFile)) {
 		# allow using the data object in DuffyNGS package
 		prefix <- getCurrentSpeciesFilePrefix()
 		tbdbFile <- paste( prefix, "Cleaned.TBDB.Mutations", sep=".")
-		data( tbdbFile)
+		data( list=tbdbFile, package="DuffyNGS", envir=environment())
 		if ( is.null( tbdb)) stop( paste( "Failed to load default TBDB Mutations data object: ", tbdbFile))
+	} else if ( is.data.frame( tbdbFile)) {
+		tbdb <- tbdbFile
 	} else {
 		# allow environment variables in the file path
 		tbdbFile <- env.sub( tbdbFile)
